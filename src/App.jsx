@@ -42,7 +42,7 @@ const AppContent = () => {
         <Route path="/teams" element={<Teams />} />
         <Route path="/announcements" element={<Announcements />} />
         <Route path="/promotion-board" element={<PromotionBoard />} />
-        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLogin />} />ç
         <Route path="/leadership" element={<Leadership />} />
 
         {/* PROTECTED ROUTES */}
