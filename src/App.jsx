@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar'; 
 
 // --- PAGES ---
+import SignUp from './pages/SignUp';
 import Home from './pages/Home';
 import Photos from './pages/Photos';
 import AdminLogin from './pages/AdminLogin';
@@ -16,12 +17,15 @@ import Teams from './pages/Teams';
 import Announcements from './pages/Announcements';
 import PromotionBoard from './pages/PromotionBoard';
 import Leadership from './pages/Leadership';
+import AdminOrders from './pages/AdminOrders'; 
+import UniformRequests from './pages/UniformRequests';
+
 
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const isAdminPage = location.pathname.startsWith('/admin');
+  const isAdminPage = location.pathname.startsWith('/admin') || location.pathname === '/uniform-requests';
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -31,7 +35,6 @@ const AppContent = () => {
 
   return (
     <>
-      {/* Navbar only shows on public-facing pages */}
       {!isAdminPage && <Navbar />}
       
       <Routes>
@@ -42,8 +45,9 @@ const AppContent = () => {
         <Route path="/teams" element={<Teams />} />
         <Route path="/announcements" element={<Announcements />} />
         <Route path="/promotion-board" element={<PromotionBoard />} />
-        <Route path="/admin" element={<AdminLogin />} />ç
+        <Route path="/admin" element={<AdminLogin />} />
         <Route path="/leadership" element={<Leadership />} />
+        <Route path="/admin/signup" element={<SignUp />} />
 
         {/* PROTECTED ROUTES */}
         <Route 
@@ -54,6 +58,14 @@ const AppContent = () => {
           path="/admin/assign-tasks" 
           element={user ? <TaskManagement /> : <Navigate to="/admin" />} 
         />
+        <Route 
+          path="/admin/orders" 
+          element={user ? <AdminOrders /> : <Navigate to="/admin" />} 
+        />
+        <Route 
+          path="/uniform-requests" 
+          element={user ? <UniformRequests /> : <Navigate to="/admin" />} 
+        />
 
         {/* CATCH ALL */}
         <Route path="*" element={<Navigate to="/" />} />
@@ -62,7 +74,7 @@ const AppContent = () => {
   );
 };
 
-function App() {
+export default function App() {
   return (
     <Router>
       <div className="bg-slate-950 min-h-screen font-sans text-white">
@@ -71,5 +83,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;
