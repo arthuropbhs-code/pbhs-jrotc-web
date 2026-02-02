@@ -5,46 +5,47 @@ import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
 const Leadership = () => {
   const [activeTab, setActiveTab] = useState('staff');
 
-  // Command Team Data - Added portrait paths
+  // Command Team Data
   const bc = { 
     role: "Battalion Commander", 
     rank: "c/LTC", 
     name: "Nicholas Pacheco",
-    portrait: "/portraits/pacheco.jpg" // Replace with actual image paths
+    portrait: "/covers/Pacheco.jpg" 
   };
   const deputy = { 
     role: "Deputy Commander", 
     rank: "c/MAJ", 
     name: "Thomas Kitts",
-    portrait: "/portraits/t_kitts.jpg" 
+    portrait: "/covers/T kitts.jpg" 
   };
   const xo = { 
     role: "Executive Officer", 
     rank: "c/MAJ", 
     name: "Grayson Kitts",
-    portrait: "/portraits/g_kitts.jpg" 
+    portrait: "/covers/G kitts.jpg" 
   };
   const csm = { 
     role: "Command Sergeant Major", 
     rank: "c/CSM", 
     name: "Bryan Morrison",
-    portrait: "/portraits/morrison.jpg" 
+    portrait: "/covers/Morrison.jpg" 
   };
   const smm = { 
     role: "Sergeant Major", 
     rank: "c/SGM", 
     name: "Kiryn Williams",
-    portrait: "/portraits/williams.jpg" 
+    portrait: "/covers/William.jpg" 
   };
 
+  // Staff Data with Portraits Added
   const staff = [
-    { role: "S-1 Adjutant", name: "Chealse Valcourt", desc: "Personnel & Administration" },
-    { role: "S-2 Security", name: "Jack Nulty", desc: "Security & Intelligence" },
-    { role: "S-3 Operations", name: "Patrick Brown", desc: "Training & Operations" },
-    { role: "S-4 Logistics", name: "Micah McMorris", desc: "Supply & Logistics" },
-    { role: "S-5 Public Affairs", name: "Jasmin Morales", desc: "Media & Recruiting" },
-    { role: "S-6 Technology", name: "Kourtney Savage", desc: "Technology & Algorithms" },
-    { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting" },
+    { role: "S-1 Adjutant", name: "Chealse Valcourt", desc: "Personnel & Administration", portrait: "/covers/Valcourt.jpg" },
+    { role: "S-2 Safety", name: "Jack Nulty", desc: "Safety & Security", portrait: "/covers/Nulty.jpg" },
+    { role: "S-3 Operations", name: "Patrick Brown", desc: "Training & Operations", portrait: "/covers/Brown.jpg" },
+    { role: "S-4 Logistics", name: "Micah McMorris", desc: "Supply & Logistics", portrait: "/covers/McMorris.jpg" },
+    { role: "S-5 Special Projects", name: "Jasmin Morales", desc: "Public Affairs & Media", portrait: "/covers/Morales.jpg" },
+    { role: "S-6 Technology", name: "Kourtney Savage", desc: "Technology & Algorithms", portrait: "/covers/Savage.jpg" },
+    { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting", portrait: "/covers/Jarussi.jpg" },
   ];
 
   const companies = [
@@ -94,7 +95,8 @@ const Leadership = () => {
              <div className="flex flex-col items-center gap-2 w-full">
                 <div className="bg-slate-900 border border-yellow-500/30 p-6 rounded-2xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full border-2 border-yellow-500/50 overflow-hidden flex-shrink-0 bg-slate-800">
-                      <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
+                      {/* Removed grayscale class */}
+                      <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <p className="text-[10px] font-black tracking-widest text-yellow-500 uppercase">{csm.role}</p>
@@ -107,7 +109,8 @@ const Leadership = () => {
 
                 <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden flex-shrink-0 bg-slate-800">
-                      <img src={smm.portrait} alt={smm.name} className="w-full h-full object-cover grayscale" />
+                      {/* Removed grayscale class */}
+                      <img src={smm.portrait} alt={smm.name} className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">{smm.role}</p>
@@ -138,10 +141,16 @@ const Leadership = () => {
               <motion.div key="staff" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="grid gap-4 text-left">
                 {staff.map((s, i) => (
                   <div key={i} className="glass-card p-5 border-l-4 border-yellow-600 flex justify-between items-center group">
-                    <div>
-                      <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">{s.role}</p>
-                      <h4 className="text-xl font-bold text-white italic">{s.name}</h4>
-                      <p className="text-xs text-slate-500 font-medium">{s.desc}</p>
+                    <div className="flex items-center gap-4">
+                      {/* Added Staff Portrait */}
+                      <div className="w-14 h-14 rounded-full border border-yellow-600/30 overflow-hidden flex-shrink-0 bg-slate-800">
+                        <img src={s.portrait} alt={s.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">{s.role}</p>
+                        <h4 className="text-xl font-bold text-white italic">{s.name}</h4>
+                        <p className="text-xs text-slate-500 font-medium">{s.desc}</p>
+                      </div>
                     </div>
                     <ShieldCheck className="text-slate-800 group-hover:text-yellow-600 transition-colors" />
                   </div>
@@ -180,7 +189,8 @@ const Leadership = () => {
 const CommandBox = ({ data, variant }) => (
   <motion.div whileHover={{ y: -5 }} className={`${variant === 'gold' ? 'bg-yellow-500 text-slate-950 shadow-[0_0_40px_rgba(234,179,8,0.2)]' : 'bg-slate-900 border border-slate-800 text-white'} p-6 rounded-2xl w-full relative transition-all flex items-center gap-5 text-left`}>
     <div className={`w-20 h-20 rounded-full border-2 overflow-hidden flex-shrink-0 bg-slate-800 ${variant === 'gold' ? 'border-slate-900' : 'border-yellow-500/50'}`}>
-      <img src={data.portrait} alt={data.name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
+      {/* Removed grayscale classes to keep color visible at all times */}
+      <img src={data.portrait} alt={data.name} className="w-full h-full object-cover" />
     </div>
     <div>
       <p className={`text-[10px] font-black tracking-[0.2em] uppercase mb-1 ${variant === 'gold' ? 'text-slate-800' : 'text-yellow-500'}`}>

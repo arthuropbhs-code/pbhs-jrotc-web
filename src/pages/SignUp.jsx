@@ -34,8 +34,8 @@ const SignUp = () => {
   const BATTALION_SECRET = "PBHS2026"; 
   
   const ranks = ["CDT PVT No Insignia", "CDT PVT", "CDT PFC", "CDT CPL", "CDT SGT", "CDT SSG", "CDT SFC", "CDT MSG", "CDT SG", "CDT SGM", "CDT CSM", "CDT 2LT", "CDT 1LT", "CDT CPT", "CDT MAJ", "CDT LTC", "CDT COL"];
-  const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company Commander", "S1 Assistant", "S2 Assistant", "S3 Assistant", "S4 Assistant", "S5 Assistant", "S6 Assistant", "S7 Assistant", "Battalion S1", "Battalion S2", "Battalion S3", "Battalion S4", "Battalion S5", "Battalion S6", "Battalion S7"];
-  const companies = ["Uniform", "Victor", "Whisky", "X-Ray", "Yankee", "Battalion"];
+  const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO" , "Company Commander", "S1 Assistant", "S2 Assistant", "S3 Assistant", "S4 Assistant", "S5 Assistant", "S6 Assistant", "S7 Assistant", "Battalion S1", "Battalion S2", "Battalion S3", "Battalion S4", "Battalion S5", "Battalion S6"];
+  const companies = ["Uniform", "Victor", "Whisky" , "X-Ray", "Yankee", "Battalion"];
 
   const handleSignUp = async (e) => {
     e.preventDefault();
