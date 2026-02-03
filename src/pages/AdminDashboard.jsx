@@ -18,7 +18,9 @@ import {
   ChevronRight,
   Megaphone, 
   Settings, 
-  Trash2
+  Trash2,
+  ShieldAlert, // Added for Top 4 alerts
+  Lock         // Added for restricted status
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -65,6 +67,9 @@ const AdminDashboard = () => {
 
   // Commander Permissions: Top 4 and Staff
   const isCommander = role === 'battalion_4' || role === 'battalion_staff' || role === 'company_leadership';
+  
+  // Strict Top 4 Check for Teams Management
+  const isTopFour = role === 'battalion_4';
 
   // Helper to highlight active link
   const isActive = (path) => location.pathname === path;
@@ -88,6 +93,18 @@ const AdminDashboard = () => {
               <Link to="/admin/orders" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/orders') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
                 <PlusSquare size={18} /> Issue Orders/Events
               </Link>
+
+              {/* RESTRICTED: Manage Teams Link */}
+              {isTopFour ? (
+                <Link to="/admin/teams" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/teams') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                  <Users size={18} /> Manage Teams
+                </Link>
+              ) : (
+                <div className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-600 cursor-not-allowed opacity-50">
+                  <Lock size={16} /> Manage Teams
+                </div>
+              )}
+
               {(role === 'battalion_4' || role === 'battalion_staff') && (
                  <Link to="/admin/announcements" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/announcements') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
                    <Megaphone size={18} /> Global Broadcast
@@ -147,6 +164,16 @@ const AdminDashboard = () => {
             </div>
           </div>
         </header>
+
+        {/* Security Banner for Non-Top 4 Staff */}
+        {!isTopFour && isCommander && (
+          <div className="mb-8 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl flex items-center gap-3">
+            <ShieldAlert className="text-yellow-500/50" size={18} />
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              Staff Access Active. <span className="text-yellow-500/80">Command features (Teams & Rosters) are locked to Top 4.</span>
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           

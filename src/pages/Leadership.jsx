@@ -43,7 +43,7 @@ const Leadership = () => {
     { role: "S-2 Safety", name: "Jack Nulty", desc: "Safety & Security", portrait: "/covers/Nulty.jpg" },
     { role: "S-3 Operations", name: "Patrick Brown", desc: "Training & Operations", portrait: "/covers/Brown.jpg" },
     { role: "S-4 Logistics", name: "Micah McMorris", desc: "Supply & Logistics", portrait: "/covers/McMorris.jpg" },
-    { role: "S-5 Special Projects", name: "Jasmin Morales", desc: "Public Affairs & Media", portrait: "/covers/Morales.jpg" },
+    { role: "S-5 Special Projects", name: "Jasmine Morales", desc: "Public Affairs & Media", portrait: "/covers/Morales.jpg" },
     { role: "S-6 Technology", name: "Kourtney Savage", desc: "Technology & Algorithms", portrait: "/covers/Savage.jpg" },
     { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting", portrait: "/covers/Jarussi.jpg" },
   ];
@@ -67,7 +67,7 @@ const Leadership = () => {
     },
     { 
       name: "Yankee Company", 
-      staff: [{ pos: "Commander", name: "Rodriguez" }, { pos: "Executive Officer", name: "Schneider" }, { pos: "First Sergeant", name: "Floral" }]
+      staff: [{ pos: "Commander", name: "Rodriguez" }, { pos: "Executive Officer", name: "Jean-Lewis" }, { pos: "First Sergeant", name: "Floral" }]
     },
   ];
 

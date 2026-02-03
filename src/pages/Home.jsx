@@ -38,7 +38,7 @@ const slides = [
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-    }, 6000);
+    }, 10000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
@@ -104,7 +104,7 @@ const slides = [
               Enter Portal
             </Link>
             <Link to="/teams" className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md">
-              Special Teams
+              Battalion Teams
             </Link>
           </div>
         </div>

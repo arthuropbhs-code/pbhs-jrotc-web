@@ -19,8 +19,8 @@ import PromotionBoard from './pages/PromotionBoard';
 import Leadership from './pages/Leadership';
 import AdminOrders from './pages/AdminOrders'; 
 import UniformRequests from './pages/UniformRequests';
-
-
+import CommanderInfo from './pages/CommanderInfo';
+import AdminTeams from './pages/AdminTeams'; // <--- Add this import
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -48,6 +48,7 @@ const AppContent = () => {
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/leadership" element={<Leadership />} />
         <Route path="/admin/signup" element={<SignUp />} />
+        <Route path="/commander/:id" element={<CommanderInfo />} />
 
         {/* PROTECTED ROUTES */}
         <Route 
@@ -61,6 +62,10 @@ const AppContent = () => {
         <Route 
           path="/admin/orders" 
           element={user ? <AdminOrders /> : <Navigate to="/admin" />} 
+        />
+        <Route 
+          path="/admin/teams" 
+          element={user ? <AdminTeams /> : <Navigate to="/admin" />} // <--- Add this route
         />
         <Route 
           path="/uniform-requests" 
