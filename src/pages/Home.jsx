@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Users, Award, ArrowRight, Star, ChevronDown, ChevronLeft, ChevronRight, Megaphone, Clock } from 'lucide-react';
+import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 const Home = () => {
-  // --- LOCAL SLIDESHOW DATA ---
-  // These point directly to your public/covers folder
-const slides = [
+  // --- UPDATED SLIDESHOW DATA ---
+  const slides = [
     {
       url: "/covers/Yuletide2025.JPG", 
       title: "TORNADO",
       subtitle: "BATTALION",
+    },
+    {
+      url: "/covers/Raiders_Awards.JPG", 
+      title: "EXCELLENCE",
+      subtitle: "RECOGNIZED AT EVERY LEVEL",
     },
     {
       url: "/covers/ball2024.JPG", 
@@ -20,25 +24,40 @@ const slides = [
       subtitle: "UNIT WITH DISTINCTION",
     },
     {
+      url: "/covers/Open_House.JPG", 
+      title: "COMMUNITY",
+      subtitle: "LEADERS OF TOMORROW",
+    },
+    {
       url: "/covers/Raiderstate2025.JPG", 
       title: "PHYSICAL",
       subtitle: "READY FOR THE CHALLENGE",
     },
     {
+      url: "/covers/Color_Guard.JPG", 
+      title: "PRECISION",
+      subtitle: "IN EVERY MOVEMENT",
+    },
+    {
       url: "/covers/fallenheros2025.JPG", 
       title: "HONORING",
       subtitle: "OUR FALLEN HEROES",
+    },
+    {
+      url: "/covers/JV_Raiders.jpg", 
+      title: "TRAINING",
+      subtitle: "THE NEXT GENERATION",
     }
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [news, setNews] = useState([]);
 
-  // Auto-rotate slides
+  // Auto-rotate slides every 8 seconds (slightly faster for more images)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-    }, 10000);
+    }, 8000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
@@ -62,10 +81,10 @@ const slides = [
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 1.5 }}
             className="absolute inset-0 z-0"
           >
             <img 
@@ -74,7 +93,7 @@ const slides = [
               className="w-full h-full object-cover"
             />
             {/* Darker Overlay for better text contrast */}
-            <div className="absolute inset-0 bg-black/60" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
           </motion.div>
         </AnimatePresence>
         
@@ -84,7 +103,7 @@ const slides = [
             animate={{ opacity: 1, y: 0 }}
             className="text-yellow-500 font-bold tracking-[0.4em] uppercase text-xs md:text-sm mb-6 block"
           >
-            Pompano Beach High School
+            Pompano Beach High School JROTC
           </motion.span>
           
           <motion.h1 
@@ -100,7 +119,7 @@ const slides = [
           </motion.h1>
 
           <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <Link to="/cadet-info" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all">
+            <Link to="/cadet-info" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
               Enter Portal
             </Link>
             <Link to="/teams" className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md">
@@ -110,11 +129,11 @@ const slides = [
         </div>
 
         {/* Navigation Arrows */}
-        <button onClick={prevSlide} className="absolute left-6 z-20 p-2 text-white/50 hover:text-yellow-500 transition-colors">
-          <ChevronLeft size={40} />
+        <button onClick={prevSlide} className="absolute left-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
+          <ChevronLeft size={48} />
         </button>
-        <button onClick={nextSlide} className="absolute right-6 z-20 p-2 text-white/50 hover:text-yellow-500 transition-colors">
-          <ChevronRight size={40} />
+        <button onClick={nextSlide} className="absolute right-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
+          <ChevronRight size={48} />
         </button>
 
         {/* Progress Dots */}
@@ -123,13 +142,13 @@ const slides = [
             <button 
               key={i} 
               onClick={() => setCurrentIndex(i)}
-              className={`h-1.5 transition-all rounded-full ${i === currentIndex ? "w-12 bg-yellow-500" : "w-4 bg-white/20"}`}
+              className={`h-1.5 transition-all duration-500 rounded-full ${i === currentIndex ? "w-12 bg-yellow-500" : "w-4 bg-white/20"}`}
             />
           ))}
         </div>
       </section>
 
-      {/* --- LIVE BULLETINS (From Firebase) --- */}
+      {/* --- LIVE BULLETINS --- */}
       {news.length > 0 && (
         <section className="py-12 bg-slate-900/50 border-y border-white/5">
           <div className="max-w-7xl mx-auto px-6">
@@ -155,8 +174,8 @@ const slides = [
 
       {/* --- ARMY VALUES --- */}
       <section className="py-24 bg-white text-slate-950">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-center text-[10px] font-black tracking-[0.5em] text-slate-400 uppercase mb-16">The Seven Army Values</h2>
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-400 uppercase mb-16">The Seven Army Values</h2>
           <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
             {['Loyalty', 'Duty', 'Respect', 'Service', 'Honor', 'Integrity', 'Courage'].map((val, i) => (
               <div key={i} className="group border border-slate-100 p-6 flex flex-col items-center hover:bg-slate-950 hover:text-white transition-all duration-500 rounded-2xl cursor-default">

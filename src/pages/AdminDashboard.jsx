@@ -13,23 +13,23 @@ import {
   PlusSquare,
   BarChart3,
   Users,
+  UserCog, // Added for Personnel Management
   Shirt,
   Calendar,
   ChevronRight,
   Megaphone, 
   Settings, 
   Trash2,
-  ShieldAlert, // Added for Top 4 alerts
-  Lock         // Added for restricted status
+  ShieldAlert, 
+  Lock         
 } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { userData, role } = useAuth();
+  const { userData, role, loading } = useAuth();
   const location = useLocation();
   const [events, setEvents] = useState([]);
   const [requestCount, setRequestCount] = useState(0);
 
-  // --- MOVE COUNTDOWN LOGIC HERE (Outside useEffect) ---
   const calculateDaysUntil = (targetDate) => {
     const diff = new Date(targetDate) - new Date();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -38,9 +38,7 @@ const AdminDashboard = () => {
 
   const daysToOrgDay = calculateDaysUntil('2026-04-02');
 
-  // Unified Data Fetching
   useEffect(() => {
-    // 1. Fetch upcoming events
     const eventsQuery = query(
       collection(db, "events"), 
       orderBy("date", "asc"), 
@@ -51,7 +49,6 @@ const AdminDashboard = () => {
       setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => console.error("Events Sync Error:", error));
 
-    // 2. Fetch Pending Uniform Requests count
     const unsubRequests = onSnapshot(collection(db, "uniform_requests"), (snapshot) => {
       const pending = snapshot.docs.filter(d => d.data().status !== 'Completed').length;
       setRequestCount(pending);
@@ -65,13 +62,10 @@ const AdminDashboard = () => {
 
   const handleLogout = () => signOut(auth);
 
-  // Commander Permissions: Top 4 and Staff
   const isCommander = role === 'battalion_4' || role === 'battalion_staff' || role === 'company_leadership';
-  
-  // Strict Top 4 Check for Teams Management
   const isTopFour = role === 'battalion_4';
+  const isStaffOrS4 = role === 'battalion_4' || role === 'battalion_staff';
 
-  // Helper to highlight active link
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -84,36 +78,85 @@ const AdminDashboard = () => {
         </div>
 
         <nav className="flex-1 space-y-2">
-          <Link to="/admin/dashboard" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/dashboard') ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+          <Link 
+            to="/admin/dashboard" 
+            className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+              isActive('/admin/dashboard') 
+                ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           
-          {isCommander && (
+          {loading ? (
             <>
-              <Link to="/admin/orders" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/orders') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+              <div className="h-10 bg-white/5 animate-pulse rounded-xl mx-1" />
+              <div className="h-10 bg-white/5 animate-pulse rounded-xl mx-1" />
+            </>
+          ) : isCommander && (
+            <>
+              {/* Personnel Management: Accessible by Top 4 and Battalion Staff */}
+              {isStaffOrS4 && (
+                <Link 
+                  to="/admin/users" 
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/users') 
+                      ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <UserCog size={18} /> Manage Personnel
+                </Link>
+              )}
+
+              <Link 
+                to="/admin/orders" 
+                className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                  isActive('/admin/orders') 
+                    ? 'bg-yellow-500 text-slate-950' 
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                }`}
+              >
                 <PlusSquare size={18} /> Issue Orders/Events
               </Link>
 
-              {/* RESTRICTED: Manage Teams Link */}
-              {isTopFour ? (
-                <Link to="/admin/teams" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/teams') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
-                  <Users size={18} /> Manage Teams
-                </Link>
-              ) : (
-                <div className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-600 cursor-not-allowed opacity-50">
-                  <Lock size={16} /> Manage Teams
-                </div>
-              )}
+              {/* Manage Teams Link */}
+              <Link 
+                to="/admin/teams" 
+                className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                  isActive('/admin/teams') 
+                    ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                {isTopFour || role === 'company_leadership' ? <Users size={18} /> : <Lock size={16} />}
+                <span>Manage Teams</span>
+              </Link>
 
-              {(role === 'battalion_4' || role === 'battalion_staff') && (
-                 <Link to="/admin/announcements" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/admin/announcements') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+              {isStaffOrS4 && (
+                 <Link 
+                   to="/admin/announcements" 
+                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                     isActive('/admin/announcements') 
+                       ? 'bg-yellow-500 text-slate-950' 
+                       : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                   }`}
+                 >
                    <Megaphone size={18} /> Global Broadcast
                  </Link>
               )}
             </>
           )}
 
-          <Link to="/uniform-requests" className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${isActive('/uniform-requests') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+          <Link 
+            to="/uniform-requests" 
+            className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
+              isActive('/uniform-requests') 
+                ? 'bg-yellow-500 text-slate-950' 
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
             <div className="flex items-center gap-3">
               <Shirt size={18} /> Uniform Items
             </div>
@@ -124,7 +167,14 @@ const AdminDashboard = () => {
             )}
           </Link>
 
-          <Link to="/photos" className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${isActive('/photos') ? 'bg-yellow-500 text-slate-950' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+          <Link 
+            to="/photos" 
+            className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+              isActive('/photos') 
+                ? 'bg-yellow-500 text-slate-950' 
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
             <BarChart3 size={18} /> Battalion Stats
           </Link>
         </nav>
@@ -165,19 +215,16 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Security Banner for Non-Top 4 Staff */}
         {!isTopFour && isCommander && (
           <div className="mb-8 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl flex items-center gap-3">
             <ShieldAlert className="text-yellow-500/50" size={18} />
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Staff Access Active. <span className="text-yellow-500/80">Command features (Teams & Rosters) are locked to Top 4.</span>
+              Staff Access Active. <span className="text-yellow-500/80">Command features are restricted based on your role.</span>
             </p>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: Command Feed */}
           <div className="lg:col-span-2 space-y-8">
             <section className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
@@ -196,7 +243,6 @@ const AdminDashboard = () => {
             </section>
           </div>
 
-          {/* Right Column: Quick Glance */}
           <div className="space-y-8">
             <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-3xl p-8 text-slate-950 shadow-lg shadow-yellow-500/10">
               <h3 className="font-black uppercase italic text-xl mb-1 text-slate-900 tracking-tighter">
@@ -228,7 +274,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Upcoming Timeline */}
             <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-xl">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">

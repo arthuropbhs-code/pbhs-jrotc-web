@@ -30,14 +30,15 @@ const Teams = () => {
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const teams = {};
-      snapshot.docs.forEach(doc => {
-        teams[doc.data().name] = { 
-          id: doc.id, 
-          ...doc.data(),
-          // Fallback icon if none defined
-          icon: iconMap[doc.data().iconName] || <Shield size={32} /> 
-        };
-      });
+snapshot.docs.forEach(doc => {
+  const data = doc.data();
+  // We use the name as the key for the state object
+  teams[data.name] = { 
+    id: doc.id, // This captures 'drones-team'
+    ...data,
+    icon: iconMap[data.iconName] || <Shield size={32} /> 
+  };
+});
       
       setTeamsData(teams);
       
@@ -53,14 +54,15 @@ const Teams = () => {
 
   const currentTeam = teamsData[activeTeam];
 
-  const handleContactCommander = () => {
-    const isOutOfSeason = currentTeam?.status === "Out of Season" || currentTeam?.status === "Not in Season";
-    const isRosterFull = currentTeam?.status === "Closed Practice";
-    
-    if (!isOutOfSeason && !isRosterFull) {
-      navigate(`/commander/${currentTeam.commanderId}`);
-    }
-  };
+const handleContactCommander = () => {
+  const isOutOfSeason = currentTeam?.status === "Out of Season" || currentTeam?.status === "Not in Season";
+  const isRosterFull = currentTeam?.status === "Closed Practice";
+  
+  if (!isOutOfSeason && !isRosterFull) {
+    // FIX: Use currentTeam.id (which is the Firestore Doc ID)
+    navigate(`/commander/${currentTeam.id}`);
+  }
+};
 
   if (loading) {
     return (
@@ -80,9 +82,9 @@ const Teams = () => {
         </Link>
 
         <header className="mb-12">
-          <h2 className="text-xs font-black text-yellow-500 tracking-[0.4em] uppercase mb-4">Extracurricular Teams</h2>
+          <h2 className="text-xs font-black text-yellow-500 tracking-[0.4em] uppercase mb-4">Extracurricular Activites</h2>
           <h1 className="text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter font-military">
-            Special <span className="text-slate-500">Teams</span>
+            Battalion <span className="text-slate-500">Teams</span>
           </h1>
         </header>
 

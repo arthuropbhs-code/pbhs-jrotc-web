@@ -1,168 +1,225 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { db } from '../firebase';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { 
-  ArrowLeft, Mail, Shield, Award, 
-  Star, Calendar, BookOpen, ExternalLink 
+  ArrowLeft, Mail, Shield, Award, Star, BookOpen, 
+  Loader2, CalendarDays, UserCircle, Users, Clock 
 } from 'lucide-react';
 
 const CommanderInfo = () => {
   const { id } = useParams();
+  const [team, setTeam] = useState(null);
+  const [leadershipDossiers, setLeadershipDossiers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Database of commander details
-  const commanderRegistry = {
-    'Drill': {
-      name: "Bryan Morrison",
-      rank: "CDT CSM",
-      position: "Command Sergeant Major / Drill Team Lead",
-      email: "pacheco@example.edu",
-      portrait: "/covers/Morrison.jpg",
-      bio: "Leading the battalion with a focus on discipline and academic excellence. Expert in Armed Exhibition and Regulation drill.",
-      achievements: ["Superior Cadet Award", "Distinguished Honor Graduate", "Drill Excellence Ribbon"],
-      yearsInProgram: "4 Years",
-    },
-    'Raider': {
-      name: "Nicholas Pacheco",
-      rank: "CDT LCOL",
-      position: "Raider Team Commander",
-      email: "tkitts@example.edu",
-      portrait: "/covers/Pacheco.jpg",
-      bio: "Dedicated to physical readiness and team tactical endurance. Spearheading the Raider conditioning program for the current season.",
-      achievements: ["Raider Challenge Medal", "Physical Fitness Excellence", "Leadership Development Ribbon"],
-      yearsInProgram: "3 Years",
-    },
-    'ColorGuard': {
-      name: "Nicholas Pacheco",
-      rank: "CDT LCOL",
-      position: "Battalion Commander / Color Guard Lead",
-      email: "morrison@example.edu",
-      portrait: "/covers/Pacheco.jpg",
-      bio: "Ensuring the highest standards of military bearing and flag etiquette across all battalion ceremonies.",
-      achievements: ["NCO of the Year", "Color Guard Excellence", "Perfect Attendance"],
-      yearsInProgram: "4 Years",
-    },
-    'JLAB': {
-      name: "Grayson Kitts",
-      rank: "c/MAJ",
-      position: "JLAB Commander",
-      email: "gkitts@example.edu",
-      portrait: "/covers/G kitts.jpg",
-      bio: "Academic lead for the battalion. Focusing on competitive recall, leadership theory, and JROTC curriculum mastery.",
-      achievements: ["Academic Excellence", "JLAB National Qualifier", "Staff Excellence Ribbon"],
-      yearsInProgram: "3 Years",
-    },
-    'Drones': {
-      name: "Max Demio",
-      rank: "CDT 2LT",
-      position: "Drone Team Commander",
-      email: "demio@example.edu",
-      portrait: "/covers/Demio.jpg",
-      bio: "Expert in UAV operations and flight safety. Managing technical missions and pilot navigation training.",
-      achievements: ["Tech Excellence Award", "Drone Pilot Certification", "Public Affairs Ribbon"],
-      yearsInProgram: "LET 3",
-    }
+  // Sorting logic: Battalion Officers (Grayson) first, then Commanders, then Co-Commanders
+  const getRankPriority = (role) => {
+    const r = role?.toUpperCase().trim() || '';
+    if (r.includes('BATTALION OFFICER')) return 0;
+    if (r === 'COMMANDER' || r === 'TEAM COMMANDER' || r.includes('DRONES COMMANDER')) return 1;
+    if (r === 'CO-COMMANDER' || r === 'TEAM CO-COMMANDER' || r.includes('CO COMMANDER')) return 2;
+    return 3;
   };
 
-  const commander = commanderRegistry[id];
+  useEffect(() => {
+    const fetchTeamAndLeadership = async () => {
+      try {
+        const normalizedId = id.toLowerCase().replace(/\s+/g, '-');
+        const teamSnap = await getDoc(doc(db, "specialTeams", normalizedId));
 
-  // Fallback if ID is not found
-  if (!commander) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6">
-        <h2 className="text-2xl font-black uppercase italic mb-4">Personnel File Not Found</h2>
-        <Link to="/teams" className="text-yellow-500 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
-          <ArrowLeft size={16} /> Return to Operations
-        </Link>
-      </div>
-    );
-  }
+        if (teamSnap.exists()) {
+          const teamData = teamSnap.data();
+          setTeam(teamData);
+
+          const leaders = teamData.leadership || [];
+          
+          const dossiersWithProfiles = await Promise.all(leaders.map(async (leader) => {
+            const emailToSearch = (leader.email || "").toLowerCase().trim();
+            let userData = {};
+
+            if (emailToSearch) {
+              const userQuery = query(collection(db, "users"), where("email", "==", emailToSearch));
+              const userSnap = await getDocs(userQuery);
+              if (!userSnap.empty) {
+                userData = userSnap.docs[0].data();
+              }
+            }
+
+            // Image path cleanup: Handles "/covers/G kitts.jpg" -> "/covers/G%20kitts.jpg"
+            let profileImg = userData.photoURL || userData.profilePicture || userData.image || null;
+            if (profileImg) {
+              // Ensure absolute path from public folder and encode spaces for browsers
+              const cleanPath = (profileImg.startsWith('http') || profileImg.startsWith('/')) 
+                ? profileImg 
+                : `/${profileImg}`;
+              profileImg = cleanPath.replace(/\s/g, '%20');
+            }
+
+            return {
+              ...userData, 
+              ...leader,
+              // Prioritize Team array data for names, User collection for metadata
+              displayName: leader.name || userData.displayName || userData.name || "Unknown Cadet",
+              displayRank: leader.rank || userData.rank || "Cadet",
+              displayRole: (leader.teamRole || leader.role || "Team Officer").toUpperCase(),
+              profileImg: profileImg,
+              mission: userData.bio || userData.missionStatement || "No mission statement currently filed.",
+              availability: userData.practiceDays || "No schedule filed"
+            };
+          }));
+
+          // Sort by tactical priority
+          setLeadershipDossiers(dossiersWithProfiles.sort((a, b) => 
+            getRankPriority(a.displayRole) - getRankPriority(b.displayRole)
+          ));
+        }
+      } catch (error) {
+        console.error("Critical Dossier Fetch Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeamAndLeadership();
+  }, [id]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6">
+      <Loader2 className="text-yellow-500 animate-spin mb-4" size={40} />
+      <h2 className="text-xs font-black uppercase tracking-[0.3em]">Accessing Battalion Dossiers...</h2>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6 pt-24 font-sans">
-      <div className="max-w-4xl mx-auto">
-        
-        <Link to="/teams" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-8 transition-colors text-sm font-bold uppercase tracking-widest">
-          <ArrowLeft size={16} /> Back to Teams
+      <div className="max-w-6xl mx-auto">
+        <Link to="/teams" className="inline-flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-8 transition-all text-xs font-black uppercase tracking-widest group">
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Teams
         </Link>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          
-          {/* Profile Sidebar */}
-          <div className="md:col-span-1 space-y-6">
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl overflow-hidden relative group">
-              <div className="aspect-square rounded-2xl overflow-hidden mb-6 border border-white/10">
-                <img 
-                  src={commander.portrait} 
-                  alt={commander.name} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                />
-              </div>
-              <h2 className="text-2xl font-black uppercase italic leading-tight">{commander.name}</h2>
-              <p className="text-yellow-500 text-xs font-black uppercase tracking-widest mt-1">{commander.rank}</p>
-              
-              <div className="mt-6 pt-6 border-t border-white/5 space-y-4">
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <Star className="text-yellow-500" size={14} /> {commander.yearsInProgram} Service
+        <div className="grid lg:grid-cols-12 gap-8">
+          {/* LEFT: PERSONNEL DOSSIERS */}
+          <div className="lg:col-span-4 space-y-6">
+            <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+              <Users size={14} /> Leadership Roster
+            </h3>
+            
+            {leadershipDossiers.map((officer, index) => (
+              <div key={index} className="bg-[#0f172a]/50 border border-white/5 rounded-[1.5rem] p-6 shadow-xl relative overflow-hidden group hover:border-yellow-500/30 transition-all">
+                
+                {/* Background Decoration */}
+                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-all duration-500 pointer-events-none">
+                  {officer.profileImg ? (
+                    <img src={officer.profileImg} alt="" className="w-24 h-24 object-cover rounded-full grayscale" />
+                  ) : (
+                    <Shield size={60} />
+                  )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <Shield className="text-yellow-500" size={14} /> Active Duty
-                </div>
-              </div>
-            </div>
 
-            <button 
-              onClick={() => window.location.href = `mailto:${commander.email}`}
-              className="w-full bg-yellow-500 text-slate-950 py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/10"
-            >
-              <Mail size={16} /> Secure Message
-            </button>
-          </div>
-
-          {/* Main Dossier Content */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl">
-              <header className="mb-8 flex justify-between items-start">
-                <div>
-                  <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.3em] mb-2">Personnel File</h3>
-                  <h4 className="text-3xl font-black uppercase italic tracking-tighter">Command Profile</h4>
-                </div>
-                <Award className="text-slate-800" size={40} />
-              </header>
-
-              <div className="space-y-8">
-                <section>
-                  <div className="flex items-center gap-3 mb-4">
-                    <BookOpen size={16} className="text-yellow-500" />
-                    <h5 className="text-xs font-black uppercase tracking-widest text-slate-200">Biography</h5>
+                <div className="flex items-center gap-4 mb-4 relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner overflow-hidden">
+                    {officer.profileImg ? (
+                      <img 
+                        src={officer.profileImg} 
+                        alt={officer.displayName} 
+                        className="w-full h-full object-cover object-top" 
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <UserCircle className="text-yellow-500" size={30} />
+                    )}
                   </div>
-                  <p className="text-slate-400 text-sm leading-relaxed italic">
-                    "{commander.bio}"
-                  </p>
-                </section>
-
-                <section>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Award size={16} className="text-yellow-500" />
-                    <h5 className="text-xs font-black uppercase tracking-widest text-slate-200">Decorations & Achievements</h5>
+                  <div>
+                    <h4 className="text-md font-black uppercase italic tracking-tight leading-none">{officer.displayName}</h4>
+                    <p className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mt-1">
+                      {officer.displayRank} • {officer.displayRole}
+                    </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {commander.achievements.map((award, i) => (
-                      <div key={i} className="bg-slate-950 border border-white/5 p-3 rounded-lg flex items-center gap-3 text-[10px] font-bold text-slate-300 uppercase tracking-tight">
-                        <div className="h-1.5 w-1.5 bg-yellow-500 rounded-full" />
-                        {award}
+                </div>
+
+                <div className="space-y-4 relative z-10">
+                  <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <BookOpen size={10} className="text-yellow-500" />
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Leadership Bio</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed italic">
+                      "{officer.mission}"
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-black/20 p-2 rounded-lg border border-white/5">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Star size={10} className="text-yellow-500" />
+                        <span className="text-[8px] font-black text-slate-500 uppercase">Training</span>
                       </div>
-                    ))}
+                      <p className="text-[10px] font-bold text-white uppercase">{officer.letLevel || 'N/A'}</p>
+                    </div>
+                    <div className="bg-black/20 p-2 rounded-lg border border-white/5">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Clock size={10} className="text-yellow-500" />
+                        <span className="text-[8px] font-black text-slate-500 uppercase">Available</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-white uppercase truncate">{officer.availability}</p>
+                    </div>
                   </div>
-                </section>
+                </div>
 
-                <div className="pt-8 border-t border-white/5 flex justify-between items-center text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                  <span>ID: AUTH-BC-{id.toUpperCase()}</span>
-                  <span>Classified: Internal Use Only</span>
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between relative z-10">
+                  <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em]">Personnel Record Verified</span>
+                  <button 
+                    onClick={() => window.location.href = `mailto:${officer.email}`}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500 text-slate-950 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
+                  >
+                    <Mail size={12} /> Contact
+                  </button>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
 
+          {/* RIGHT: UNIT OPERATIONS */}
+          <div className="lg:col-span-8 space-y-6">
+             <div className="bg-[#0f172a]/50 border border-white/5 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+                <header className="mb-10 flex justify-between items-start border-b border-white/5 pb-8 relative z-10">
+                  <div>
+                    <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em] mb-2">Team Operational File</h3>
+                    <h4 className="text-4xl font-black uppercase italic tracking-tighter">{team?.name}</h4>
+                    <p className="text-xs text-slate-400 mt-2 font-medium max-w-xl">{team?.description}</p>
+                  </div>
+                  <Award className="text-slate-800" size={48} />
+                </header>
+
+                <div className="grid md:grid-cols-2 gap-10">
+                  <section>
+                    <div className="flex items-center gap-3 mb-4">
+                      <CalendarDays size={16} className="text-yellow-500" />
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-200">Logistics</h5>
+                    </div>
+                    <div className="bg-slate-950 border border-white/5 p-4 rounded-xl mb-3">
+                      <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Practice Schedule</p>
+                      <p className="text-xs font-bold text-white uppercase">{team?.practice}</p>
+                    </div>
+                    <div className="bg-slate-950 border border-white/5 p-4 rounded-xl">
+                      <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Operational Area</p>
+                      <p className="text-xs font-bold text-white uppercase">{team?.location}</p>
+                    </div>
+                  </section>
+
+                  <section>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Shield size={16} className="text-yellow-500" />
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-200">Team Status</h5>
+                    </div>
+                    <div className="bg-yellow-500/5 border border-yellow-500/20 p-6 rounded-2xl border-l-4 border-l-yellow-500">
+                      <p className="text-xl font-black text-white uppercase italic">{team?.status}</p>
+                    </div>
+                  </section>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
     </div>

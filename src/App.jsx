@@ -18,13 +18,34 @@ import Announcements from './pages/Announcements';
 import PromotionBoard from './pages/PromotionBoard';
 import Leadership from './pages/Leadership';
 import AdminOrders from './pages/AdminOrders'; 
+import AdminAnnouncements from './pages/AdminAnnouncements'; // <--- ADD THIS IMPORT
 import UniformRequests from './pages/UniformRequests';
 import CommanderInfo from './pages/CommanderInfo';
-import AdminTeams from './pages/AdminTeams'; // <--- Add this import
+import AdminTeams from './pages/AdminTeams';
+import AdminUsers from './pages/AdminUsers';
+
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, role, loading } = useAuth();
+  
+  if (loading) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-yellow-500"></div>
+    </div>
+  );
+
+  if (!user) return <Navigate to="/admin" />;
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/admin/dashboard" />;
+  }
+
+  return children;
+};
 
 const AppContent = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const location = useLocation();
+  
   const isAdminPage = location.pathname.startsWith('/admin') || location.pathname === '/uniform-requests';
 
   if (loading) return (
@@ -38,39 +59,44 @@ const AppContent = () => {
       {!isAdminPage && <Navbar />}
       
       <Routes>
-        {/* PUBLIC ROUTES */}
+        {/* --- PUBLIC ROUTES --- */}
         <Route path="/" element={<Home />} />
         <Route path="/photos" element={<Photos />} />
         <Route path="/cadet-info" element={<CadetInfo />} />
         <Route path="/teams" element={<Teams />} />
         <Route path="/announcements" element={<Announcements />} />
         <Route path="/promotion-board" element={<PromotionBoard />} />
-        <Route path="/admin" element={<AdminLogin />} />
         <Route path="/leadership" element={<Leadership />} />
-        <Route path="/admin/signup" element={<SignUp />} />
         <Route path="/commander/:id" element={<CommanderInfo />} />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/signup" element={<SignUp />} />
 
-        {/* PROTECTED ROUTES */}
+        {/* --- PROTECTED ADMIN ROUTES --- */}
+        <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/assign-tasks" element={<ProtectedRoute><TaskManagement /></ProtectedRoute>} />
+        <Route path="/admin/orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
+        <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
+
+        {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
         <Route 
-          path="/admin/dashboard" 
-          element={user ? <AdminDashboard /> : <Navigate to="/admin" />} 
+          path="/admin/announcements" 
+          element={
+            <ProtectedRoute allowedRoles={['battalion_4', 'battalion_staff']}>
+              <AdminAnnouncements />
+            </ProtectedRoute>
+          } 
         />
+
         <Route 
-          path="/admin/assign-tasks" 
-          element={user ? <TaskManagement /> : <Navigate to="/admin" />} 
+          path="/admin/users" 
+          element={
+            <ProtectedRoute allowedRoles={['battalion_4', 'battalion_staff']}>
+              <AdminUsers />
+            </ProtectedRoute>
+          } 
         />
-        <Route 
-          path="/admin/orders" 
-          element={user ? <AdminOrders /> : <Navigate to="/admin" />} 
-        />
-        <Route 
-          path="/admin/teams" 
-          element={user ? <AdminTeams /> : <Navigate to="/admin" />} // <--- Add this route
-        />
-        <Route 
-          path="/uniform-requests" 
-          element={user ? <UniformRequests /> : <Navigate to="/admin" />} 
-        />
+
+        <Route path="/admin/teams" element={<ProtectedRoute><AdminTeams /></ProtectedRoute>} />
 
         {/* CATCH ALL */}
         <Route path="*" element={<Navigate to="/" />} />

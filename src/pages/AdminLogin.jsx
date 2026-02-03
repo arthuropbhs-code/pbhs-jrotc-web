@@ -2,31 +2,44 @@ import React, { useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowLeft, UserPlus, Shield } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2 } from 'lucide-react';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/admin/dashboard');
-    } catch (err) {
-      setError("AUTHENTICATION FAILED: Check credentials.");
+  // Trim whitespace from email
+  const cleanEmail = email.trim();
+
+  try {
+    await signInWithEmailAndPassword(auth, cleanEmail, password);
+    navigate('/admin/dashboard'); 
+  } catch (err) {
+      console.error("Login error:", err.code);
+      if (err.code === 'auth/invalid-credential') {
+        setError("Invalid email or password.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Account temporarily locked. Try again later.");
+      } else {
+        setError("Login failed. Please check your credentials.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Decorative Element */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="w-full max-w-md z-10">
-        {/* Top Navigation */}
         <div className="flex justify-between items-center mb-8">
           <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
             <ArrowLeft size={16} /> Back to Menu
@@ -56,7 +69,8 @@ const AdminLogin = () => {
               <input 
                 type="email" 
                 placeholder="CADET EMAIL" 
-                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold"
+                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold text-white"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
@@ -67,23 +81,25 @@ const AdminLogin = () => {
               <input 
                 type="password" 
                 placeholder="PASSWORD" 
-                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold"
+                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold text-white"
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
 
-            <button className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10 active:scale-[0.98]">
-              Authorize Entry
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : "Authorize Entry"}
             </button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">First time here?</p>
-            <Link 
-              to="/admin/signup" 
-              className="flex items-center gap-2 text-white hover:text-yellow-500 transition-colors font-black uppercase text-xs"
-            >
+            <Link to="/admin/signup" className="flex items-center gap-2 text-white hover:text-yellow-500 transition-colors font-black uppercase text-xs">
               <UserPlus size={16} /> Create Cadet Account
             </Link>
           </div>

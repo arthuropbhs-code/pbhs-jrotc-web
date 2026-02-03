@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -10,33 +10,46 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          // 1. Get the user's UID
-          const uid = firebaseUser.uid;
-          // 2. Fetch their specific data from Firestore
-          const docRef = doc(db, "users", uid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            setRole(docSnap.data().role);
-            setUserData(docSnap.data());
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // 1. Set the basic user object first
+        setUser(firebaseUser);
+
+        // 2. Start the listener for the Firestore user document
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        
+        const unsubscribeDoc = onSnapshot(userDocRef, 
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setUserData(data);
+              setRole(data.role || 'cadet');
+            } else {
+              // Doc missing in Firestore
+              setUserData(null);
+              setRole('guest');
+            }
+            setLoading(false);
+          }, 
+          (error) => {
+            console.warn("Firestore: Access pending or denied.", error);
+            setRole('guest');
+            setLoading(false);
           }
-          setUser(firebaseUser);
-        } else {
-          setUser(null);
-          setRole(null);
-          setUserData(null);
-        }
-      } catch (error) {
-        console.error("Auth Hook Error:", error);
-      } finally {
+        );
+
+        // Cleanup doc listener if auth changes
+        return () => unsubscribeDoc();
+      } else {
+        // No user logged in
+        setUser(null);
+        setRole(null);
+        setUserData(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   return { user, role, userData, loading };
