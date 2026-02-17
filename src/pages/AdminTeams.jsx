@@ -6,33 +6,31 @@ import { Navigate, Link } from 'react-router-dom';
 import { 
   Save, Trash2, Edit3, ShieldAlert, 
   ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
-  UserCircle, BookOpen, Calendar, Settings2
+  UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks
 } from 'lucide-react';
 import { ROLE_HIERARCHY } from '../constants';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('teams'); // 'teams' or 'dossier'
+  const [activeTab, setActiveTab] = useState('teams'); 
   const [teams, setTeams] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [showStatus, setShowStatus] = useState(null); 
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
 
-  // Team Form State
+  // Team Form State - ADDED disciplines
   const [formData, setFormData] = useState({
     name: '', status: 'Open Practice', description: '', practice: '', location: '',
-    requirements: '', teamEvents: '', leadership: [] 
+    requirements: '', disciplines: '', teamEvents: '', leadership: [] 
   });
 
-  // Personal Dossier State (Text Only)
   const [dossier, setDossier] = useState({
     bio: userData?.bio || '',
     practiceDays: userData?.practiceDays || ''
   });
   const [uploading, setUploading] = useState(false);
 
-  // 1. Auth & Hierarchy Logic
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isPowerUser = userLevel >= 90; 
   const userEmail = user?.email?.toLowerCase().trim();
@@ -51,7 +49,6 @@ const AdminTeams = () => {
     }
   }, [authLoading, user]);
 
-  // Sync personal dossier state if userData loads late
   useEffect(() => {
     if (userData) {
       setDossier({
@@ -71,19 +68,16 @@ const AdminTeams = () => {
   const teamSpecificRole = userInTeam?.teamRole || 'Team Member';
   const canEditMainFields = isPowerUser || teamSpecificRole === "Commander" || teamSpecificRole === "Co-Commander";
 
-  // --- DOSSIER HANDLERS ---
   const handleUpdateDossier = async (e) => {
     e.preventDefault();
     setUploading(true);
     const userRef = doc(db, "users", user.uid);
-    
     try {
       await updateDoc(userRef, {
         bio: dossier.bio,
         practiceDays: dossier.practiceDays,
         updatedAt: new Date()
       });
-      
       setShowStatus('success');
       setTimeout(() => setShowStatus(null), 4000);
     } catch (err) {
@@ -94,7 +88,6 @@ const AdminTeams = () => {
     }
   };
 
-  // --- TEAM HANDLERS ---
   const addLeader = () => {
     setFormData({
       ...formData,
@@ -118,6 +111,7 @@ const AdminTeams = () => {
     setFormData({
       ...team,
       requirements: Array.isArray(team.requirements) ? team.requirements.join(', ') : '',
+      disciplines: Array.isArray(team.disciplines) ? team.disciplines.join(', ') : '', // Map array to string
       teamEvents: Array.isArray(team.teamEvents) ? team.teamEvents.join(', ') : '',
       leadership: team.leadership || []
     });
@@ -135,6 +129,7 @@ const AdminTeams = () => {
       ...formData,
       commanderEmails,
       requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()).filter(Boolean) : [],
+      disciplines: formData.disciplines ? formData.disciplines.split(',').map(d => d.trim()).filter(Boolean) : [], // Map string to array
       teamEvents: formData.teamEvents ? formData.teamEvents.split(',').map(e => e.trim()).filter(Boolean) : [],
       updatedAt: new Date(),
       lastUpdatedBy: userEmail
@@ -143,7 +138,7 @@ const AdminTeams = () => {
     try {
       await setDoc(doc(db, "specialTeams", docId), finalData);
       setEditingId(null);
-      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', teamEvents: '', leadership: [] });
+      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', teamEvents: '', leadership: [] });
       setShowStatus('success');
       setTimeout(() => setShowStatus(null), 4000);
     } catch (err) {
@@ -189,7 +184,6 @@ const AdminTeams = () => {
               </h1>
             </div>
             
-            {/* TAB SELECTOR */}
             <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
               <button 
                 onClick={() => setActiveTab('teams')}
@@ -209,7 +203,6 @@ const AdminTeams = () => {
         </header>
 
         {activeTab === 'teams' ? (
-          /* --- ORIGINAL TEAM MANAGEMENT CODE --- */
           <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in duration-500">
             <div className="lg:col-span-2">
               <form onSubmit={handleSaveTeam} className="bg-[#0f172a]/50 border border-white/5 p-8 rounded-3xl space-y-8">
@@ -248,6 +241,35 @@ const AdminTeams = () => {
                   <input value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white" placeholder="Location" />
                 </div>
 
+                {/* --- NEW FIELDS: CORE DISCIPLINES & REQUIREMENTS --- */}
+                <div className="grid md:grid-cols-2 gap-6 border-t border-white/5 pt-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest flex items-center gap-2">
+                      <Target size={12}/> Teams & Events
+                    </label>
+                    <input 
+                      value={formData.disciplines} 
+                      onChange={(e) => setFormData({...formData, disciplines: e.target.value})} 
+                      className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white outline-none focus:border-yellow-500/50" 
+                      placeholder="e.g. Armed Drill, Color Guard, Unarmed" 
+                    />
+                    <p className="text-[9px] text-slate-600 ml-1">Separate with commas</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest flex items-center gap-2">
+                      <ListChecks size={12}/> Joining Requirements
+                    </label>
+                    <input 
+                      value={formData.requirements} 
+                      onChange={(e) => setFormData({...formData, requirements: e.target.value})} 
+                      className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white outline-none focus:border-yellow-500/50" 
+                      placeholder="e.g. 2.5 GPA, Passing PT Score" 
+                    />
+                    <p className="text-[9px] text-slate-600 ml-1">Separate with commas</p>
+                  </div>
+                </div>
+
+                {/* --- LEADERSHIP SECTION --- */}
                 <div className="space-y-6 border-t border-white/5 pt-8">
                   <div className="flex justify-between items-center">
                     <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2"><Users size={14}/> Team Leadership</h3>
@@ -322,7 +344,7 @@ const AdminTeams = () => {
                     {isPowerUser && (
                       <button onClick={(e) => {
                         e.stopPropagation();
-                        setDeleteConfirm({ open: true, id: team.id, name: team.name });
+                        setDeleteConfirm({ open: true, id: null, name: team.name });
                       }} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
                         <Trash2 size={16}/>
                       </button>
@@ -333,7 +355,7 @@ const AdminTeams = () => {
             </div>
           </div>
         ) : (
-          /* --- PERSONNEL DOSSIER VIEW (NEW) --- */
+          /* Dossier View remains unchanged */
           <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
             <form onSubmit={handleUpdateDossier} className="bg-[#0f172a]/50 border border-white/5 p-10 rounded-[40px] shadow-2xl space-y-8">
               <div className="flex items-center gap-6">
@@ -389,7 +411,6 @@ const AdminTeams = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirm.open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
           <div className="bg-slate-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">

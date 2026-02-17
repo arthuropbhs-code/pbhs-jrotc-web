@@ -23,6 +23,8 @@ import UniformRequests from './pages/UniformRequests';
 import CommanderInfo from './pages/CommanderInfo';
 import AdminTeams from './pages/AdminTeams';
 import AdminUsers from './pages/AdminUsers';
+import AboutPage from './pages/AboutPage';
+import CalendarPage from './pages/CalendarPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, role, loading } = useAuth();
@@ -70,12 +72,14 @@ const AppContent = () => {
         <Route path="/commander/:id" element={<CommanderInfo />} />
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/signup" element={<SignUp />} />
+        <Route path="/about" element={<AboutPage />} />
 
         {/* --- PROTECTED ADMIN ROUTES --- */}
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/assign-tasks" element={<ProtectedRoute><TaskManagement /></ProtectedRoute>} />
         <Route path="/admin/orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
         <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
+        <Route path="/events" element={<CalendarPage />} />
 
         {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
         <Route 

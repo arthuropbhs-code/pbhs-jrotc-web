@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2 } from 'lucide-react';
+import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -10,18 +11,59 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
 
-  // Trim whitespace from email
-  const cleanEmail = email.trim();
+  // NEW: Logic to prevent duplicates by merging manual records on login
+  const handleProfileMerge = async (authUser) => {
+    try {
+      const userRef = doc(db, "users", authUser.uid);
+      const userSnap = await getDoc(userRef);
 
-  try {
-    await signInWithEmailAndPassword(auth, cleanEmail, password);
-    navigate('/admin/dashboard'); 
-  } catch (err) {
+      // If the user document doesn't have a name yet, check for a manual "Ghost" record
+      if (!userSnap.exists() || !userSnap.data().fullName) {
+        const manualQuery = query(
+          collection(db, "users"),
+          where("email", "==", authUser.email),
+          where("isManual", "==", true)
+        );
+        
+        const manualSnap = await getDocs(manualQuery);
+        
+        if (!manualSnap.empty) {
+          const manualDoc = manualSnap.docs[0];
+          const manualData = manualDoc.data();
+
+          // 1. Move manual data to the new UID doc
+          await setDoc(userRef, {
+            ...manualData,
+            uid: authUser.uid,
+            email: authUser.email,
+            isManual: false,
+            linkedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+
+          // 2. Delete the old manual duplicate
+          await deleteDoc(doc(db, "users", manualDoc.id));
+          console.log("Duplicate prevented: Manual record merged.");
+        }
+      }
+    } catch (err) {
+      console.error("Merge error:", err);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const cleanEmail = email.trim();
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      // Run the merge check immediately after login
+      await handleProfileMerge(userCredential.user);
+      navigate('/admin/dashboard'); 
+    } catch (err) {
       console.error("Login error:", err.code);
       if (err.code === 'auth/invalid-credential') {
         setError("Invalid email or password.");
@@ -104,10 +146,6 @@ const handleLogin = async (e) => {
             </Link>
           </div>
         </div>
-        
-        <p className="text-center mt-8 text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
-          Property of PBHS JROTC
-        </p>
       </div>
     </div>
   );

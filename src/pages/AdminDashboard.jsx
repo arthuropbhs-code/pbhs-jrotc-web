@@ -13,7 +13,7 @@ import {
   PlusSquare,
   BarChart3,
   Users,
-  UserCog, // Added for Personnel Management
+  UserCog, 
   Shirt,
   Calendar,
   ChevronRight,
@@ -96,7 +96,6 @@ const AdminDashboard = () => {
             </>
           ) : isCommander && (
             <>
-              {/* Personnel Management: Accessible by Top 4 and Battalion Staff */}
               {isStaffOrS4 && (
                 <Link 
                   to="/admin/users" 
@@ -121,7 +120,6 @@ const AdminDashboard = () => {
                 <PlusSquare size={18} /> Issue Orders/Events
               </Link>
 
-              {/* Manage Teams Link */}
               <Link 
                 to="/admin/teams" 
                 className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
@@ -228,7 +226,6 @@ const AdminDashboard = () => {
           <div className="lg:col-span-2 space-y-8">
             <section className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-              
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl font-black uppercase italic flex items-center gap-3">
                   <ClipboardCheck className="text-yellow-500" /> Command Feed
@@ -238,7 +235,6 @@ const AdminDashboard = () => {
                   Live Updates
                 </span>
               </div>
-              
               <MyDuties /> 
             </section>
           </div>
@@ -263,25 +259,17 @@ const AdminDashboard = () => {
                     <p className="text-[8px] font-black uppercase">Days Left</p>
                   </div>
                 </div>
-
-                <div className="bg-black/10 backdrop-blur-md p-4 rounded-2xl border border-black/5">
-                  <p className="text-[10px] font-black uppercase mb-1 text-slate-900">Operational Readiness</p>
-                  <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
-                    <div className="bg-slate-950 h-full w-[85%]"></div> 
-                  </div>
-                  <p className="text-[9px] font-bold mt-2 text-right text-slate-900">85% ALPHA STRENGTH</p>
-                </div>
               </div>
             </div>
 
             <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-xl">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
-                   <Calendar size={14} /> Upcoming Ops
+                   <Calendar size={14} /> Upcoming Events
                 </h3>
                 <Link to="/events" className="text-yellow-500 p-1 hover:bg-yellow-500/10 rounded-lg transition-all">
-                  <ChevronRight size={16} />
-                </Link>
+  <ChevronRight size={16} />
+</Link>
               </div>
               
               <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-white/5">

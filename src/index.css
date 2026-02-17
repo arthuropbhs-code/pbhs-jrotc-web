@@ -17,3 +17,7 @@
   background-color: #020617;
   color: #f1f5f9;
 }
+
+.nav-link-glow:hover {
+  text-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+}

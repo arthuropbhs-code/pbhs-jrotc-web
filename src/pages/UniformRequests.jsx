@@ -1,33 +1,174 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
-import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen } from 'lucide-react';
+import { db, auth } from '../firebase';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Import constants
+import { ROLE_HIERARCHY } from '../constants';
+
 const UniformRequests = () => {
   const [requests, setRequests] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
   const [filter, setFilter] = useState('Pending');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showRegs, setShowRegs] = useState(false); // Toggle for regulations
+  const [showRegs, setShowRegs] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
+  // --- NOTIFICATION & VALIDATION STATE ---
+  const [notification, setNotification] = useState(null); 
+  const [deleteConfirm, setDeleteConfirm] = useState(null); 
+
+  // Form State
+  const [formData, setFormData] = useState({
+    issuedBy: '',   
+    cadetName: '',  
+    company: 'Uniform', 
+    rank: '', 
+    item: '', 
+    detail: '', 
+    notes: ''
+  });
+
+  const showNotify = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // --- PERMISSION LOGIC ---
+  const userRole = userProfile?.role || 'cadet';
+  const userLevel = ROLE_HIERARCHY[userRole] || 1;
+
+  // Level 80 (S4) and 90-100 (Grayson/Top Command)
+  const isS4Master = userRole === 's4_logistics' || userLevel >= 90;
+  
+  // General Staff (S1-S7) excluding S4
+  const isStaffObserver = userLevel >= 70 && userLevel <= 80 && userRole !== 's4_logistics';
+
+  // Company Leadership (Level 40-55)
+  const isCompanyLeadership = userLevel >= 40 && userLevel <= 55;
+
+  // S4 Assistant (Specifically Level 35)
+  const isS4Assistant = userRole.includes('s4_assistant') && userLevel === 35;
+
+  // FIX 1: New Issuance button is only for S4 Masters and S4 Assistants
+  const canAccessCreateButton = isS4Master || isS4Assistant;
+
+  // --- DATA FETCHING ---
   useEffect(() => {
+    const fetchProfile = async () => {
+      if (auth.currentUser) {
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserProfile(data);
+          
+          setFormData(prev => ({ 
+            ...prev, 
+            // FIX 2: Issued By defaults to current user if they are S4 Staff
+            issuedBy: (isS4Master || isS4Assistant) ? (data.fullName || '') : '',
+            company: data.company || 'Uniform'
+          }));
+        }
+      }
+    };
+    fetchProfile();
+
     const q = query(collection(db, "uniform_requests"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allReqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const filteredByHierarchy = allReqs.filter(req => {
+        if (isS4Master || isStaffObserver) return true;
+        if (isS4Assistant || isCompanyLeadership) return req.company === userProfile?.company;
+        return req.cadetName === userProfile?.fullName;
+      });
+
+      setRequests(filteredByHierarchy);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userRole, userProfile?.fullName, userLevel]);
 
+  // --- DATA CONFIGURATION ---
+  const OFFICIAL_RIBBONS = ["Medal for Heroism (Ribbon)", "Superior Cadet Award (Ribbon)", "N-1-1 Distinguished Cadet", "N-1-2 Academic Excellence", "N-1-3 Academic Achievement", "N-1-4 Perfect Attendance", "N-1-5 Student Governement", "N-1-6 LET Service", "N-1-7 Superior Instructor", "N-1-8 CPR First Aid", "N-1-9 Distinguished Cadet", "N-1-10 Honor Cadet", "N-3-1 Dai/Sai Leadership", "N-3-2 Personal Appearance", "N-3-3 Proficiency", "N-3-4 Drill Team", "N-3-5 Orienteering", "N-3-6 Color | Honor Guard", "N-3-7 Rifle Marksmanship", "N-3-8 Adventure Training", "N-3-9 Commendation", "N-3-10 Good Conduct", "N-3-11 JCLC Participation", "N-3-12 Championship Drill", "N-3-13 Raider Team", "N-3-14 Recondo / Rappelling", "N-3-15 Meritorious Actions", "N-2-1 Varsity Athletics", "N-2-2 Physical Fitness", "N-2-3 JROTC Athletics", "N-2-4 Junior Varsity Athletics", "N-2-5 Athletic Service", "N-4-1 Parade", "N-4-2 Recruiting", "N-4-3 School Support", "N-4-4 Community Service", "N-4-5 Confidence Course", "N-4-6 Service Learning", "N-4-7 Excellent Staff Performance", "Company Commander of the Quarter", "Company XO of the Quarter", "100 Flags", "Funeral Detail"];
+  const JROTC_RANKS = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
+  const ARCS = ["Cadet Challenge", "Color Guard", "Drill Team", "Flag Detail", "Fundraising", "JCLC", "Raider", "Saber Team", "Staff"];
+  const MEDALS = ["JPA Medal", "100 Flag Medal", "Superior Cadet Medal"];
+
+  const supplyOptions = {
+    "Uniform Components": ["Class A Jacket (Male)", "Class A Jacket (Female)", "Class B Shirt (Male)", "Class B Shirt (Female)", "Male Pants", "Female Pants"],
+    "OCP Gear": ["OCP Shirt", "OCP Jacket", "OCP Pants", "OCP Belt"],
+    "Accoutrements": ["Ribbons", "Medals", "Arcs", "Unit Crest", "Rank Insignia"],
+    "PT Gear": ["PT Shirt", "PT Shorts"]
+  };
+
+  const detailOptions = {
+    "Ribbons": OFFICIAL_RIBBONS,
+    "Medals": MEDALS,
+    "Arcs": ARCS,
+    "Rank Insignia": JROTC_RANKS,
+    "Uniform Components": ["34S", "34R", "36S", "36R", "38R", "38L", "40R", "42R", "14.5 Neck", "15.5 Neck", "Size 2 (F)", "Size 4 (F)", "Size 6 (F)"],
+    "OCP Gear": ["XS-R", "S-R", "M-R", "L-R", "L-L"],
+    "PT Gear": ["Small", "Medium", "Large", "XL"]
+  };
+
+  // --- ACTIONS ---
   const handleToggleStatus = async (id, currentStatus) => {
+    if (!isS4Master) {
+      showNotify("Access Denied: Only S-4 or Command can issue items.", "error");
+      return;
+    }
     const newStatus = currentStatus === 'Pending' ? 'Completed' : 'Pending';
     await updateDoc(doc(db, "uniform_requests", id), { status: newStatus });
+    showNotify(`Request marked as ${newStatus}`);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to remove this request?")) {
-      await deleteDoc(doc(db, "uniform_requests", id));
+    if (!isS4Master) return;
+    await deleteDoc(doc(db, "uniform_requests", id));
+    setDeleteConfirm(null);
+    showNotify("Request permanently deleted", "error");
+  };
+
+  const handleSubmitRequest = async (e) => {
+    e.preventDefault();
+    if (isCompanyLeadership) return;
+
+    const finalIssuedBy = isS4Assistant ? (userProfile?.fullName) : formData.issuedBy;
+    
+    if (!finalIssuedBy || !formData.cadetName || !formData.company || !formData.item || (formData.item !== "Unit Crest" && !formData.detail)) {
+      showNotify("Incomplete Information.", "error");
+      return;
     }
+
+    try {
+      await addDoc(collection(db, "uniform_requests"), {
+        ...formData,
+        issuedBy: finalIssuedBy,
+        status: 'Pending',
+        timestamp: serverTimestamp()
+      });
+      setShowModal(false);
+      setFormData(prev => ({ 
+        ...prev, 
+        cadetName: '', 
+        item: '', 
+        detail: '', 
+        notes: '' 
+      }));
+      showNotify("Request Logged Successfully!");
+    } catch (err) { 
+      showNotify("System Error.", "error");
+    }
+  };
+
+  const getDetailLabel = () => {
+    if (formData.item === "Ribbons") return "Select Ribbon Name";
+    if (formData.item === "Medals") return "Select Medal Type";
+    if (formData.item === "Arcs") return "Select Arc Name";
+    if (formData.item === "Rank Insignia") return "Select Rank Level";
+    return "Select Size / Specification";
   };
 
   const filteredRequests = requests.filter(req => {
@@ -38,112 +179,216 @@ const UniformRequests = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <Link to="/admin/dashboard" className="text-yellow-500 flex items-center gap-2 text-sm font-bold mb-2 hover:underline">
-            <ArrowLeft size={16} /> Back to Command
-          </Link>
-          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Shirt className="text-yellow-500" /> Supply Room
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowRegs(!showRegs)}
-            className="flex items-center gap-2 bg-slate-900 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/5 transition-all"
-          >
-            <BookOpen size={16} /> {showRegs ? "Hide Regs" : "View Regs"}
-          </button>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            <input 
-              type="text"
-              placeholder="Search Cadet..."
-              className="bg-slate-900 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:border-yellow-500 outline-none transition-all"
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5">
-            {['Pending', 'Completed'].map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${filter === s ? 'bg-yellow-500 text-slate-950' : 'text-slate-500 hover:text-white'}`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Regulations Section (Conditional) */}
+    <div className="min-h-screen bg-slate-950 text-white p-8 pt-24 font-sans">
+      
+      {/* Notifications */}
       <AnimatePresence>
-        {showRegs && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="max-w-6xl mx-auto mb-12 overflow-hidden"
-          >
-            <div className="bg-white p-8 rounded-3xl shadow-xl text-slate-900 grid md:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-xl font-black uppercase italic mb-4 border-b-2 border-yellow-500 inline-block">Male Standards</h2>
-                <ul className="space-y-2 text-sm font-medium text-slate-600">
-                  <li className="flex gap-2"><span>•</span> Hair: Neat appearance, not touching ears/collar.</li>
-                  <li className="flex gap-2"><span>•</span> Shaving: Face must be clean-shaven.</li>
-                  <li className="flex gap-2"><span>•</span> Gigline: Belt, shirt, and fly must be aligned.</li>
-                </ul>
-              </div>
-              <div>
-                <h2 className="text-xl font-black uppercase italic mb-4 border-b-2 border-yellow-500 inline-block">Female Standards</h2>
-                <ul className="space-y-2 text-sm font-medium text-slate-600">
-                  <li className="flex gap-2"><span>•</span> Hair: Must not fall below bottom edge of collar.</li>
-                  <li className="flex gap-2"><span>•</span> Jewelry: Gold, silver, or pearl studs only.</li>
-                  <li className="flex gap-2"><span>•</span> Cosmetics: Professional and conservative.</li>
-                </ul>
-              </div>
-            </div>
+        {notification && (
+          <motion.div initial={{ opacity: 0, y: -50, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: -50, x: '-50%' }} className={`fixed top-10 left-1/2 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border-l-4 ${notification.type === 'error' ? 'bg-slate-900 border-red-500 text-red-400' : 'bg-slate-900 border-yellow-500 text-yellow-500'}`}>
+            {notification.type === 'error' ? <AlertCircle size={18}/> : <Bell size={18}/>}
+            <span className="text-[11px] font-black uppercase tracking-wider">{notification.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Requests Grid */}
+      {/* Delete Confirm */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-white/10 p-8 rounded-[2rem] max-w-sm w-full text-center">
+              <div className="bg-red-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-xl font-black uppercase italic mb-2">Delete Record?</h3>
+              <p className="text-slate-400 text-xs font-bold mb-6 uppercase tracking-tight">This action will permanently remove this logistics record.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 rounded-xl bg-white/5 font-black uppercase text-[10px]">Cancel</button>
+                <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 py-3 rounded-xl bg-red-600 font-black uppercase text-[10px]">Delete</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <Link to="/admin/dashboard" className="text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-2 hover:opacity-70 transition-all">
+            <ArrowLeft size={14} /> Back to Command
+          </Link>
+          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+            <Package className="text-yellow-500" /> S-4 Logistics
+          </h1>
+          <div className="flex gap-2 mt-2">
+            <span className="bg-yellow-500 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">Level {userLevel}</span>
+            <p className="text-slate-500 text-[10px] font-bold uppercase">{userRole.replace('_', ' ')}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative mr-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+            <input 
+              type="text"
+              placeholder="Search Records..."
+              className="bg-slate-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-xs focus:border-yellow-500 outline-none w-48"
+              onChange={(e) => setSearchTerm(e.target.value || '')}
+            />
+          </div>
+          {/* FIX 1: BUTTON GATED FOR COMPANY LEADERSHIP */}
+          {canAccessCreateButton && (
+            <button onClick={() => setShowModal(true)} className="bg-yellow-500 text-slate-950 px-6 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-yellow-400 transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/10">
+              <Plus size={16} /> New Issuance
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto mb-6 flex bg-slate-900/50 p-1 rounded-xl w-fit border border-white/5">
+        {['Pending', 'Completed'].map((s) => (
+          <button key={s} onClick={() => setFilter(s)} className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${filter === s ? 'bg-yellow-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {/* Grid */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredRequests.length > 0 ? filteredRequests.map((req) => (
-          <div key={req.id} className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-xl relative group">
+        {filteredRequests.map((req) => (
+          <div key={req.id} className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all hover:border-white/10">
             <div className={`absolute top-0 left-0 w-1 h-full ${req.status === 'Pending' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="font-black text-lg leading-tight uppercase tracking-tighter">{req.cadetName}</h3>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{req.company} | {req.rank}</p>
+                <h3 className="font-black text-lg uppercase tracking-tighter">{req.cadetName}</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">Issued By: {req.issuedBy || "S-4 Staff"}</p>
               </div>
-              <button onClick={() => handleDelete(req.id)} className="text-slate-700 hover:text-red-500"><Trash2 size={16} /></button>
+              {isS4Master && (
+                <button onClick={() => setDeleteConfirm(req.id)} className="text-slate-700 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+              )}
             </div>
-            <div className="bg-white/5 rounded-xl p-4 mb-6 border border-white/5">
-              <p className="text-[10px] font-black uppercase text-yellow-500 mb-1">Requested Item</p>
+            
+            <div className="bg-black/20 rounded-xl p-4 mb-6 border border-white/5">
+              <p className="text-[10px] font-black uppercase text-yellow-500 mb-1">Item Info</p>
               <p className="text-sm font-bold text-slate-200">{req.item}</p>
-              {req.size && <p className="text-[10px] text-slate-400 font-bold mt-1">SIZE: {req.size}</p>}
+              <div className="flex justify-between mt-3 pt-3 border-t border-white/5">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{req.detail || 'Standard Issue'}</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{req.company}</span>
+              </div>
             </div>
-            <button 
-              onClick={() => handleToggleStatus(req.id, req.status)}
-              className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all ${
-                req.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-slate-950' : 'bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white'
-              }`}
-            >
-              {req.status === 'Pending' ? <><Clock size={14} /> Mark Issued</> : <><CheckCircle2 size={14} /> Completed</>}
-            </button>
+
+            {isS4Master ? (
+              <button 
+                onClick={() => handleToggleStatus(req.id, req.status)}
+                className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all ${
+                  req.status === 'Pending' ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400' : 'bg-green-500/10 text-green-500'
+                }`}
+              >
+                {req.status === 'Pending' ? <><Clock size={14} /> Mark Issued</> : <><CheckCircle2 size={14} /> Completed</>}
+              </button>
+            ) : (
+              <div className={`w-full py-3 rounded-xl font-black uppercase text-[10px] text-center border border-white/5 ${req.status === 'Pending' ? 'text-yellow-500/40' : 'text-green-500'}`}>
+                {req.status === 'Pending' ? "Awaiting S-4 Approval" : "Item Issued"}
+              </div>
+            )}
           </div>
-        )) : (
-          <div className="col-span-full py-20 text-center bg-slate-900/50 rounded-3xl border border-dashed border-white/10">
-            <Shirt className="mx-auto text-slate-800 mb-4" size={48} />
-            <p className="text-slate-500 font-bold italic">No {filter.toLowerCase()} requests found.</p>
+        ))}
+      </div>
+
+      {/* ISSUANCE MODAL */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Issue Supply</h2>
+                <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white"><X /></button>
+              </div>
+
+              <form onSubmit={handleSubmitRequest} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1 flex items-center gap-1">
+                    <UserCheck size={12}/> Issued By
+                  </label>
+                  <input 
+                    readOnly={isS4Assistant}
+                    className={`w-full bg-black/30 border border-white/5 p-3 rounded-xl text-sm outline-none ${isS4Assistant ? 'text-slate-400 cursor-not-allowed' : 'focus:border-yellow-500 text-white'}`} 
+                    value={isS4Assistant ? (userProfile?.fullName || '') : formData.issuedBy} 
+                    onChange={e => setFormData({...formData, issuedBy: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* FIX 3: RECIPIENT NAME NOW TYPABLE */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-yellow-500 ml-1">
+                      Recipient Cadet
+                    </label>
+                    <input 
+                      placeholder="Type Cadet Name" 
+                      className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white outline-none focus:border-yellow-500" 
+                      value={formData.cadetName} 
+                      onChange={e => setFormData({...formData, cadetName: e.target.value})} 
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">
+                      Company
+                    </label>
+                    <select 
+                      className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white" 
+                      value={formData.company} 
+                      onChange={e => setFormData({...formData, company: e.target.value || 'Uniform'})}
+                    >
+                      <option value="Uniform">Uniform</option>
+                      <option value="Victor">Victor</option>
+                      <option value="Whisky">Whisky</option>
+                      <option value="X-Ray">X-Ray</option>
+                      <option value="Yankee">Yankee</option>
+                      <option value="Battalion">Battalion</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Select Item</label>
+                  <select className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white" value={formData.item || ''} onChange={e => setFormData({...formData, item: e.target.value || '', detail: ''})}>
+                    <option value="">Choose Supply...</option>
+                    {Object.entries(supplyOptions).map(([cat, items]) => (
+                      <optgroup key={cat} label={cat}>
+                        {items.map(i => <option key={i} value={i}>{i}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                {formData.item && formData.item !== "Unit Crest" && (
+                  <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-yellow-500 ml-1 flex items-center gap-1"><Target size={10}/> {getDetailLabel()}</label>
+                    <select className="w-full bg-black/50 border border-yellow-500/20 p-3 rounded-xl text-sm text-white focus:border-yellow-500" value={formData.detail || ''} onChange={e => setFormData({...formData, detail: e.target.value || ''})}>
+                      <option value="">Select Option...</option>
+                      {(detailOptions[formData.item] || detailOptions[Object.keys(supplyOptions).find(cat => supplyOptions[cat].includes(formData.item))])?.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </motion.div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Logistics Notes</label>
+                  <textarea placeholder="Reason for issuance or size requests..." className="w-full h-24 bg-black/50 border border-white/10 p-3 rounded-xl text-sm outline-none" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value || ''})} />
+                </div>
+
+                <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-500/10">
+                  {isS4Assistant ? "Submit Request to S-4" : "Complete Transaction"}
+                </button>
+              </form>
+            </motion.div>
           </div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 };
