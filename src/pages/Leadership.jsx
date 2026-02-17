@@ -10,42 +10,42 @@ const Leadership = () => {
     role: "Battalion Commander", 
     rank: "c/LTC", 
     name: "Nicholas Pacheco",
-    portrait: "/covers/Pacheco.jpg" 
+    portrait: "/covers/Pacheco.webp" 
   };
   const deputy = { 
     role: "Deputy Commander", 
     rank: "c/MAJ", 
     name: "Thomas Kitts",
-    portrait: "/covers/T kitts.jpg" 
+    portrait: "/covers/T kitts.webp" 
   };
   const xo = { 
     role: "Executive Officer", 
     rank: "c/MAJ", 
     name: "Grayson Kitts",
-    portrait: "/covers/G kitts.jpg" 
+    portrait: "/covers/G kitts.webp" 
   };
   const csm = { 
     role: "Command Sergeant Major", 
     rank: "c/CSM", 
     name: "Bryan Morrison",
-    portrait: "/covers/Morrison.jpg" 
+    portrait: "/covers/Morrison.webp" 
   };
   const smm = { 
     role: "Sergeant Major", 
     rank: "c/SGM", 
     name: "Kiryn Williams",
-    portrait: "/covers/William.jpg" 
+    portrait: "/covers/William.webp" 
   };
 
   // Staff Data with Portraits Added
   const staff = [
-    { role: "S-1 Adjutant", name: "Chealse Valcourt", desc: "Personnel & Administration", portrait: "/covers/Valcourt.jpg" },
-    { role: "S-2 Safety", name: "Jack Nulty", desc: "Safety & Security", portrait: "/covers/Nulty.jpg" },
-    { role: "S-3 Operations", name: "Patrick Brown", desc: "Training & Operations", portrait: "/covers/Brown.jpg" },
-    { role: "S-4 Logistics", name: "Micah McMorris", desc: "Supply & Logistics", portrait: "/covers/McMorris.jpg" },
-    { role: "S-5 Special Projects", name: "Jasmine Morales", desc: "Public Affairs & Media", portrait: "/covers/Morales.jpg" },
-    { role: "S-6 Technology", name: "Kourtney Savage", desc: "Technology & Algorithms", portrait: "/covers/Savage.jpg" },
-    { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting", portrait: "/covers/Jarussi.jpg" },
+    { role: "S-1 Adjutant", name: "Chealse Valcourt", desc: "Personnel & Administration", portrait: "/covers/Valcourt.webp" },
+    { role: "S-2 Safety", name: "Jack Nulty", desc: "Safety & Security", portrait: "/covers/Nulty.webp" },
+    { role: "S-3 Operations", name: "Patrick Brown", desc: "Training & Operations", portrait: "/covers/Brown.webp" },
+    { role: "S-4 Logistics", name: "Micah McMorris", desc: "Supply & Logistics", portrait: "/covers/McMorris.webp" },
+    { role: "S-5 Special Projects", name: "Jasmine Morales", desc: "Public Affairs & Media", portrait: "/covers/Morales.webp" },
+    { role: "S-6 Technology", name: "Kourtney Savage", desc: "Technology & Algorithms", portrait: "/covers/Savage.webp" },
+    { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting", portrait: "/covers/Jarussi.webp" },
   ];
 
   const companies = [

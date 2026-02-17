@@ -9,42 +9,42 @@ const Home = () => {
   // --- UPDATED SLIDESHOW DATA ---
   const slides = [
     {
-      url: "/covers/Yuletide2025.JPG", 
+      url: "/covers/Yuletide2025.webp", 
       title: "TORNADO",
       subtitle: "BATTALION",
     },
     {
-      url: "/covers/Raiders_Awards.JPG", 
+      url: "/covers/Raiders_Awards.webp", 
       title: "EXCELLENCE",
       subtitle: "RECOGNIZED AT EVERY LEVEL",
     },
     {
-      url: "/covers/ball2024.JPG", 
+      url: "/covers/ball2024.webp", 
       title: "DECORATED",
       subtitle: "UNIT WITH DISTINCTION",
     },
     {
-      url: "/covers/Open_House.JPG", 
+      url: "/covers/Open_House.webp", 
       title: "COMMUNITY",
       subtitle: "LEADERS OF TOMORROW",
     },
     {
-      url: "/covers/Raiderstate2025.JPG", 
+      url: "/covers/Raiders2025.webp", 
       title: "PHYSICAL",
       subtitle: "READY FOR THE CHALLENGE",
     },
     {
-      url: "/covers/Color_Guard.JPG", 
+      url: "/covers/Color_Guard.webp", 
       title: "PRECISION",
       subtitle: "IN EVERY MOVEMENT",
     },
     {
-      url: "/covers/fallenheros2025.JPG", 
+      url: "/covers/fallenheros2025.webp", 
       title: "HONORING",
       subtitle: "OUR FALLEN HEROES",
     },
     {
-      url: "/covers/JV_Raiders.jpg", 
+      url: "/covers/JV_Raiders.webp", 
       title: "TRAINING",
       subtitle: "THE NEXT GENERATION",
     }
