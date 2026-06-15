@@ -5,55 +5,44 @@ import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
+// --- TOP 4 DATA ---
+const topFour = [
+  {
+    name: "DAMIAN WASHINGTON",
+    rank: "Battalion Commander",
+    quote: "Leadership is not a position or a title, it is action and example.", // Re-used existing inspirational quotes
+    image: "/covers/Washington.webp"
+  },
+  {
+    name: "MAX DEMIO",
+    rank: "Battalion XO",
+    quote: "Success is the result of preparation, hard work, and learning from failure.",
+    image: "/covers/Demio.webp"
+  },
+  {
+    name: "JANELLY RAMOS",
+    rank: "Command Sergeant Major",
+    quote: "Disciplined execution leads to unparalleled results.",
+    image: "/covers/Ramos.webp"
+  }
+];
+
 const Home = () => {
-  // --- UPDATED SLIDESHOW DATA ---
+  // --- SLIDESHOW DATA ---
   const slides = [
-    {
-      url: "/covers/Yuletide2025.webp", 
-      title: "TORNADO",
-      subtitle: "BATTALION",
-    },
-    {
-      url: "/covers/Raiders_Awards.webp", 
-      title: "EXCELLENCE",
-      subtitle: "RECOGNIZED AT EVERY LEVEL",
-    },
-    {
-      url: "/covers/ball2024.webp", 
-      title: "DECORATED",
-      subtitle: "UNIT WITH DISTINCTION",
-    },
-    {
-      url: "/covers/Open_House.webp", 
-      title: "COMMUNITY",
-      subtitle: "LEADERS OF TOMORROW",
-    },
-    {
-      url: "/covers/Raiders2025.webp", 
-      title: "PHYSICAL",
-      subtitle: "READY FOR THE CHALLENGE",
-    },
-    {
-      url: "/covers/Color_Guard.webp", 
-      title: "PRECISION",
-      subtitle: "IN EVERY MOVEMENT",
-    },
-    {
-      url: "/covers/fallenheros2025.webp", 
-      title: "HONORING",
-      subtitle: "OUR FALLEN HEROES",
-    },
-    {
-      url: "/covers/JV_Raiders.webp", 
-      title: "TRAINING",
-      subtitle: "THE NEXT GENERATION",
-    }
+    { url: "/covers/Yuletide2025.webp", title: "TORNADO", subtitle: "BATTALION" },
+    { url: "/covers/Raiders_Awards.webp", title: "EXCELLENCE", subtitle: "RECOGNIZED AT EVERY LEVEL" },
+    { url: "/covers/ball2024.webp", title: "DECORATED", subtitle: "UNIT WITH DISTINCTION" },
+    { url: "/covers/Open_House.webp", title: "COMMUNITY", subtitle: "LEADERS OF TOMORROW" },
+    { url: "/covers/Raiders2025.webp", title: "PHYSICAL", subtitle: "READY FOR THE CHALLENGE" },
+    { url: "/covers/Color_Guard.webp", title: "PRECISION", subtitle: "IN EVERY MOVEMENT" },
+    { url: "/covers/fallenheros2025.webp", title: "HONORING", subtitle: "OUR FALLEN HEROES" },
+    { url: "/covers/JV_Raiders.webp", title: "TRAINING", subtitle: "THE NEXT GENERATION" }
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [news, setNews] = useState([]);
 
-  // Auto-rotate slides every 8 seconds (slightly faster for more images)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
@@ -61,7 +50,6 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // Fetch Live Announcements
   useEffect(() => {
     const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(3));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -92,7 +80,6 @@ const Home = () => {
               alt="Battalion Slide"
               className="w-full h-full object-cover"
             />
-            {/* Darker Overlay for better text contrast */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
           </motion.div>
         </AnimatePresence>
@@ -119,8 +106,8 @@ const Home = () => {
           </motion.h1>
 
           <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <Link to="/cadet-info" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
-              Enter Portal
+            <Link to="/About" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
+              Learn More
             </Link>
             <Link to="/teams" className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md">
               Battalion Teams
@@ -128,7 +115,6 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Navigation Arrows */}
         <button onClick={prevSlide} className="absolute left-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
           <ChevronLeft size={48} />
         </button>
@@ -136,7 +122,6 @@ const Home = () => {
           <ChevronRight size={48} />
         </button>
 
-        {/* Progress Dots */}
         <div className="absolute bottom-10 flex gap-2 z-20">
           {slides.map((_, i) => (
             <button 
@@ -187,8 +172,54 @@ const Home = () => {
         </div>
       </section>
 
+      {/* --- TOP 4 COMMAND SECTION --- */}
+      <section className="py-24 bg-slate-950 border-t border-white/5 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
+            <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {topFour.map((leader, i) => (
+              <motion.div 
+                key={i}
+                whileHover={{ y: -10 }}
+                className="group relative"
+              >
+                <div className="aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 bg-slate-900 relative mb-6">
+                  <img 
+                    src={leader.image} 
+                    alt={leader.name}
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                    loading="lazy" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
+                </div>
+
+                <div className="space-y-1 mb-4 text-center sm:text-left">
+                  <h4 className="text-white font-black uppercase text-lg italic leading-tight tracking-tight">
+                    {leader.name}
+                  </h4>
+                  <p className="text-yellow-500 font-bold uppercase text-[10px] tracking-widest">
+                    {leader.rank}
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <span className="text-4xl text-yellow-500/20 font-serif absolute -top-4 -left-2">"</span>
+                  <p className="text-slate-400 text-xs italic leading-relaxed pl-4 border-l border-yellow-500/20">
+                    {leader.quote}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* --- QUICK ACCESS --- */}
-      <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/5">
         <InfoCard icon={<Shield />} title="Cadet Info" desc="Regulations, Creed, and Knowledge." link="/cadet-info" />
         <InfoCard icon={<Users />} title="Leadership" desc="Battalion Staff & Command." link="/leadership" />
         <InfoCard icon={<Award />} title="Special Teams" desc="Raiders, Drill, and Color Guard." link="/teams" />

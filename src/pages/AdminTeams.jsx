@@ -19,42 +19,34 @@ const AdminTeams = () => {
   const [showStatus, setShowStatus] = useState(null); 
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
 
-  // Team Form State - ADDED disciplines
   const [formData, setFormData] = useState({
     name: '', status: 'Open Practice', description: '', practice: '', location: '',
-    requirements: '', disciplines: '', teamEvents: '', leadership: [] 
+    requirements: '', disciplines: '', leadership: [] 
   });
 
-  const [dossier, setDossier] = useState({
-    bio: userData?.bio || '',
-    practiceDays: userData?.practiceDays || ''
-  });
+  const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
   const [uploading, setUploading] = useState(false);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isPowerUser = userLevel >= 90; 
   const userEmail = user?.email?.toLowerCase().trim();
 
+  // Sync Teams Data
   useEffect(() => {
     if (!authLoading && user) {
       const q = query(collection(db, "specialTeams"), orderBy("name", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setDataLoading(false);
-      }, (err) => {
-        console.error("Fetch Error:", err);
-        setDataLoading(false);
-      });
+      }, () => setDataLoading(false));
       return () => unsubscribe();
     }
   }, [authLoading, user]);
 
+  // Sync Dossier
   useEffect(() => {
     if (userData) {
-      setDossier({
-        bio: userData.bio || '',
-        practiceDays: userData.practiceDays || ''
-      });
+      setDossier({ bio: userData.bio || '', practiceDays: userData.practiceDays || '' });
     }
   }, [userData]);
 
@@ -68,24 +60,44 @@ const AdminTeams = () => {
   const teamSpecificRole = userInTeam?.teamRole || 'Team Member';
   const canEditMainFields = isPowerUser || teamSpecificRole === "Commander" || teamSpecificRole === "Co-Commander";
 
+  const triggerStatus = (type) => {
+    setShowStatus(type);
+    setTimeout(() => setShowStatus(null), 3000);
+  };
+
   const handleUpdateDossier = async (e) => {
     e.preventDefault();
     setUploading(true);
-    const userRef = doc(db, "users", user.uid);
     try {
-      await updateDoc(userRef, {
-        bio: dossier.bio,
-        practiceDays: dossier.practiceDays,
+      await updateDoc(doc(db, "users", user.uid), {
+        ...dossier,
         updatedAt: new Date()
       });
-      setShowStatus('success');
-      setTimeout(() => setShowStatus(null), 4000);
-    } catch (err) {
-      console.error("Dossier Error:", err);
-      setShowStatus('error');
-    } finally {
-      setUploading(false);
-    }
+      triggerStatus('success');
+    } catch (err) { triggerStatus('error'); }
+    setUploading(false);
+  };
+
+  const handleSaveTeam = async (e) => {
+    e.preventDefault();
+    const docId = editingId || formData.name.toLowerCase().replace(/\s+/g, '-');
+    const commanderEmails = formData.leadership.map(l => l.email?.toLowerCase().trim()).filter(Boolean);
+
+    const finalData = {
+      ...formData,
+      commanderEmails,
+      requirements: typeof formData.requirements === 'string' ? formData.requirements.split(',').map(r => r.trim()).filter(Boolean) : formData.requirements,
+      disciplines: typeof formData.disciplines === 'string' ? formData.disciplines.split(',').map(d => d.trim()).filter(Boolean) : formData.disciplines,
+      updatedAt: new Date(),
+      lastUpdatedBy: userEmail
+    };
+
+    try {
+      await setDoc(doc(db, "specialTeams", docId), finalData);
+      setEditingId(null);
+      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', leadership: [] });
+      triggerStatus('success');
+    } catch (err) { triggerStatus('error'); }
   };
 
   const addLeader = () => {
@@ -101,57 +113,23 @@ const AdminTeams = () => {
     setFormData({ ...formData, leadership: updatedLeadership });
   };
 
-  const removeLeader = (index) => {
-    const updatedLeadership = formData.leadership.filter((_, i) => i !== index);
-    setFormData({ ...formData, leadership: updatedLeadership });
-  };
-
   const handleEdit = (team) => {
     setEditingId(team.id);
     setFormData({
       ...team,
-      requirements: Array.isArray(team.requirements) ? team.requirements.join(', ') : '',
-      disciplines: Array.isArray(team.disciplines) ? team.disciplines.join(', ') : '', // Map array to string
-      teamEvents: Array.isArray(team.teamEvents) ? team.teamEvents.join(', ') : '',
+      requirements: Array.isArray(team.requirements) ? team.requirements.join(', ') : team.requirements || '',
+      disciplines: Array.isArray(team.disciplines) ? team.disciplines.join(', ') : team.disciplines || '',
       leadership: team.leadership || []
     });
+    setActiveTab('teams');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleSaveTeam = async (e) => {
-    e.preventDefault();
-    const docId = editingId || formData.name.toLowerCase().replace(/\s+/g, '-');
-    const commanderEmails = formData.leadership
-      .map(l => l.email?.toLowerCase().trim())
-      .filter(email => email && email !== "");
-
-    const finalData = {
-      ...formData,
-      commanderEmails,
-      requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()).filter(Boolean) : [],
-      disciplines: formData.disciplines ? formData.disciplines.split(',').map(d => d.trim()).filter(Boolean) : [], // Map string to array
-      teamEvents: formData.teamEvents ? formData.teamEvents.split(',').map(e => e.trim()).filter(Boolean) : [],
-      updatedAt: new Date(),
-      lastUpdatedBy: userEmail
-    };
-
-    try {
-      await setDoc(doc(db, "specialTeams", docId), finalData);
-      setEditingId(null);
-      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', teamEvents: '', leadership: [] });
-      setShowStatus('success');
-      setTimeout(() => setShowStatus(null), 4000);
-    } catch (err) {
-      console.error("Save Error:", err);
-      setShowStatus('error');
-    }
   };
 
   if (authLoading || (dataLoading && teams.length === 0)) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <Loader2 className="animate-spin text-yellow-500 mb-4" size={40} />
-        <p className="font-black uppercase tracking-widest text-[10px]">Establishing Secure Command Link...</p>
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col items-center justify-center">
+        <Loader2 className="animate-spin text-yellow-600 dark:text-yellow-500 mb-4" size={40} />
+        <p className="font-black uppercase tracking-widest text-[10px] text-slate-500">Establishing Command Link...</p>
       </div>
     );
   }
@@ -159,70 +137,69 @@ const AdminTeams = () => {
   if (!isAuthorized && !dataLoading) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8 pt-24 font-sans relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 font-sans relative selection:bg-yellow-500/30">
+      
+      {/* STATUS TOAST */}
       {showStatus && (
-        <div className={`fixed top-8 right-8 z-50 flex items-center gap-3 p-4 rounded-2xl border shadow-2xl animate-in fade-in slide-in-from-top-4 ${
-          showStatus === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-400'
+        <div className={`fixed top-8 right-8 z-[100] flex items-center gap-3 p-4 rounded-2xl border shadow-2xl animate-in fade-in slide-in-from-top-4 ${
+          showStatus === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-600 dark:text-red-400'
         }`}>
-          {showStatus === 'success' ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
-          <p className="text-sm font-black uppercase tracking-widest">
-            {showStatus === 'success' ? 'System Synced' : 'Sync Failed'}
+          {showStatus === 'success' ? <CheckCircle2 size={18} /> : <ShieldAlert size={18} />}
+          <p className="text-[10px] font-black uppercase tracking-widest">
+            {showStatus === 'success' ? 'System Synced' : 'Transmission Failure'}
           </p>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12">
-          <div className="flex justify-between items-end">
-            <div>
-              <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-4 text-[10px] font-black uppercase tracking-widest transition-all">
-                <ArrowLeft size={14} /> Back to Operations
-              </Link>
-              <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-                <ShieldAlert className="text-yellow-500" /> 
-                {isPowerUser ? "BATTALION COMMAND" : "UNIT COMMAND"}
-              </h1>
-            </div>
-            
-            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
-              <button 
-                onClick={() => setActiveTab('teams')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'teams' ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-400 hover:text-white'}`}
-              >
-                <Settings2 size={14} /> Team Management
-              </button>
-              <button 
-                onClick={() => setActiveTab('dossier')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'dossier' ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-400 hover:text-white'}`}
-              >
-                <UserCircle size={14} /> Personnel Dossier
-              </button>
-            </div>
+      <div className="max-w-6xl mx-auto p-6 md:p-12 pt-24">
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all">
+              <ArrowLeft size={14} /> Back to Operations
+            </Link>
+            <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter flex items-center gap-4">
+              <ShieldAlert className="text-yellow-600 dark:text-yellow-500" size={36} /> 
+              {isPowerUser ? "Battalion" : "Unit"} <span className="text-yellow-600 dark:text-yellow-500">Command</span>
+            </h1>
           </div>
-          <div className="h-px bg-white/10 w-full mt-6"></div>
+          
+          <div className="flex bg-slate-200/50 dark:bg-white/5 p-1 rounded-2xl border border-slate-200 dark:border-white/5 backdrop-blur-sm">
+            {[
+              { id: 'teams', label: 'Unit Management', icon: Settings2 },
+              { id: 'dossier', label: 'Cadet Dossier', icon: UserCircle }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-white/5'}`}
+              >
+                <tab.icon size={14} /> {tab.label}
+              </button>
+            ))}
+          </div>
         </header>
 
         {activeTab === 'teams' ? (
-          <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in duration-500">
-            <div className="lg:col-span-2">
-              <form onSubmit={handleSaveTeam} className="bg-[#0f172a]/50 border border-white/5 p-8 rounded-3xl space-y-8">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xs font-black text-yellow-500 uppercase tracking-widest">
-                    {editingId ? `Modifying: ${formData.name}` : "Initialize New Special Team"}
+          <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in slide-in-from-bottom-2">
+            <div className="lg:col-span-2 space-y-8">
+              <form onSubmit={handleSaveTeam} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 md:p-10 rounded-[2.5rem] shadow-xl dark:shadow-none space-y-8">
+                <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-6">
+                  <h2 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">
+                    {editingId ? `Modifying: ${formData.name}` : "Initialize New Strategic Unit"}
                   </h2>
                   {editingId && (
-                    <button type="button" onClick={() => setEditingId(null)} className="text-[10px] font-black text-slate-500 uppercase hover:text-white transition-colors">Cancel</button>
+                    <button type="button" onClick={() => { setEditingId(null); setFormData({name:'', status:'Open Practice', description:'', practice:'', location:'', requirements:'', disciplines:'', leadership:[]}); }} className="text-[10px] font-black text-slate-400 uppercase hover:text-red-500 transition-colors">Reset</button>
                   )}
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Team Name</label>
-                    <input required readOnly={!isPowerUser} value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className={`w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white focus:border-yellow-500/50 outline-none ${!isPowerUser && 'opacity-50 cursor-not-allowed'}`} />
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Unit Designation</label>
+                    <input required readOnly={!isPowerUser} value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 ring-yellow-500/20 outline-none transition-all" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Team Status</label>
-                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white outline-none focus:border-yellow-500/50">
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Operational Status</label>
+                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-sm text-slate-900 dark:text-white outline-none">
                       <option>Open Practice</option>
                       <option>Conditioning Only</option>
                       <option>Out of Season</option>
@@ -232,196 +209,120 @@ const AdminTeams = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Mission Statement / Description</label>
-                  <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm h-32 text-white outline-none focus:border-yellow-500/50" />
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Mission Directives</label>
+                  <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-sm h-32 text-slate-900 dark:text-white outline-none" />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <input value={formData.practice} onChange={(e) => setFormData({...formData, practice: e.target.value})} className="bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white" placeholder="Practice Days" />
-                  <input value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white" placeholder="Location" />
-                </div>
-
-                {/* --- NEW FIELDS: CORE DISCIPLINES & REQUIREMENTS --- */}
-                <div className="grid md:grid-cols-2 gap-6 border-t border-white/5 pt-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest flex items-center gap-2">
-                      <Target size={12}/> Teams & Events
-                    </label>
-                    <input 
-                      value={formData.disciplines} 
-                      onChange={(e) => setFormData({...formData, disciplines: e.target.value})} 
-                      className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white outline-none focus:border-yellow-500/50" 
-                      placeholder="e.g. Armed Drill, Color Guard, Unarmed" 
-                    />
-                    <p className="text-[9px] text-slate-600 ml-1">Separate with commas</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest flex items-center gap-2">
-                      <ListChecks size={12}/> Joining Requirements
-                    </label>
-                    <input 
-                      value={formData.requirements} 
-                      onChange={(e) => setFormData({...formData, requirements: e.target.value})} 
-                      className="w-full bg-[#020617] border border-white/10 p-4 rounded-xl text-sm text-white outline-none focus:border-yellow-500/50" 
-                      placeholder="e.g. 2.5 GPA, Passing PT Score" 
-                    />
-                    <p className="text-[9px] text-slate-600 ml-1">Separate with commas</p>
-                  </div>
-                </div>
-
-                {/* --- LEADERSHIP SECTION --- */}
-                <div className="space-y-6 border-t border-white/5 pt-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2"><Users size={14}/> Team Leadership</h3>
+                <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-white/5">
+                  <div className="space-y-6">
+                    <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-2"><Users size={14}/> Command Structure</h3>
                     {isPowerUser && (
-                      <button type="button" onClick={addLeader} className="text-[10px] bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full font-black border border-yellow-500/20 hover:bg-yellow-500 hover:text-slate-950 transition-all flex items-center gap-1">
-                        <Plus size={12}/> ADD OFFICER
+                      <button type="button" onClick={addLeader} className="text-[9px] bg-yellow-500 text-slate-950 px-4 py-2 rounded-full font-black hover:bg-yellow-400 transition-all">
+                        + APPOINT OFFICER
                       </button>
                     )}
                   </div>
-
-                  <div className="space-y-4">
-                    {formData.leadership.map((leader, index) => (
-                      <div key={index} className="bg-black/40 p-6 rounded-2xl border border-white/5 relative group border-l-2 border-l-transparent hover:border-l-yellow-500 transition-all">
-                        {isPowerUser && (
-                          <button type="button" onClick={() => removeLeader(index)} className="absolute top-4 right-4 text-slate-600 hover:text-red-500 transition-colors">
-                            <Trash2 size={16}/>
-                          </button>
-                        )}
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <input value={leader.name} onChange={(e) => updateLeader(index, 'name', e.target.value)} className="bg-slate-950 border border-white/10 p-3 rounded-lg text-xs text-white" placeholder="Full Name" />
-                          <input value={leader.rank} onChange={(e) => updateLeader(index, 'rank', e.target.value)} className="bg-slate-950 border border-white/10 p-3 rounded-lg text-xs text-white" placeholder="Rank" />
-                          
-                          <select 
-                            value={leader.teamRole || 'Team Member'} 
-                            onChange={(e) => updateLeader(index, 'teamRole', e.target.value)}
-                            className="bg-slate-950 border border-white/10 p-3 rounded-lg text-xs text-yellow-500 font-bold uppercase outline-none focus:ring-1 ring-yellow-500/50"
-                          >
-                            <option value="Battalion Officer">Battalion Officer</option>
-                            <option value="Commander">Commander</option>
-                            <option value="Co-Commander">Co-Commander</option>
-                            <option value="Team Commander">Team Commander</option>
-                            <option value="Team Co-Commander">Team Co-Commander</option>
-                            <option value="Team Member">Team Member</option>
-                          </select>
-
-                          <input value={leader.letLevel} onChange={(e) => updateLeader(index, 'letLevel', e.target.value)} className="bg-slate-950 border border-white/10 p-3 rounded-lg text-xs text-white" placeholder="LET Level" />
-                          
-                          <div className="lg:col-span-2 relative">
-                            <Mail size={12} className="absolute left-3 top-3.5 text-slate-500" />
-                            <input 
-                              readOnly={!isPowerUser} 
-                              value={leader.email} 
-                              onChange={(e) => updateLeader(index, 'email', e.target.value)} 
-                              className={`w-full bg-slate-950 border border-white/10 p-3 pl-8 rounded-lg text-xs text-white ${!isPowerUser && 'opacity-50 font-mono'}`} 
-                              placeholder="Cadet Email" 
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
-                <button type="submit" disabled={!canEditMainFields} className={`w-full py-5 rounded-xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
-                  canEditMainFields ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-xl' : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                {formData.leadership.map((leader, index) => (
+                  <div key={index} className="bg-slate-50 dark:bg-slate-950/60 p-6 rounded-3xl border border-slate-200 dark:border-white/5 relative group transition-all">
+                    {isPowerUser && (
+                      <button type="button" onClick={() => setFormData({...formData, leadership: formData.leadership.filter((_, i) => i !== index)})} className="absolute top-4 right-4 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                    )}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <input value={leader.name} onChange={(e) => updateLeader(index, 'name', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs" placeholder="Name" />
+                      <input value={leader.rank} onChange={(e) => updateLeader(index, 'rank', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs" placeholder="Rank" />
+                      <select value={leader.teamRole || 'Team Member'} onChange={(e) => updateLeader(index, 'teamRole', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs text-yellow-600 font-bold uppercase outline-none">
+                        <option value="Commander">Commander</option>
+                        <option value="Co-Commander">Co-Commander</option>
+                        <option value="Team Member">Team Member</option>
+                      </select>
+                      <div className="lg:col-span-2 relative">
+                        <Mail size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input readOnly={!isPowerUser} value={leader.email} onChange={(e) => updateLeader(index, 'email', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 pl-10 rounded-xl text-xs" placeholder="Email" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <button type="submit" disabled={!canEditMainFields} className={`w-full py-5 rounded-2xl font-black uppercase text-xs tracking-[0.25em] transition-all flex items-center justify-center gap-3 shadow-2xl ${
+                  canEditMainFields ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 hover:-translate-y-1 shadow-yellow-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50'
                 }`}>
-                  <Save size={18} /> SYNC UNIT DATA
+                  <Save size={18} /> Synchronize Operational Data
                 </button>
               </form>
             </div>
 
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Authorized Teams</h3>
-              {accessibleTeams.map(team => (
-                <div key={team.id} onClick={() => handleEdit(team)} className="bg-[#0f172a]/50 border border-white/5 p-6 rounded-2xl flex justify-between items-center group hover:border-yellow-500/40 transition-all cursor-pointer">
-                  <div>
-                    <h4 className="font-black uppercase italic text-lg group-hover:text-yellow-500 transition-colors">{team.name}</h4>
-                    <p className="text-[10px] text-yellow-500 font-bold uppercase tracking-widest">{team.status}</p>
+              <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic flex items-center gap-4">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" /> Catalog
+              </h3>
+              <div className="grid gap-4">
+                {accessibleTeams.map(team => (
+                  <div key={team.id} onClick={() => handleEdit(team)} className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl flex justify-between items-center group hover:border-yellow-500 transition-all cursor-pointer shadow-sm dark:shadow-none">
+                    <div>
+                      <h4 className="font-black uppercase italic text-xl group-hover:text-yellow-600 dark:group-hover:text-yellow-500 transition-colors leading-none mb-2">{team.name}</h4>
+                      <span className="text-[9px] font-black px-2 py-1 rounded-md uppercase bg-slate-100 dark:bg-white/5 text-slate-400">{team.status}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-yellow-600 dark:group-hover:text-white transition-all"><Edit3 size={16}/></div>
+                      {isPowerUser && (
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ open: true, id: team.id, name: team.name }); }} className="w-10 h-10 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <div className="p-2 text-slate-600 group-hover:text-white"><Edit3 size={16}/></div>
-                    {isPowerUser && (
-                      <button onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm({ open: true, id: null, name: team.name });
-                      }} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
-                        <Trash2 size={16}/>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         ) : (
-          /* Dossier View remains unchanged */
-          <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
-            <form onSubmit={handleUpdateDossier} className="bg-[#0f172a]/50 border border-white/5 p-10 rounded-[40px] shadow-2xl space-y-8">
-              <div className="flex items-center gap-6">
-                <div className="w-20 h-20 rounded-[24px] bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                  <UserCircle className="text-yellow-500" size={40} />
+          /* DOSSIER VIEW */
+          <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <form onSubmit={handleUpdateDossier} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-10 rounded-[3rem] shadow-xl dark:shadow-none space-y-10 backdrop-blur-xl relative overflow-hidden">
+              <div className="flex items-center gap-8">
+                <div className="w-24 h-24 rounded-[2rem] bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                  <UserCircle className="text-yellow-600 dark:text-yellow-500" size={48} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black uppercase italic text-white tracking-tighter">{userData?.displayName || 'Unknown Cadet'}</h3>
-                  <p className="text-xs font-bold text-yellow-500 uppercase tracking-widest">{role?.replace('_', ' ')}</p>
+                  <h3 className="text-3xl font-black uppercase italic text-slate-900 dark:text-white tracking-tighter mb-1">{userData?.displayName || 'Active Cadet'}</h3>
+                  <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">{role?.replace('_', ' ')}</p>
                 </div>
               </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1 flex items-center gap-2 tracking-widest">
-                    <BookOpen size={12} /> Personnel Biography
-                  </label>
-                  <textarea 
-                    value={dossier.bio}
-                    onChange={(e) => setDossier({...dossier, bio: e.target.value})}
-                    placeholder="Describe your goals, experience, and leadership mission..." 
-                    className="w-full bg-[#020617] border border-white/10 p-5 rounded-2xl text-sm h-40 text-white focus:border-yellow-500/50 outline-none transition-all placeholder:text-slate-800 font-medium"
-                  />
+              <div className="space-y-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-[0.2em]"><BookOpen size={14} /> Command Biography</label>
+                  <textarea value={dossier.bio} onChange={(e) => setDossier({...dossier, bio: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-white/5 p-6 rounded-3xl text-sm h-48 text-slate-900 dark:text-white focus:border-yellow-500/50 outline-none transition-all placeholder:text-slate-300" placeholder="Document your leadership history..." />
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1 flex items-center gap-2 tracking-widest">
-                    <Calendar size={12} /> Instructor Availability
-                  </label>
-                  <input 
-                    type="text"
-                    value={dossier.practiceDays}
-                    onChange={(e) => setDossier({...dossier, practiceDays: e.target.value})}
-                    placeholder="e.g. Mon, Wed, Fri (1500 - 1630)" 
-                    className="w-full bg-[#020617] border border-white/10 p-5 rounded-2xl text-sm text-white focus:border-yellow-500/50 outline-none transition-all placeholder:text-slate-800 font-medium"
-                  />
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-[0.2em]"><Calendar size={14} /> Availability Window</label>
+                  <input value={dossier.practiceDays} onChange={(e) => setDossier({...dossier, practiceDays: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-white/5 p-6 rounded-2xl text-sm text-slate-900 dark:text-white focus:border-yellow-500/50 outline-none" placeholder="e.g. Mon-Fri 1500-1630" />
                 </div>
               </div>
-
-              <button 
-                type="submit" 
-                disabled={uploading}
-                className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all flex items-center justify-center gap-3 shadow-xl shadow-yellow-500/10"
-              >
-                {uploading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <><Save size={20}/> Synchronize Profile</>
-                )}
+              <button type="submit" disabled={uploading} className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 hover:shadow-yellow-500/20 transition-all flex items-center justify-center gap-4 shadow-xl">
+                {uploading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20}/> Update Command Dossier</>}
               </button>
             </form>
           </div>
         )}
       </div>
 
+      {/* CONFIRMATION MODAL */}
       {deleteConfirm.open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <div className="bg-slate-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
-            <h3 className="text-xl font-black uppercase italic mb-2 text-white">Decommission?</h3>
-            <p className="text-slate-400 text-sm mb-8 font-medium italic">Erase <span className="text-white font-bold">{deleteConfirm.name}</span> dossier permanently?</p>
-            <div className="flex gap-4">
-              <button onClick={() => setDeleteConfirm({ open: false, id: null, name: '' })} className="flex-1 px-4 py-3 rounded-xl font-bold text-slate-400 hover:text-white transition-all uppercase text-[10px] tracking-widest">Abort</button>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
+            <ShieldAlert size={48} className="text-red-500 mx-auto mb-6" />
+            <h3 className="text-2xl font-black uppercase italic mb-3 text-slate-900 dark:text-white">Decommission Unit?</h3>
+            <p className="text-slate-500 text-xs mb-10 leading-relaxed">Permanent erasure of the <span className="text-red-600 font-bold">{deleteConfirm.name}</span> dossier. This action is irreversible.</p>
+            <div className="flex flex-col gap-3">
               <button onClick={async () => {
-                await deleteDoc(doc(db, 'specialTeams', deleteConfirm.id));
-                setDeleteConfirm({ open: false, id: null, name: '' });
-              }} className="flex-1 bg-red-600 px-4 py-3 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm</button>
+                  try {
+                    await deleteDoc(doc(db, 'specialTeams', deleteConfirm.id));
+                    setDeleteConfirm({ open: false, id: null, name: '' });
+                    triggerStatus('success');
+                  } catch (err) { triggerStatus('error'); }
+                }} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Purge</button>
+              <button onClick={() => setDeleteConfirm({ open: false, id: null, name: '' })} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest bg-slate-100 dark:bg-white/5">Abort Mission</button>
             </div>
           </div>
         </div>

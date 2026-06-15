@@ -18,15 +18,14 @@ import {
   Calendar, 
   Bell, 
   CheckCircle, 
-  MapPin, 
-  Tag, 
   ChevronLeft,
   Check,
   Trash2,
   RefreshCcw,
   Clock,
   AlertTriangle,
-  X
+  X,
+  Target
 } from 'lucide-react';
 
 const AdminOrders = () => {
@@ -35,11 +34,9 @@ const AdminOrders = () => {
   const [status, setStatus] = useState({ loading: false, success: false });
   const [recentItems, setRecentItems] = useState([]);
   
-  // Custom UI State
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // Form State
   const [orderText, setOrderText] = useState('');
   const [selectedTargets, setSelectedTargets] = useState([]);
   const [eventData, setEventData] = useState({
@@ -85,13 +82,10 @@ const AdminOrders = () => {
     setTimeout(() => setErrorMessage(null), 4000);
   };
 
-  // SECURITY: Check rank before showing delete modal
   const requestDelete = (item) => {
     const userWeight = ROLE_HIERARCHY[role] || 0;
-    // Using ?? 0 ensures legacy items (no issuerRole) are treated as level 0
     const issuerWeight = ROLE_HIERARCHY[item.issuerRole] ?? 0;
 
-    // ALLOW delete if user is higher OR equal rank
     if (userWeight >= issuerWeight) {
       setDeleteConfirm({ show: true, id: item.id });
     } else {
@@ -110,16 +104,8 @@ const AdminOrders = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (selectedTargets.length === 0) {
-      showError("Operational Error: Select at least one target.");
-      return;
-    }
-
-    if (mode === 'order' && !orderText.trim()) {
-      showError("Operational Error: Order content cannot be empty.");
-      return;
-    }
+    if (selectedTargets.length === 0) return showError("Operational Error: Select at least one target.");
+    if (mode === 'order' && !orderText.trim()) return showError("Operational Error: Order content cannot be empty.");
 
     setStatus({ loading: true, success: false });
 
@@ -155,11 +141,12 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 pt-12 pb-20 px-6 ml-64 relative overflow-x-hidden">
+    /* REMOVED ml-64 TO DELETE THE SIDEBAR SPACE */
+    <div className="min-h-screen bg-blue-50 dark:bg-slate-950 pt-12 pb-20 px-6 relative overflow-x-hidden transition-colors duration-300">
       
-      {/* ERROR TOAST NOTIFICATION */}
+      {/* ERROR TOAST */}
       {errorMessage && (
-        <div className="fixed top-8 right-8 z-[110] flex items-center gap-4 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-red-600/20 animate-in slide-in-from-right duration-300">
+        <div className="fixed top-8 right-8 z-[110] flex items-center gap-4 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right duration-300">
           <AlertTriangle size={20} />
           <p className="text-[10px] font-black uppercase tracking-widest">{errorMessage}</p>
           <button onClick={() => setErrorMessage(null)} className="ml-4 hover:rotate-90 transition-transform">
@@ -169,58 +156,88 @@ const AdminOrders = () => {
       )}
 
       <div className="max-w-4xl mx-auto">
-        <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 transition-colors mb-8 text-[10px] font-black uppercase tracking-[0.2em]">
+        <Link to="/admin/dashboard" className="flex items-center gap-2 text-blue-400 dark:text-slate-500 hover:text-[#d4af37] transition-colors mb-8 text-[10px] font-black uppercase tracking-[0.2em]">
           <ChevronLeft size={14} /> Back to Command Dashboard
         </Link>
 
-        {/* HEADER SECTION */}
-        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter">
-              Command <span className="text-yellow-500">Ops</span>
+        {/* HEADER */}
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="w-full md:w-auto text-center md:text-left">
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
+              Command <span className="text-[#d4af37]">Ops</span>
             </h1>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2 tracking-[0.3em]">
-              Authorized Personnel | {userData?.company}
+            <p className="text-blue-300 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
+              Authorized Personnel | {userData?.company || "Battalion"}
             </p>
           </div>
 
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5 shadow-2xl">
+          <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">
             <button type="button" onClick={() => setMode('order')}
-              className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'order' ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'text-slate-500 hover:text-white'}`}>
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'order' ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
               <Bell size={14} /> Issue Order
             </button>
             <button type="button" onClick={() => setMode('event')}
-              className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'event' ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-white'}`}>
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'event' ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
               <Calendar size={14} /> Create Event
             </button>
           </div>
         </header>
 
         {/* MAIN INPUT CARD */}
-        <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
+        <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-xl transition-all">
           <form onSubmit={handleSubmit} className="space-y-8">
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Target Audience</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <label className="flex items-center gap-2 text-[10px] font-black text-blue-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                <Target size={14} className="text-[#d4af37]" /> Target Audience
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 {targetOptions.map((t) => (
                   <button key={t} type="button" onClick={() => toggleTarget(t)}
-                    className={`px-3 py-3 rounded-xl text-[9px] font-bold uppercase transition-all border flex items-center justify-between ${selectedTargets.includes(t) ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500' : 'bg-slate-950 border-white/5 text-slate-500'}`}>
-                    {t} {selectedTargets.includes(t) && <Check size={12} />}
+                    className={`px-3 py-3.5 rounded-2xl text-[9px] font-bold uppercase transition-all border-2 flex items-center justify-between ${
+                      selectedTargets.includes(t) 
+                        ? 'bg-blue-50/50 border-[#d4af37] text-[#d4af37] dark:bg-yellow-500/10' 
+                        : 'bg-white dark:bg-slate-950 border-blue-50 dark:border-white/5 text-slate-400 hover:border-blue-100'
+                    }`}
+                  >
+                    <span className="truncate mr-1">{t}</span>
+                    {selectedTargets.includes(t) && <Check size={12} strokeWidth={3} className="flex-shrink-0" />}
                   </button>
                 ))}
               </div>
             </div>
 
             {mode === 'order' ? (
-              <textarea value={orderText} onChange={(e) => setOrderText(e.target.value)}
-                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-6 text-white text-sm focus:border-yellow-500 outline-none transition-all min-h-[150px] shadow-inner"
-                placeholder="Enter battalion orders..." />
+              <textarea 
+                value={orderText} 
+                onChange={(e) => setOrderText(e.target.value)}
+                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all min-h-[160px] placeholder:text-blue-200 font-medium shadow-inner"
+                placeholder="Enter battalion orders for broadcast..." 
+              />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input className="bg-slate-950 border border-white/5 rounded-xl p-4 text-white text-sm focus:border-yellow-500 outline-none" placeholder="Event Title" value={eventData.title} onChange={(e) => setEventData({...eventData, title: e.target.value})} />
-                <input type="date" className="bg-slate-950 border border-white/5 rounded-xl p-4 text-white text-sm text-slate-400 focus:border-yellow-500 outline-none" value={eventData.date} onChange={(e) => setEventData({...eventData, date: e.target.value})} />
-                <input className="bg-slate-950 border border-white/5 rounded-xl p-4 text-white text-sm focus:border-yellow-500 outline-none" placeholder="Location" value={eventData.location} onChange={(e) => setEventData({...eventData, location: e.target.value})} />
-                <select className="bg-slate-950 border border-white/5 rounded-xl p-4 text-white text-sm focus:border-yellow-500 outline-none" value={eventData.type} onChange={(e) => setEventData({...eventData, type: e.target.value})}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
+                  placeholder="Event Title" 
+                  value={eventData.title} 
+                  onChange={(e) => setEventData({...eventData, title: e.target.value})} 
+                />
+                <input 
+                  type="date"
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-400 text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all shadow-inner" 
+                  value={eventData.date} 
+                  onChange={(e) => setEventData({...eventData, date: e.target.value})} 
+                />
+                <input 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
+                  placeholder="Location" 
+                  value={eventData.location} 
+                  onChange={(e) => setEventData({...eventData, location: e.target.value})} 
+                />
+                <select 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all shadow-inner" 
+                  value={eventData.type} 
+                  onChange={(e) => setEventData({...eventData, type: e.target.value})}
+                >
                   {EVENT_TYPES.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
@@ -228,7 +245,14 @@ const AdminOrders = () => {
               </div>
             )}
 
-            <button disabled={status.loading} className={`w-full font-black uppercase py-5 rounded-2xl transition-all flex items-center justify-center gap-3 ${status.success ? 'bg-green-500 text-white' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50'}`}>
+            <button 
+              disabled={status.loading} 
+              className={`w-full font-black uppercase py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl transform active:scale-[0.98] ${
+                status.success 
+                  ? 'bg-green-500 text-white shadow-green-500/20' 
+                  : 'bg-[#d4af37] text-white hover:bg-[#b8962d] shadow-yellow-500/30 disabled:opacity-50'
+              }`}
+            >
               {status.loading ? <RefreshCcw className="animate-spin" size={20} /> : status.success ? <CheckCircle size={20} /> : <Send size={20} />}
               {status.loading ? "Synchronizing..." : status.success ? "Published" : "Execute Transmission"}
             </button>
@@ -236,49 +260,53 @@ const AdminOrders = () => {
         </div>
 
         {/* LOG HISTORY */}
-        <div className="mt-12 space-y-6">
-          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-            <Clock size={14} /> Recent Log
-          </h3>
-          <div className="grid gap-3">
+        <div className="mt-16 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-[10px] font-black text-blue-300 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+              <Clock size={14} /> Recent Log
+            </h3>
+            <div className="h-px flex-1 bg-blue-100 dark:bg-white/5 mx-4"></div>
+          </div>
+          
+          <div className="grid gap-4">
             {recentItems.map((item) => (
-              <div key={item.id} className="bg-slate-900/80 border border-white/5 p-5 rounded-2xl flex justify-between items-center group transition-all hover:border-red-500/20">
-                <div className="max-w-[80%]">
-                  <p className="text-sm text-slate-200 font-medium mb-1 truncate">{mode === 'order' ? item.content : item.title}</p>
-                  <div className="flex gap-3 items-center mt-1">
-                    <span className="text-[8px] font-black text-yellow-500/80 uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>
-                    <span className="text-[7px] text-slate-600 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
+              <div key={item.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-6 rounded-[2rem] flex justify-between items-center group transition-all hover:border-[#d4af37]/30 shadow-sm">
+                <div className="max-w-[80%] pl-4 border-l-[3px] border-[#d4af37] rounded-sm">
+                  <p className="text-sm text-slate-800 dark:text-slate-200 font-bold mb-1.5 leading-tight">
+                    {mode === 'order' ? item.content : item.title}
+                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
+                    <span className="text-[9px] font-black text-[#d4af37] uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>
+                    <span className="text-[9px] text-blue-300 dark:text-slate-600 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
                   </div>
                 </div>
                 
-                {/* Trash icon logic based on ROLE_HIERARCHY */}
-                {/* Trash icon logic */}
-{((ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[item.issuerRole] || 0)) && (
-  <button 
-    onClick={() => requestDelete(item)} 
-    className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-xl"
-  >
-    <Trash2 size={16} />
-  </button>
-)}
+                {((ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[item.issuerRole] || 0)) && (
+                  <button 
+                    onClick={() => requestDelete(item)} 
+                    className="p-3.5 text-slate-300 dark:text-slate-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* CUSTOM DELETE MODAL */}
+        {/* DELETE CONFIRMATION MODAL */}
         {deleteConfirm.show && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/80 animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-white/5 p-8 rounded-3xl max-w-sm w-full shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
-              <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-blue-100/20 dark:bg-slate-950/80 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-8 rounded-[2rem] max-w-sm w-full shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 text-center">
+              <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
                 <AlertTriangle size={32} />
               </div>
-              <h3 className="text-xl font-black text-white text-center uppercase italic tracking-tighter mb-2">Confirm <span className="text-red-500">Destruction</span></h3>
-              <p className="text-slate-400 text-[10px] text-center font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed px-4">This transmission will be permanently scrubbed. This action cannot be undone.</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">Confirm <span className="text-red-500">Destruction</span></h3>
+              <p className="text-blue-300 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed px-4">This transmission will be permanently scrubbed. This action cannot be undone.</p>
               <div className="flex flex-col gap-3">
                 <button onClick={confirmDelete} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl transition-all shadow-xl shadow-red-600/20">Confirm Destruction</button>
-                <button onClick={() => setDeleteConfirm({ show: false, id: null })} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl transition-all">Abort Mission</button>
+                <button onClick={() => setDeleteConfirm({ show: false, id: null })} className="w-full py-4 bg-blue-50 dark:bg-slate-800 text-blue-400 dark:text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl transition-all">Abort Mission</button>
               </div>
             </div>
           </div>

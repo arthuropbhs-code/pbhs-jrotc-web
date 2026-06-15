@@ -221,7 +221,7 @@ const PromotionBoard = () => {
                       {currentAsst?.id} Assistant Duties
                     </h3>
                     <div className="text-right">
-                      <p className="text-[10px] text-slate-500 uppercase font-black">Leadership Standard</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-black">Principles of Leadership Requirement</p>
                       <p className="text-sm font-bold text-white uppercase">5/11 Principles</p>
                     </div>
                   </div>
@@ -236,7 +236,7 @@ const PromotionBoard = () => {
                   </ul>
 
                   <div className="mt-8 pt-8 border-t border-slate-800/50">
-                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4">Core Knowledge Base</p>
+                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4">Promotion Board Requirement</p>
                     <ul className="grid md:grid-cols-2 gap-x-6 gap-y-2">
                       {boardData['Staff Assistants'].knowledge.map((item, i) => (
                         <li key={i} className="text-slate-500 text-[11px] flex items-center gap-2">
@@ -256,10 +256,10 @@ const PromotionBoard = () => {
             >
               <div className="glass-card p-8 border-t-2 border-yellow-500">
                 <h3 className="text-xl font-bold text-white uppercase italic mb-6 flex items-center gap-2">
-                  <BookOpen className="text-yellow-500" size={20} /> Required Knowledge
+                  <BookOpen className="text-yellow-500" size={20} /> Promotion Board Requirement
                 </h3>
                 <div className="mb-6 p-3 bg-white/5 rounded border border-white/5">
-                  <p className="text-[10px] text-yellow-500 font-black uppercase mb-1">Leadership Standard</p>
+                  <p className="text-[10px] text-yellow-500 font-black uppercase mb-1">Principles of Leadership Requirement</p>
                   <p className="text-lg font-black text-white">{boardData[selectedRank].leadership}</p>
                 </div>
                 <ul className="grid grid-cols-1 gap-3">

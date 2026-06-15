@@ -2,9 +2,9 @@
 
 @layer base {
   body {
-    /* Standard CSS properties are safer in v4 for the base layer */
-    background-color: #020617; /* slate-950 */
-    color: #cbd5e1;           /* slate-300 */
+    /* Changed to transparent so the component controls the background */
+    background-color: transparent; 
+    color: #cbd5e1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
@@ -12,10 +12,11 @@
   }
 }
 
-/* Fallback remains the same */
+/* Ensure the root allows for full height colors */
 :root {
-  background-color: #020617;
-  color: #f1f5f9;
+  min-height: 100vh;
+  /* Default to dark if no classes are present, but allows override */
+  background-color: #020617; 
 }
 
 .nav-link-glow:hover {

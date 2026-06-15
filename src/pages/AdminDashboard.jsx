@@ -18,8 +18,6 @@ import {
   Calendar,
   ChevronRight,
   Megaphone, 
-  Settings, 
-  Trash2,
   ShieldAlert, 
   Lock         
 } from 'lucide-react';
@@ -69,12 +67,14 @@ const AdminDashboard = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex">
+    // MAIN WRAPPER: Light Blue vs Slate Dark
+    <div className="min-h-screen bg-blue-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex transition-colors duration-300">
+      
       {/* --- SIDEBAR NAVIGATION --- */}
-      <aside className="w-64 bg-slate-900 border-r border-white/5 p-6 flex flex-col fixed h-full z-10">
+      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-blue-100 dark:border-white/5 p-6 flex flex-col fixed h-full z-10 shadow-sm transition-colors">
         <div className="mb-10">
-          <h2 className="text-xl font-black uppercase italic tracking-tighter text-yellow-500">Command</h2>
-          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Personnel Management</p>
+          <h2 className="text-xl font-black uppercase italic tracking-tighter text-[#d4af37]">Command</h2>
+          <p className="text-[10px] text-blue-400 dark:text-slate-500 uppercase font-bold tracking-[0.2em]">Personnel Management</p>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -82,18 +82,18 @@ const AdminDashboard = () => {
             to="/admin/dashboard" 
             className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
               isActive('/admin/dashboard') 
-                ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' 
+                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-[#d4af37]'
             }`}
           >
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           
           {loading ? (
-            <>
-              <div className="h-10 bg-white/5 animate-pulse rounded-xl mx-1" />
-              <div className="h-10 bg-white/5 animate-pulse rounded-xl mx-1" />
-            </>
+            <div className="space-y-2">
+              <div className="h-10 bg-blue-50/50 dark:bg-white/5 animate-pulse rounded-xl mx-1" />
+              <div className="h-10 bg-blue-50/50 dark:bg-white/5 animate-pulse rounded-xl mx-1" />
+            </div>
           ) : isCommander && (
             <>
               {isStaffOrS4 && (
@@ -101,8 +101,8 @@ const AdminDashboard = () => {
                   to="/admin/users" 
                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
                     isActive('/admin/users') 
-                      ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' 
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <UserCog size={18} /> Manage Personnel
@@ -113,8 +113,8 @@ const AdminDashboard = () => {
                 to="/admin/orders" 
                 className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
                   isActive('/admin/orders') 
-                    ? 'bg-yellow-500 text-slate-950' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#d4af37] text-white' 
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
                 }`}
               >
                 <PlusSquare size={18} /> Issue Orders/Events
@@ -124,8 +124,8 @@ const AdminDashboard = () => {
                 to="/admin/teams" 
                 className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
                   isActive('/admin/teams') 
-                    ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' 
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
                 }`}
               >
                 {isTopFour || role === 'company_leadership' ? <Users size={18} /> : <Lock size={16} />}
@@ -137,8 +137,8 @@ const AdminDashboard = () => {
                    to="/admin/announcements" 
                    className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
                      isActive('/admin/announcements') 
-                       ? 'bg-yellow-500 text-slate-950' 
-                       : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                       ? 'bg-[#d4af37] text-white' 
+                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
                    }`}
                  >
                    <Megaphone size={18} /> Global Broadcast
@@ -151,15 +151,15 @@ const AdminDashboard = () => {
             to="/uniform-requests" 
             className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
               isActive('/uniform-requests') 
-                ? 'bg-yellow-500 text-slate-950' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-[#d4af37] text-white' 
+                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
             }`}
           >
             <div className="flex items-center gap-3">
               <Shirt size={18} /> Uniform Items
             </div>
             {requestCount > 0 && (
-              <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black animate-pulse">
+              <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
                 {requestCount}
               </span>
             )}
@@ -169,8 +169,8 @@ const AdminDashboard = () => {
             to="/photos" 
             className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
               isActive('/photos') 
-                ? 'bg-yellow-500 text-slate-950' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-[#d4af37] text-white' 
+                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
             }`}
           >
             <BarChart3 size={18} /> Battalion Stats
@@ -179,7 +179,7 @@ const AdminDashboard = () => {
 
         <button 
           onClick={handleLogout}
-          className="mt-auto flex items-center gap-3 p-3 text-red-400 hover:bg-red-400/10 rounded-xl font-bold text-sm transition-all border border-transparent hover:border-red-400/20"
+          className="mt-auto flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl font-bold text-sm transition-all border border-transparent hover:border-red-100 dark:hover:border-red-500/20"
         >
           <LogOut size={18} /> Log Out
         </button>
@@ -189,24 +189,24 @@ const AdminDashboard = () => {
       <main className="flex-1 ml-64 p-10 overflow-y-auto">
         <header className="flex justify-between items-start mb-12">
           <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter">
-              Welcome, <span className="text-yellow-500">{userData?.name || 'Cadet'}</span>
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              Welcome, <span className="text-[#d4af37]">{userData?.name || 'Cadet'}</span>
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400 dark:text-slate-500 transition-colors">
                 {userData?.rank}
               </span>
-              <span className="text-yellow-500/50 text-[10px] font-black uppercase tracking-widest">
+              <span className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest">
                 {userData?.position} | {userData?.company} Company
               </span>
             </div>
           </div>
           
-          <div className="bg-slate-900 p-4 rounded-2xl border border-white/5 flex items-center gap-4 shadow-xl">
-            <UserCircle className="text-slate-500" size={32} />
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-blue-100 dark:border-white/5 flex items-center gap-4 shadow-sm transition-colors">
+            <UserCircle className="text-blue-200 dark:text-slate-700" size={32} />
             <div className="text-right">
-              <p className="text-[10px] font-black uppercase text-slate-500 leading-none mb-1">Access Level</p>
-              <p className="text-xs font-bold text-white uppercase tracking-tighter">
+              <p className="text-[10px] font-black uppercase text-blue-300 dark:text-slate-600 leading-none mb-1">Access Level</p>
+              <p className="text-xs font-bold text-slate-900 dark:text-slate-300 uppercase tracking-tighter">
                 {role?.replace('_', ' ')}
               </p>
             </div>
@@ -214,23 +214,25 @@ const AdminDashboard = () => {
         </header>
 
         {!isTopFour && isCommander && (
-          <div className="mb-8 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl flex items-center gap-3">
-            <ShieldAlert className="text-yellow-500/50" size={18} />
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Staff Access Active. <span className="text-yellow-500/80">Command features are restricted based on your role.</span>
+          <div className="mb-8 p-4 bg-blue-100/30 dark:bg-yellow-500/5 border border-blue-100 dark:border-yellow-500/20 rounded-2xl flex items-center gap-3">
+            <ShieldAlert className="text-[#d4af37]" size={18} />
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+              Staff Access Active. <span className="text-[#d4af37]">Command features are restricted based on your role.</span>
             </p>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <section className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+            <section className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-3xl p-8 shadow-sm relative overflow-hidden transition-colors">
+              {/* Floating Ambient Blue Glow (Hidden in dark mode for cleaner look) */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
+              
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-black uppercase italic flex items-center gap-3">
-                  <ClipboardCheck className="text-yellow-500" /> Command Feed
+                <h2 className="text-xl font-black uppercase italic flex items-center gap-3 text-slate-900 dark:text-white">
+                  <ClipboardCheck className="text-[#d4af37]" /> Command Feed
                 </h2>
-                <span className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <span className="flex items-center gap-2 text-[10px] font-bold text-blue-300 dark:text-slate-600 uppercase tracking-widest">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                   Live Updates
                 </span>
@@ -240,19 +242,19 @@ const AdminDashboard = () => {
           </div>
 
           <div className="space-y-8">
-            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-3xl p-8 text-slate-950 shadow-lg shadow-yellow-500/10">
-              <h3 className="font-black uppercase italic text-xl mb-1 text-slate-900 tracking-tighter">
+            <div className="bg-gradient-to-br from-[#d4af37] to-[#b8962d] rounded-3xl p-8 text-white shadow-lg shadow-yellow-500/20">
+              <h3 className="font-black uppercase italic text-xl mb-1 tracking-tighter">
                 Battalion Status
               </h3>
-              <p className="text-[10px] font-black opacity-80 mb-6 uppercase tracking-[0.2em] text-slate-800">
+              <p className="text-[10px] font-black opacity-80 mb-6 uppercase tracking-[0.2em]">
                 Honor Unit With Distinction
               </p>
               
               <div className="space-y-4">
-                <div className="bg-black/10 backdrop-blur-md p-4 rounded-2xl border border-black/5 flex justify-between items-center">
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
                   <div>
                     <p className="text-[10px] font-black uppercase leading-none mb-1">Organizational Day</p>
-                    <p className="text-[8px] font-bold uppercase opacity-60">April 2nd, 2026</p>
+                    <p className="text-[8px] font-bold uppercase opacity-80">April 2nd, 2026</p>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-black tracking-tighter leading-none">{daysToOrgDay}</p>
@@ -262,26 +264,26 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-xl">
+            <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-3xl p-8 shadow-sm transition-colors">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 dark:text-slate-600 flex items-center gap-2">
                    <Calendar size={14} /> Upcoming Events
                 </h3>
-                <Link to="/events" className="text-yellow-500 p-1 hover:bg-yellow-500/10 rounded-lg transition-all">
-  <ChevronRight size={16} />
-</Link>
+                <Link to="/events" className="text-[#d4af37] p-1 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition-all">
+                  <ChevronRight size={16} />
+                </Link>
               </div>
               
-              <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-white/5">
+              <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-blue-50 dark:before:bg-white/5">
                 {events.length > 0 ? events.map((event) => (
                   <div key={event.id} className="relative pl-6 group">
-                    <div className="absolute left-0 top-1.5 w-3.5 h-3.5 bg-slate-900 border-2 border-slate-700 rounded-full group-hover:border-yellow-500 group-hover:bg-yellow-500 transition-all"></div>
-                    <p className="text-[10px] font-black text-yellow-500/70 uppercase mb-1 tracking-tighter">{event.date}</p>
-                    <h4 className="text-sm font-bold text-slate-200 leading-tight">{event.title}</h4>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{event.location}</p>
+                    <div className="absolute left-0 top-1.5 w-3.5 h-3.5 bg-white dark:bg-slate-900 border-2 border-blue-100 dark:border-white/10 rounded-full group-hover:border-[#d4af37] group-hover:bg-[#d4af37] transition-all"></div>
+                    <p className="text-[10px] font-black text-[#d4af37]/70 uppercase mb-1 tracking-tighter">{event.date}</p>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{event.title}</h4>
+                    <p className="text-[10px] text-blue-400 dark:text-slate-500 font-bold uppercase mt-1">{event.location}</p>
                   </div>
                 )) : (
-                  <div className="py-4 text-center text-xs text-slate-600 italic">No events scheduled.</div>
+                  <div className="py-4 text-center text-xs text-blue-300 dark:text-slate-600 italic">No events scheduled.</div>
                 )}
               </div>
             </div>

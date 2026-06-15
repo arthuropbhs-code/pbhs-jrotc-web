@@ -12,13 +12,11 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // NEW: Logic to prevent duplicates by merging manual records on login
   const handleProfileMerge = async (authUser) => {
     try {
       const userRef = doc(db, "users", authUser.uid);
       const userSnap = await getDoc(userRef);
 
-      // If the user document doesn't have a name yet, check for a manual "Ghost" record
       if (!userSnap.exists() || !userSnap.data().fullName) {
         const manualQuery = query(
           collection(db, "users"),
@@ -32,7 +30,6 @@ const AdminLogin = () => {
           const manualDoc = manualSnap.docs[0];
           const manualData = manualDoc.data();
 
-          // 1. Move manual data to the new UID doc
           await setDoc(userRef, {
             ...manualData,
             uid: authUser.uid,
@@ -42,9 +39,7 @@ const AdminLogin = () => {
             updatedAt: serverTimestamp()
           }, { merge: true });
 
-          // 2. Delete the old manual duplicate
           await deleteDoc(doc(db, "users", manualDoc.id));
-          console.log("Duplicate prevented: Manual record merged.");
         }
       }
     } catch (err) {
@@ -60,11 +55,9 @@ const AdminLogin = () => {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
-      // Run the merge check immediately after login
       await handleProfileMerge(userCredential.user);
       navigate('/admin/dashboard'); 
     } catch (err) {
-      console.error("Login error:", err.code);
       if (err.code === 'auth/invalid-credential') {
         setError("Invalid email or password.");
       } else if (err.code === 'auth/too-many-requests') {
@@ -78,52 +71,57 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="min-h-screen bg-blue-50 dark:bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
+      {/* Ambient Glow - Now using Gold/Blue tones */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="w-full max-w-md z-10">
         <div className="flex justify-between items-center mb-8">
-          <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
+          <Link to="/" className="flex items-center gap-2 text-blue-400 hover:text-[#d4af37] transition-colors text-xs font-black uppercase tracking-widest">
             <ArrowLeft size={16} /> Back to Menu
           </Link>
-          <div className="bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-            <Shield size={12} className="text-yellow-500" />
-            <span className="text-[10px] font-black text-yellow-500 uppercase tracking-tighter">Secure Access</span>
+          <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
+            <Shield size={12} className="text-[#d4af37]" />
+            <span className="text-[10px] font-black text-[#d4af37] uppercase tracking-tighter">Secure Access</span>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-white/5 p-8 rounded-3xl shadow-2xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Command <span className="text-yellow-500">Login</span></h1>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Personnel Authorization Required</p>
+        <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-10 rounded-[2.5rem] shadow-xl transition-all">
+          <div className="mb-10 text-center">
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              Command <span className="text-[#d4af37]">Login</span>
+            </h1>
+            <p className="text-[10px] text-blue-300 dark:text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">
+              Personnel Authorization Required
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-xs font-bold mb-6 flex items-center gap-3">
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-2xl text-[10px] font-black uppercase mb-6 flex items-center gap-3">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-200 group-focus-within:text-[#d4af37] transition-colors" size={18} />
               <input 
                 type="email" 
                 placeholder="CADET EMAIL" 
-                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold text-white"
+                className="w-full bg-blue-50/50 dark:bg-black/40 border border-blue-100 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-[#d4af37] dark:focus:border-[#d4af37] outline-none transition-all placeholder:text-blue-200 dark:placeholder:text-slate-700 font-bold text-slate-900 dark:text-white"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
+            <div className="relative group">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-200 group-focus-within:text-[#d4af37] transition-colors" size={18} />
               <input 
                 type="password" 
                 placeholder="PASSWORD" 
-                className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 outline-none transition-all placeholder:text-slate-700 font-bold text-white"
+                className="w-full bg-blue-50/50 dark:bg-black/40 border border-blue-100 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-[#d4af37] dark:focus:border-[#d4af37] outline-none transition-all placeholder:text-blue-200 dark:placeholder:text-slate-700 font-bold text-slate-900 dark:text-white"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -133,19 +131,30 @@ const AdminLogin = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10 active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full bg-[#d4af37] text-white font-black uppercase py-4 rounded-2xl hover:bg-[#b8962d] transition-all shadow-lg shadow-yellow-500/20 active:scale-[0.98] flex items-center justify-center gap-2 group"
             >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : "Authorize Entry"}
+              {loading ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <>
+                  Authorize Entry
+                  <Shield size={16} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">First time here?</p>
-            <Link to="/admin/signup" className="flex items-center gap-2 text-white hover:text-yellow-500 transition-colors font-black uppercase text-xs">
-              <UserPlus size={16} /> Create Cadet Account
+          <div className="mt-10 pt-8 border-t border-blue-50 dark:border-white/5 flex flex-col items-center gap-4 text-center">
+            <p className="text-blue-300 dark:text-slate-500 text-[9px] font-black uppercase tracking-[0.2em]">Deployment Access</p>
+            <Link to="/admin/signup" className="flex items-center gap-2 text-slate-900 dark:text-white hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors font-black uppercase text-xs">
+              <UserPlus size={16} className="text-[#d4af37]" /> Create Cadet Account
             </Link>
           </div>
         </div>
+        
+        <p className="mt-8 text-center text-[9px] font-bold text-blue-200 dark:text-slate-600 uppercase tracking-widest">
+          Authorized Military Personnel Only
+        </p>
       </div>
     </div>
   );

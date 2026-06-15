@@ -8,91 +8,103 @@ const Navbar = () => {
 
   const isActive = (path) => currentPath === path;
 
+  // Refined NavLink component
+  const NavLink = ({ to, children }) => {
+    if (isActive(to)) return null;
+    return (
+      <Link 
+        to={to} 
+        className="text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-200 
+                   text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:scale-105 active:scale-95"
+      >
+        {children}
+      </Link>
+    );
+  };
+
   return (
-    <nav className="bg-slate-900/95 backdrop-blur-sm text-white p-4 fixed top-0 w-full z-50 shadow-lg border-b border-yellow-600/30">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <nav className="fixed top-0 w-full z-50 h-16 transition-colors duration-300
+                    bg-white/95 dark:bg-[#0a0c12]/95 backdrop-blur-sm 
+                    border-b border-slate-200 dark:border-white/5 shadow-md dark:shadow-2xl">
+      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
         
-        <div className="flex items-center space-x-7">
-          {/* Logo / Home */}
-          {!isActive('/') && (
-            <Link to="/" className="flex items-center gap-2 group mr-2">
-              <Shield className="text-yellow-500 group-hover:rotate-12 transition-transform" size={18} />
-              <span className="text-xs font-black uppercase tracking-[0.2em] hover:text-yellow-500 transition">
+        {/* LEFT SECTION: Logo & Primary Links */}
+        <div className="flex items-center gap-10">
+          {!isActive('/') ? (
+            <Link to="/" className="flex items-center gap-3 group">
+              <Shield className="text-[#d4af37] group-hover:rotate-12 transition-transform" size={20} />
+              <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white group-hover:text-[#d4af37] transition">
                 Home
               </span>
             </Link>
+          ) : (
+            <div className="flex items-center gap-3 opacity-40 cursor-default">
+              <Shield className="text-[#d4af37]" size={20} />
+              <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white">Home</span>
+            </div>
           )}
 
-          {/* STANDALONE ABOUT LINK */}
-          {!isActive('/about') && (
-            <Link to="/about" className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-yellow-500 transition">
-              About
-            </Link>
-          )}
+          <div className="hidden md:flex items-center gap-8">
+            <NavLink to="/about">About</NavLink>
 
-          {/* Cadet Info Dropdown */}
-          <div className="relative group">
-            <div className="flex items-center gap-1 cursor-default">
-              <span className={`text-xs font-black uppercase tracking-[0.2em] transition-colors ${currentPath.includes('cadet') || currentPath === '/promotion-board' ? 'text-yellow-500' : 'text-slate-400 group-hover:text-white'}`}>
-                Cadet Info
-              </span>
-              <ChevronDown size={12} className="text-slate-500 group-hover:text-white" />
+            {/* --- CADET INFO DROPDOWN --- */}
+            <div className="relative group py-5">
+              <div className="flex items-center gap-1 cursor-pointer">
+                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
+                  ${currentPath.includes('cadet') || currentPath === '/promotion-board' || currentPath.includes('winning-colors') 
+                  ? 'text-[#d4af37]' 
+                  : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                  Cadet Info
+                </span>
+                <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" />
+              </div>
+              
+              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 
+                              bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
+                {!isActive('/cadet-info') && (
+                  <Link to="/cadet-info" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+                    General Info
+                  </Link>
+                )}
+                {!isActive('/promotion-board') && (
+                  <Link to="/promotion-board" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+                    Promotion Board
+                  </Link>
+                )}
+                {/* --- ADDED WINNING COLORS ITEM --- */}
+                {!isActive('/cadet-info/winning-colors') && (
+                  <Link to="/cadet-info/winning-colors" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
+                    Winning Colors
+                  </Link>
+                )}
+              </div>
             </div>
-            <div className="absolute top-full -left-2 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-2 shadow-2xl">
-              {!isActive('/cadet-info') && (
-                <Link to="/cadet-info" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded">
-                  General Info
-                </Link>
-              )}
-              {!isActive('/promotion-board') && (
-                <Link to="/promotion-board" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded">
-                  Promotion Board
-                </Link>
-              )}
+
+            <div className="relative group py-5">
+              <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
+                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
+                  ${['/announcements', '/photos'].includes(currentPath) ? 'text-[#d4af37]' : 'group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                  Battalion
+                </span>
+                <ChevronDown size={14} />
+              </div>
+              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 
+                              bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
+                <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
+                <Link to="/photos" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Photo Gallery</Link>
+              </div>
             </div>
+
+            <NavLink to="/leadership">Leadership</NavLink>
+            <NavLink to="/teams">Teams</NavLink>
           </div>
-
-          {/* Battalion Dropdown */}
-          <div className="relative group">
-            <div className="flex items-center gap-1 cursor-default">
-              <span className={`text-xs font-black uppercase tracking-[0.2em] transition-colors ${['/announcements', '/photos'].includes(currentPath) ? 'text-yellow-500' : 'text-slate-400 group-hover:text-white'}`}>
-                Battalion
-              </span>
-              <ChevronDown size={12} className="text-slate-500 group-hover:text-white" />
-            </div>
-            <div className="absolute top-full -left-2 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-2 shadow-2xl">
-              {!isActive('/announcements') && (
-                <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded">
-                  Announcements
-                </Link>
-              )}
-              {!isActive('/photos') && (
-                <Link to="/photos" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded">
-                  Photo Gallery
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {!isActive('/leadership') && (
-            <Link to="/leadership" className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition">
-              Leadership
-            </Link>
-          )}
-
-          {!isActive('/teams') && (
-            <Link to="/teams" className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition">
-              Teams
-            </Link>
-          )}
         </div>
 
-        {/* Right Side */}
         <div className="flex items-center">
           {!isActive('/admin') && (
             <Link 
               to="/admin" 
-              className="text-[10px] font-black uppercase tracking-widest text-yellow-500 hover:brightness-125 transition-all border border-yellow-500/20 px-4 py-2 rounded"
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d4af37] hover:bg-[#d4af37] hover:text-white transition-all duration-300 border border-[#d4af37]/40 px-5 py-2 rounded-full"
             >
               Admin Portal
             </Link>
