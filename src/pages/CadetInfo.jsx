@@ -229,18 +229,17 @@ const CadetInfo = () => {
           </div>
 
           <div className="space-y-8">
-            {/* BATTALION LEADERSHIP */}
+            {/* UPDATED BATTALION LEADERSHIP ELEMENTS */}
             <Section title="Battalion Leadership" icon={Users} color="yellow">
               <div className="space-y-4">
                 <div className="bg-yellow-500 p-4 rounded-2xl text-slate-950 shadow-lg">
                   <p className="text-[10px] font-black uppercase opacity-60">Battalion Commander</p>
-                  <p className="text-lg font-black uppercase italic tracking-tighter">Cadet Pacheco</p>
+                  <p className="text-lg font-black uppercase italic tracking-tighter">Cadet Damian Washington</p>
                 </div>
                 <div className="grid grid-cols-1 gap-2 text-[13px] font-black uppercase italic">
                   {[
-                    { role: "DC", name: "Cadet T. Kitts" },
-                    { role: "XO", name: "Cadet G. Kitts" },
-                    { role: "CSM", name: "Cadet Morrison" }
+                    { role: "XO", name: "Cadet Max Demio" },
+                    { role: "CSM", name: "Cadet Janelly Ramos" }
                   ].map((leader) => (
                     <div key={leader.role} className="bg-black/40 p-3 rounded-xl border border-white/5 flex justify-between items-center group hover:border-yellow-500/30 transition-all">
                       <span className="text-slate-500 not-italic text-[9px] group-hover:text-yellow-500">{leader.role}</span>
