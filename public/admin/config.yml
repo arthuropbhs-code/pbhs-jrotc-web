@@ -1,0 +1,19 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "public/covers" # Where cadet portraits will be uploaded
+public_folder: "/covers" # The path your React code will read
+
+collections:
+  - name: "leadership"
+    label: "Battalion Leadership"
+    folder: "src/data/cms"
+    create: true
+    format: "json"
+    slug: "{{fields.role}}"
+    fields:
+      - { label: "Role Title", name: "role", widget: "string" }
+      - { label: "Rank Shortcode (e.g. c/LTC)", name: "rank", widget: "string" }
+      - { label: "Full Name", name: "name", widget: "string" }
+      - { label: "Portrait Image", name: "portrait", widget: "image" }
