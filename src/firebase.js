@@ -1,8 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage"; // Import this
-
+import { getStorage } from "firebase/storage"; 
 
 // Using import.meta.env to keep keys secure
 const firebaseConfig = {
@@ -15,10 +14,25 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize variables outside so they can be safely exported
+let app;
+let auth;
+let db;
+let storage;
 
-// Export services for use in your hooks/pages
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app); // Export this
+try {
+  // Only attempt to start Firebase if an API key is actually present
+  if (firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+  } else {
+    console.warn("Firebase configuration keys are missing. Skipping initialization.");
+  }
+} catch (error) {
+  console.error("Firebase failed to initialize cleanly:", error);
+}
+
+// Export services safely so your pages don't crash when opening the site
+export { auth, db, storage };
