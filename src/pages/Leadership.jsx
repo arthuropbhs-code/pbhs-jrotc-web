@@ -6,7 +6,11 @@ import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
 const fetchCmsData = () => {
   // Pulls all dynamic json files from your general cms folder
   const files = import.meta.glob('/src/data/cms/*.json', { eager: true });
-  return Object.values(files).map((file) => file.default || file);
+  
+  // Map through modules and safely extract the nested default JSON properties
+  return Object.values(files).map((module) => {
+    return module.default || module;
+  });
 };
 
 const Leadership = () => {
@@ -18,12 +22,11 @@ const Leadership = () => {
     setCmsEntries(rawData);
   }, []);
 
-// --- 1. COMMAND TEAM FILTERS (Robust Property Extraction) ---
+  // --- 1. COMMAND TEAM FILTERS ---
   const getRole = (roleTitle, fallbackName) => {
     const found = cmsEntries.find((item) => {
-      // Direct access or fallback in case fields got nested under an attributes/data key
-      const role = item.role || item.attributes?.role;
-      const company = item.company || item.attributes?.company;
+      const role = item?.role || item?.attributes?.role;
+      const company = item?.company || item?.attributes?.company;
       
       return role?.trim().toLowerCase() === roleTitle.toLowerCase() && 
              (!company || company === "None");
@@ -48,8 +51,8 @@ const Leadership = () => {
 
   // --- 2. BATTALION STAFF FILTERS ---
   const staff = cmsEntries.filter((item) => {
-    const role = item.role || item.attributes?.role;
-    const company = item.company || item.attributes?.company;
+    const role = item?.role || item?.attributes?.role;
+    const company = item?.company || item?.attributes?.company;
     return role && role.toUpperCase().startsWith("S-") && (!company || company === "None");
   }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
 
@@ -58,19 +61,19 @@ const Leadership = () => {
   
   const companies = companyNames.map((companyName) => {
     const companyMembers = cmsEntries.filter((item) => {
-      const company = item.company || item.attributes?.company;
+      const company = item?.company || item?.attributes?.company;
       return company?.trim().toLowerCase() === companyName.toLowerCase();
     });
 
     const getCompanyPosition = (posName) => {
       const found = companyMembers.find((m) => {
-        const role = m.role || m.attributes?.role;
+        const role = m?.role || m?.attributes?.role;
         return role?.trim().toLowerCase() === posName.toLowerCase();
       });
       
       return { 
         pos: posName, 
-        name: found ? `${found.rank || ''} ${found.name}`.trim() : "None" 
+        name: found ? `${found.rank || ''} ${found.name || ''}`.trim() : "None" 
       };
     };
 
@@ -155,7 +158,7 @@ const Leadership = () => {
                   <div key={i} className="glass-card bg-slate-900/60 border border-slate-800 p-5 border-l-4 border-yellow-600 flex justify-between items-center group rounded-xl">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full border border-yellow-600/30 overflow-hidden flex-shrink-0 bg-slate-800">
-                        <img src={s.portrait} alt={s.name} className="w-full h-full object-cover" />
+                        <img src={s.portrait || "/covers/placeholder.webp"} alt={s.name} className="w-full h-full object-cover" />
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">{s.role}</p>

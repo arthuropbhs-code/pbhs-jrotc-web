@@ -10,7 +10,7 @@ collections:
     label: "Battalion Leadership"
     folder: "src/data/cms"
     create: true
-    slug: "{{slug}}"
+    slug: "{{role}}-{{name}}"
     fields:
       - { label: "Full Name", name: "name", widget: "string" }
       - { label: "Role/Position Title", name: "role", widget: "string", hint: "e.g., Battalion Commander, S-1 Adjutant, Commander, First Sergeant" }
