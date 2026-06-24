@@ -18,12 +18,27 @@ const Leadership = () => {
     setCmsEntries(rawData);
   }, []);
 
-  // --- 1. COMMAND TEAM FILTERS ---
+// --- 1. COMMAND TEAM FILTERS (Robust Property Extraction) ---
   const getRole = (roleTitle, fallbackName) => {
-    const found = cmsEntries.find(
-      (item) => item.role?.trim().toLowerCase() === roleTitle.toLowerCase() && !item.company
-    );
-    return found || { role: roleTitle, rank: "N/A", name: fallbackName, portrait: "/covers/placeholder.webp" };
+    const found = cmsEntries.find((item) => {
+      // Direct access or fallback in case fields got nested under an attributes/data key
+      const role = item.role || item.attributes?.role;
+      const company = item.company || item.attributes?.company;
+      
+      return role?.trim().toLowerCase() === roleTitle.toLowerCase() && 
+             (!company || company === "None");
+    });
+
+    if (found) {
+      return {
+        role: found.role || roleTitle,
+        rank: found.rank || "N/A",
+        name: found.name || fallbackName,
+        portrait: found.portrait || "/covers/placeholder.webp"
+      };
+    }
+
+    return { role: roleTitle, rank: "N/A", name: fallbackName, portrait: "/covers/placeholder.webp" };
   };
 
   const bc = getRole("Battalion Commander", "Unassigned");
@@ -32,23 +47,27 @@ const Leadership = () => {
   const sgm = getRole("Sergeant Major", "Unassigned");
 
   // --- 2. BATTALION STAFF FILTERS ---
-  const staff = cmsEntries.filter(
-    (item) => item.role && item.role.toUpperCase().startsWith("S-") && !item.company
-  ).sort((a, b) => a.role.localeCompare(b.role));
+  const staff = cmsEntries.filter((item) => {
+    const role = item.role || item.attributes?.role;
+    const company = item.company || item.attributes?.company;
+    return role && role.toUpperCase().startsWith("S-") && (!company || company === "None");
+  }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
 
   // --- 3. DYNAMIC COMPANY GENERATOR ---
-  // This takes whatever company entries are published in the CMS and groups them cleanly
   const companyNames = ["Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"];
   
   const companies = companyNames.map((companyName) => {
-    // Find all CMS entries belonging to this specific company
-    const companyMembers = cmsEntries.filter(
-      (item) => item.company?.trim().toLowerCase() === companyName.toLowerCase()
-    );
+    const companyMembers = cmsEntries.filter((item) => {
+      const company = item.company || item.attributes?.company;
+      return company?.trim().toLowerCase() === companyName.toLowerCase();
+    });
 
-    // Helper to extract specific spots like "Commander" inside that company
     const getCompanyPosition = (posName) => {
-      const found = companyMembers.find(m => m.role?.trim().toLowerCase() === posName.toLowerCase());
+      const found = companyMembers.find((m) => {
+        const role = m.role || m.attributes?.role;
+        return role?.trim().toLowerCase() === posName.toLowerCase();
+      });
+      
       return { 
         pos: posName, 
         name: found ? `${found.rank || ''} ${found.name}`.trim() : "None" 
