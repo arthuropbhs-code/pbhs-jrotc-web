@@ -4,12 +4,13 @@ import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
 
 // --- DATA FETCHING ENGINE ---
 const fetchCmsData = () => {
-  // Pulls all dynamic json files from your general cms folder
-  const files = import.meta.glob('/src/data/cms/*.json', { eager: true });
+  // 1. Scan for markdown files instead of json files
+  const files = import.meta.glob('/src/data/cms/*.md', { eager: true });
   
-  // Map through modules and safely extract the nested default JSON properties
   return Object.values(files).map((module) => {
-    return module.default || module;
+    // 2. Decap CMS parses Markdown frontmatter data into module.attributes
+    // fall back to module.default or raw module properties just in case
+    return module.attributes || module.default || module;
   });
 };
 
