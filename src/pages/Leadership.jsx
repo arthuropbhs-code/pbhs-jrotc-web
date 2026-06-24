@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Users } from 'lucide-react';
 
 // --- DATA FETCHING ENGINE ---
 const fetchCmsData = () => {
@@ -40,7 +40,7 @@ const Leadership = () => {
       const company = item?.company || item?.attributes?.company;
       
       return role?.trim().toLowerCase() === roleTitle.toLowerCase() && 
-             (!company || company === "None");
+             (!company || company.trim() === "" || company.trim().toLowerCase() === "none");
     });
 
     if (found) {
@@ -58,22 +58,30 @@ const Leadership = () => {
   const bc = getRole("Battalion Commander", "Unassigned");
   const xo = getRole("Executive Officer", "Unassigned");
   const csm = getRole("Command Sergeant Major", "Unassigned");
-  const sgm = getRole("Sergeant Major", "Unassigned");
 
-// --- 2. BATTALION STAFF FILTERS ---
-const staff = cmsEntries.filter((item) => {
-  const role = item?.role;
-  const company = item?.company;
-  
-  if (!role) return false;
-  
-  const upperRole = role.toUpperCase().trim();
-  // Matches "S-3", "S3", "S-1", "S1", etc.
-  const isStaffRole = upperRole.startsWith("S-") || /^S\d/.test(upperRole);
-  const isNoCompany = !company || company.trim() === "" || company.trim().toLowerCase() === "none";
-  
-  return isStaffRole && isNoCompany;
-}).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
+  // DYNAMIC SGM FILTER: Gathers all matching profiles into an array to support 0, 1, or multiple entries
+  const sgmMembers = cmsEntries.filter((item) => {
+    const role = item?.role || item?.attributes?.role || "";
+    const company = item?.company || item?.attributes?.company || "None";
+    return role.trim().toLowerCase() === "sergeant major" && 
+           (!company || company.trim() === "" || company.trim().toLowerCase() === "none");
+  });
+
+  // --- 2. BATTALION STAFF FILTERS ---
+  const staff = cmsEntries.filter((item) => {
+    const role = item?.role;
+    const company = item?.company;
+    
+    if (!role) return false;
+    
+    const upperRole = role.toUpperCase().trim();
+    // Matches "S-3", "S3", "S-1", "S1", etc.
+    const isStaffRole = upperRole.startsWith("S-") || /^S\d/.test(upperRole);
+    const isNoCompany = !company || company.trim() === "" || company.trim().toLowerCase() === "none";
+    
+    return isStaffRole && isNoCompany;
+  }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
+
   // --- 3. DYNAMIC COMPANY GENERATOR ---
   const companyNames = ["Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"];
   
@@ -122,36 +130,44 @@ const staff = cmsEntries.filter((item) => {
             <CommandBox data={bc} variant="gold" />
           </div>
 
-          {/* XO AND CSM GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl items-stretch justify-center">
+          {/* XO AND CSM / SGM GRID LAYOUT */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl items-start justify-center">
+             
+             {/* XO BOX */}
              <CommandBox data={xo} variant="blue" />
              
-             <div className="bg-slate-900 border border-yellow-500/30 p-6 rounded-2xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
-                 <div className="w-16 h-16 rounded-full border-2 border-yellow-500/50 overflow-hidden flex-shrink-0 bg-slate-800">
-                   <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover" />
-                 </div>
-                 <div>
-                   <p className="text-[10px] font-black tracking-widest text-yellow-500 uppercase">{csm.role}</p>
-                   <h3 className="text-xl font-black text-white uppercase italic leading-none">{csm.name}</h3>
-                   <p className="text-sm font-bold text-slate-500 mt-1">{csm.rank}</p>
-                 </div>
-             </div>
-          </div>
+             {/* CSM + OPTIONAL SGM LAYERED STACK */}
+             <div className="flex flex-col gap-4 w-full">
+               <div className="bg-slate-900 border border-yellow-500/30 p-6 rounded-2xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
+                   <div className="w-16 h-16 rounded-full border-2 border-yellow-500/50 overflow-hidden flex-shrink-0 bg-slate-800">
+                     <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover" />
+                   </div>
+                   <div>
+                     <p className="text-[10px] font-black tracking-widest text-yellow-500 uppercase">{csm.role}</p>
+                     <h3 className="text-xl font-black text-white uppercase italic leading-none">{csm.name}</h3>
+                     <p className="text-sm font-bold text-slate-500 mt-1">{csm.rank}</p>
+                   </div>
+               </div>
 
-          {/* SGM SUPPORT ELEMENT */}
-          <div className="flex flex-col items-center w-full max-w-xs">
-             <ChevronDown className="text-yellow-500/50 mb-2" size={24} />
-
-             <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden flex-shrink-0 bg-slate-800">
-                   <img src={sgm.portrait} alt={sgm.name} className="w-full h-full object-cover" />
+               {/* SERGEANT MAJOR CARDS (Conditionally rendered, drops completely out of layout if empty) */}
+               {sgmMembers.length > 0 && (
+                 <div className="flex flex-col items-center w-full pl-6 border-l-2 border-slate-800/60 gap-3 mt-1">
+                   {sgmMembers.map((sgmItem, index) => (
+                     <div key={index} className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
+                         <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden flex-shrink-0 bg-slate-800">
+                           <img src={sgmItem.portrait || "/covers/placeholder.webp"} alt={sgmItem.name} className="w-full h-full object-cover" />
+                         </div>
+                         <div>
+                           <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">{sgmItem.role || "Sergeant Major"}</p>
+                           <h3 className="text-md font-black text-slate-200 uppercase italic leading-none">{sgmItem.name}</h3>
+                           <p className="text-xs font-bold text-slate-600 mt-0.5">{sgmItem.rank || "N/A"}</p>
+                         </div>
+                     </div>
+                   ))}
                  </div>
-                 <div>
-                   <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">{sgm.role}</p>
-                   <h3 className="text-md font-black text-slate-200 uppercase italic leading-none">{sgm.name}</h3>
-                   <p className="text-xs font-bold text-slate-600 mt-0.5">{sgm.rank}</p>
-                 </div>
+               )}
              </div>
+
           </div>
         </div>
 
