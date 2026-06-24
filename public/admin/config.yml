@@ -10,10 +10,18 @@ collections:
     label: "Battalion Leadership"
     folder: "src/data/cms"
     create: true
-    format: "json"
-    slug: "{{fields.role}}"
+    slug: "{{slug}}"
     fields:
-      - { label: "Role Title", name: "role", widget: "string" }
-      - { label: "Rank Shortcode (e.g. c/LTC)", name: "rank", widget: "string" }
       - { label: "Full Name", name: "name", widget: "string" }
-      - { label: "Portrait Image", name: "portrait", widget: "image" }
+      - { label: "Role/Position Title", name: "role", widget: "string", hint: "e.g., Battalion Commander, S-1 Adjutant, Commander, First Sergeant" }
+      - { label: "Rank Shortcode", name: "rank", widget: "string", hint: "e.g., c/LTC, c/1SG, c/CPT" }
+      - { label: "Portrait Photo", name: "portrait", widget: "image", required: false }
+      - { label: "Staff Description", name: "desc", widget: "string", required: false, hint: "Only used for S-staff members (e.g. Personnel & Administration)" }
+      - { 
+          label: "Company Assignment", 
+          name: "company", 
+          widget: "select", 
+          options: ["None", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"], 
+          default: "None",
+          hint: "Leave as None if this is a Battalion Staff or Command position."
+        }

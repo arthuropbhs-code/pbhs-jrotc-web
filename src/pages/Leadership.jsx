@@ -1,69 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
 
+// --- DATA FETCHING ENGINE ---
+const fetchCmsData = () => {
+  // Pulls all dynamic json files from your general cms folder
+  const files = import.meta.glob('/src/data/cms/*.json', { eager: true });
+  return Object.values(files).map((file) => file.default || file);
+};
+
 const Leadership = () => {
   const [activeTab, setActiveTab] = useState('staff');
+  const [cmsEntries, setCmsEntries] = useState([]);
 
-  // --- REVISED COMMAND TEAM DATA ---
-  const bc = { 
-    role: "Battalion Commander", 
-    rank: "c/LTC", 
-    name: "Damian Washington",
-    portrait: "/covers/Washington.webp" 
-  };
-  const xo = { 
-    role: "Executive Officer", 
-    rank: "c/MAJ", 
-    name: "Max Demio",
-    portrait: "/covers/Demio.webp" 
-  };
-  const csm = { 
-    role: "Command Sergeant Major", 
-    rank: "c/CSM", 
-    name: "Janelly Ramos",
-    portrait: "/covers/Ramos.webp" 
-  };
-  const sgm = { 
-    role: "Sergeant Major", 
-    rank: "c/SGM", 
-    name: "Sophia Almeida",
-    portrait: "/covers/Almeida.webp" 
+  useEffect(() => {
+    const rawData = fetchCmsData();
+    setCmsEntries(rawData);
+  }, []);
+
+  // --- 1. COMMAND TEAM FILTERS ---
+  const getRole = (roleTitle, fallbackName) => {
+    const found = cmsEntries.find(
+      (item) => item.role?.trim().toLowerCase() === roleTitle.toLowerCase() && !item.company
+    );
+    return found || { role: roleTitle, rank: "N/A", name: fallbackName, portrait: "/covers/placeholder.webp" };
   };
 
-  // --- REVISED BATTALION STAFF DATA ---
-  const staff = [
-    { role: "S-1 Adjutant", name: "Kiran Savage", desc: "Personnel & Administration", portrait: "/covers/SavageK.webp" },
-    { role: "S-2 Safety", name: "Casey Clarkson", desc: "Safety & Security", portrait: "/covers/Clarkson.webp" },
-    { role: "S-3 Operations", name: "Sarah De Jesus", desc: "Training & Operations", portrait: "/covers/DeJesus.webp" },
-    { role: "S-4 Logistics", name: "Isabella Alves", desc: "Supply & Logistics", portrait: "/covers/Alves.webp" },
-    { role: "S-5 Special Projects", name: "Arthuro De Almeida", desc: "Public Affairs & Media", portrait: "/covers/DeAlmeida.webp" },
-    { role: "S-6 Technology", name: "Santiago Peña", desc: "Technology & Infrastructure", portrait: "/covers/Pena.webp" },
-    { role: "S-7 Assistance", name: "Layla Jarussi-Hasan", desc: "Assistance & Budgeting", portrait: "/covers/Jarussi.webp" },
-  ];
+  const bc = getRole("Battalion Commander", "Unassigned");
+  const xo = getRole("Executive Officer", "Unassigned");
+  const csm = getRole("Command Sergeant Major", "Unassigned");
+  const sgm = getRole("Sergeant Major", "Unassigned");
 
-  const companies = [
-    { 
-      name: "Alpha Company", 
-      staff: [{ pos: "Commander", name: "None" }, { pos: "Executive Officer", name: "None" }, { pos: "First Sergeant", name: "None" }]
-    },
-    { 
-      name: "Bravo Company", 
-      staff: [{ pos: "Commander", name: "None" }, { pos: "Executive Officer", name: "None" }, { pos: "First Sergeant", name: "None" }]
-    },
-    { 
-      name: "Charlie Company", 
-      staff: [{ pos: "Commander", name: "None" }, { pos: "Executive Officer", name: "None" }, { pos: "First Sergeant", name: "Brown" }]
-    },
-    { 
-      name: "Delta Company", 
-      staff: [{ pos: "Commander", name: "None" }, { pos: "Executive Officer", name: "None" }, { pos: "First Sergeant", name: "None" }]
-    },
-    { 
-      name: "Echo Company", 
-      staff: [{ pos: "Commander", name: "None" }, { pos: "Executive Officer", name: "None" }, { pos: "First Sergeant", name: "None" }]
-    },
-  ];
+  // --- 2. BATTALION STAFF FILTERS ---
+  const staff = cmsEntries.filter(
+    (item) => item.role && item.role.toUpperCase().startsWith("S-") && !item.company
+  ).sort((a, b) => a.role.localeCompare(b.role));
+
+  // --- 3. DYNAMIC COMPANY GENERATOR ---
+  // This takes whatever company entries are published in the CMS and groups them cleanly
+  const companyNames = ["Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"];
+  
+  const companies = companyNames.map((companyName) => {
+    // Find all CMS entries belonging to this specific company
+    const companyMembers = cmsEntries.filter(
+      (item) => item.company?.trim().toLowerCase() === companyName.toLowerCase()
+    );
+
+    // Helper to extract specific spots like "Commander" inside that company
+    const getCompanyPosition = (posName) => {
+      const found = companyMembers.find(m => m.role?.trim().toLowerCase() === posName.toLowerCase());
+      return { 
+        pos: posName, 
+        name: found ? `${found.rank || ''} ${found.name}`.trim() : "None" 
+      };
+    };
+
+    return {
+      name: companyName,
+      staff: [
+        getCompanyPosition("Commander"),
+        getCompanyPosition("Executive Officer"),
+        getCompanyPosition("First Sergeant")
+      ]
+    };
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-4">
@@ -82,7 +82,7 @@ const Leadership = () => {
             <CommandBox data={bc} variant="gold" />
           </div>
 
-          {/* XO AND CSM GRID - TIED AT THE EXACT SAME HEIGHT */}
+          {/* XO AND CSM GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl items-stretch justify-center">
              <CommandBox data={xo} variant="blue" />
              
@@ -98,7 +98,7 @@ const Leadership = () => {
              </div>
           </div>
 
-          {/* SGM SUPPORT ELEMENT - ROWING UNDERNEATH CENTERED */}
+          {/* SGM SUPPORT ELEMENT */}
           <div className="flex flex-col items-center w-full max-w-xs">
              <ChevronDown className="text-yellow-500/50 mb-2" size={24} />
 
@@ -141,7 +141,7 @@ const Leadership = () => {
                       <div>
                         <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">{s.role}</p>
                         <h4 className="text-xl font-bold text-white italic">{s.name}</h4>
-                        <p className="text-xs text-slate-500 font-medium">{s.desc}</p>
+                        <p className="text-xs text-slate-500 font-medium">{s.desc || 'Battalion Staff Officer'}</p>
                       </div>
                     </div>
                     <ShieldCheck className="text-slate-800 group-hover:text-yellow-600 transition-colors" />
@@ -178,7 +178,6 @@ const Leadership = () => {
   );
 }
 
-// RENDER HELPER HOOK FOR RASTER OBJECT CARDS
 const CommandBox = ({ data, variant }) => (
   <motion.div whileHover={{ y: -5 }} className={`${variant === 'gold' ? 'bg-yellow-500 text-slate-950 shadow-[0_0_40px_rgba(234,179,8,0.2)]' : 'bg-slate-900 border border-slate-800 text-white'} p-6 rounded-2xl w-full relative transition-all flex items-center gap-5 text-left`}>
     <div className={`w-20 h-20 rounded-full border-2 overflow-hidden flex-shrink-0 bg-slate-800 ${variant === 'gold' ? 'border-slate-900' : 'border-yellow-500/50'}`}>
