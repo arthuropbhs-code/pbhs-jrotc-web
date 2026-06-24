@@ -60,13 +60,20 @@ const Leadership = () => {
   const csm = getRole("Command Sergeant Major", "Unassigned");
   const sgm = getRole("Sergeant Major", "Unassigned");
 
-  // --- 2. BATTALION STAFF FILTERS ---
-  const staff = cmsEntries.filter((item) => {
-    const role = item?.role || item?.attributes?.role;
-    const company = item?.company || item?.attributes?.company;
-    return role && role.toUpperCase().startsWith("S-") && (!company || company === "None");
-  }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
-
+// --- 2. BATTALION STAFF FILTERS ---
+const staff = cmsEntries.filter((item) => {
+  const role = item?.role;
+  const company = item?.company;
+  
+  if (!role) return false;
+  
+  const upperRole = role.toUpperCase().trim();
+  // Matches "S-3", "S3", "S-1", "S1", etc.
+  const isStaffRole = upperRole.startsWith("S-") || /^S\d/.test(upperRole);
+  const isNoCompany = !company || company.trim() === "" || company.trim().toLowerCase() === "none";
+  
+  return isStaffRole && isNoCompany;
+}).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
   // --- 3. DYNAMIC COMPANY GENERATOR ---
   const companyNames = ["Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"];
   
