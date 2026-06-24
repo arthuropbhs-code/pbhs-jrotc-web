@@ -4,13 +4,23 @@ import { ShieldCheck, Users, ChevronDown } from 'lucide-react';
 
 // --- DATA FETCHING ENGINE ---
 const fetchCmsData = () => {
-  // 1. Scan for markdown files instead of json files
-  const files = import.meta.glob('/src/data/cms/*.md', { eager: true });
+  // 1. Tell Vite to pull files purely as uncompiled raw text chunks
+  const files = import.meta.glob('/src/data/cms/*.md', { query: '?raw', eager: true });
   
   return Object.values(files).map((module) => {
-    // 2. Decap CMS parses Markdown frontmatter data into module.attributes
-    // fall back to module.default or raw module properties just in case
-    return module.attributes || module.default || module;
+    const rawContent = module.default || '';
+    const data = {};
+    
+    // 2. Extract standard frontmatter key: value pairs cleanly via regex
+    const matches = rawContent.matchAll(/^([a-zA-Z0-9_-]+):\s*(.+)$/gm);
+    for (const match of matches) {
+      const key = match[1].trim();
+      // Remove surrounding quotes if they exist
+      const value = match[2].trim().replace(/^["']|["']$/g, '');
+      data[key] = value;
+    }
+    
+    return data;
   });
 };
 
