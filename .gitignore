@@ -9,3 +9,4 @@
 logs
 *.log
 ... (the rest of your file)
+.vercel
