@@ -5,29 +5,11 @@ import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
-// --- TOP 4 DATA ---
-const topFour = [
-  {
-    name: "DAMIAN WASHINGTON",
-    rank: "Battalion Commander",
-    quote: "Leadership is not a position or a title, it is action and example.", // Re-used existing inspirational quotes
-    image: "/covers/Washington.webp"
-  },
-  {
-    name: "MAX DEMIO",
-    rank: "Battalion XO",
-    quote: "Success is the result of preparation, hard work, and learning from failure.",
-    image: "/covers/Demio.webp"
-  },
-  {
-    name: "JANELLY RAMOS",
-    rank: "Command Sergeant Major",
-    quote: "Disciplined execution leads to unparalleled results.",
-    image: "/covers/Ramos.webp"
-  }
-];
-
 const Home = () => {
+  const [topThree, setTopThree] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [news, setNews] = useState([]);
+
   // --- SLIDESHOW DATA ---
   const slides = [
     { url: "/covers/Yuletide2025.webp", title: "TORNADO", subtitle: "BATTALION" },
@@ -40,8 +22,58 @@ const Home = () => {
     { url: "/covers/JV_Raiders.webp", title: "TRAINING", subtitle: "THE NEXT GENERATION" }
   ];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [news, setNews] = useState([]);
+  // --- PARSE CMS MARKDOWN FOR LEADERSHIP & QUOTES ---
+  useEffect(() => {
+    const rawFiles = import.meta.glob('../data/cms/*.md', { query: '?raw', eager: true });
+    const leadersList = [];
+
+    const parseFrontmatter = (rawStr) => {
+      const match = rawStr.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (!match) return {};
+      const obj = {};
+      match[1].split('\n').forEach(line => {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+          obj[key] = value;
+        }
+      });
+      return obj;
+    };
+
+    for (const path in rawFiles) {
+      const fileData = rawFiles[path];
+      const rawContent = fileData.default || fileData;
+      if (typeof rawContent === 'string') {
+        const meta = parseFrontmatter(rawContent);
+        if (meta.name) {
+          leadersList.push({
+            name: meta.name.toUpperCase(),
+            role: meta.role ? meta.role.toLowerCase() : '',
+            rank: meta.rank || '',
+            image: meta.portrait || '/covers/default.webp',
+            quote: meta.quote || 'Ready to lead and excel.'
+          });
+        }
+      }
+    }
+
+    // Filter down specifically to the Top 3 command elements
+    const filteredTopThree = leadersList.filter(l => 
+      l.role === 'battalion-commander' || 
+      l.role === 'executive-officer' || 
+      l.role === 'command-sergeant-major'
+    );
+
+    // Enforce display ordering: BC -> XO -> CSM
+    filteredTopThree.sort((a, b) => {
+      const rolesOrder = ['battalion-commander', 'executive-officer', 'command-sergeant-major'];
+      return rolesOrder.indexOf(a.role) - rolesOrder.indexOf(b.role);
+    });
+
+    setTopThree(filteredTopThree);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -104,7 +136,6 @@ const Home = () => {
               {slides[currentIndex].subtitle}
             </span>
           </motion.h1>
-
           <div className="flex flex-wrap justify-center gap-4 mt-10">
             <Link to="/About" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
               Learn More
@@ -114,14 +145,12 @@ const Home = () => {
             </Link>
           </div>
         </div>
-
         <button onClick={prevSlide} className="absolute left-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
           <ChevronLeft size={48} />
         </button>
         <button onClick={nextSlide} className="absolute right-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
           <ChevronRight size={48} />
         </button>
-
         <div className="absolute bottom-10 flex gap-2 z-20">
           {slides.map((_, i) => (
             <button 
@@ -172,16 +201,15 @@ const Home = () => {
         </div>
       </section>
 
-      {/* --- TOP 4 COMMAND SECTION --- */}
+      {/* --- TOP 3 COMMAND SECTION --- */}
       <section className="py-24 bg-slate-950 border-t border-white/5 overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
             <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {topFour.map((leader, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {topThree.map((leader, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
@@ -196,16 +224,14 @@ const Home = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
                 </div>
-
                 <div className="space-y-1 mb-4 text-center sm:text-left">
                   <h4 className="text-white font-black uppercase text-lg italic leading-tight tracking-tight">
                     {leader.name}
                   </h4>
                   <p className="text-yellow-500 font-bold uppercase text-[10px] tracking-widest">
-                    {leader.rank}
+                    {leader.rank} ({leader.role.replace('-', ' ')})
                   </p>
                 </div>
-
                 <div className="relative">
                   <span className="text-4xl text-yellow-500/20 font-serif absolute -top-4 -left-2">"</span>
                   <p className="text-slate-400 text-xs italic leading-relaxed pl-4 border-l border-yellow-500/20">

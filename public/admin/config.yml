@@ -17,7 +17,8 @@ collections:
       - { label: "Rank Shortcode", name: "rank", widget: "string", hint: "e.g., c/LTC, c/1SG, c/CPT" }
       - { label: "Portrait Photo", name: "portrait", widget: "image", required: false }
       - { label: "Staff Description", name: "desc", widget: "string", required: false, hint: "Only used for S-staff members (e.g. Personnel & Administration)" }
-      - { 
+      - { label: "Leadership Quote", name: "quote", widget: "string", required: false }
+      - {
           label: "Company Assignment", 
           name: "company", 
           widget: "select", 
