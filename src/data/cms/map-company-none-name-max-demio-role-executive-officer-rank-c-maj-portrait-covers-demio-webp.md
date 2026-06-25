@@ -1,7 +1,7 @@
 ---
 name: Max Demio
 role: Executive Officer
-rank: C/MAJ
+rank: c/MAJ
 portrait: /covers/Demio.webp
 company: None
 ---
