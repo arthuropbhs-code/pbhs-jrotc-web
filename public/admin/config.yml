@@ -30,7 +30,21 @@ collections:
     label: "Instructors"
     folder: "src/data/cms_instructors"
     create: true
+    delete: false
     slug: "{{type}}-{{name}}"
     fields:
       - { label: "Instructor Type", name: "type", widget: "select", options: ["SAI", "AI"] }
       - { label: "Rank and Last Name", name: "name", widget: "string", hint: "e.g., LTC Johnson, 1SG Chevrestt" }
+  - name: "announcements"
+    label: "Announcements"
+    folder: "src/data/announcements"
+    create: true
+    delete: true 
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Description / Body Content", name: "body", widget: "markdown" }
+      - { label: "Date Issued", name: "date_issued", widget: "datetime", format: "YYYY-MM-DD", dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: "Issued By (Name/Role)", name: "issued_by", widget: "string", hint: "e.g., LTC Johnson, c/LTC Washington" }
+      - { label: "Notice Ends (Expiration Date)", name: "notice_ends", widget: "datetime", format: "YYYY-MM-DD", dateFormat: "YYYY-MM-DD", timeFormat: false, required: false, hint: "Optional: When this announcement should stop displaying or archiving." }
+      - { label: "Announcement Image", name: "image", widget: "image", required: false, hint: "Optional: Attach an image banner to this announcement." }

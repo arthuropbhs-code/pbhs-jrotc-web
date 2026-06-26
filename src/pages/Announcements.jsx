@@ -1,135 +1,153 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { useAuth } from '../hooks/useAuth';
-import { Megaphone, Clock, ShieldCheck, ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Megaphone, Calendar, User, Clock, AlertCircle } from 'lucide-react';
 
 const Announcements = () => {
-  const { userData, role } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Define who should see what based on user metadata
-    const targetList = ["All", "Battalion Wide"];
-    if (userData?.company) {
-      targetList.push(userData.company + " Company");
-      targetList.push(userData.company);
+    // Dynamically pull all markdown files from the announcements CMS data folder
+    const announcementFiles = import.meta.glob('../data/announcements/*.md', { query: '?raw', eager: true });
+    const loadedAnnouncements = [];
+
+    // Simple markdown frontmatter parsing engine
+    const parseMD = (rawStr) => {
+      const frontmatterMatch = rawStr.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      const body = rawStr.replace(/^---\r?\n([\s\S]*?)\r?\n---/, '').trim();
+      
+      const meta = {};
+      if (frontmatterMatch) {
+        frontmatterMatch[1].split('\n').forEach(line => {
+          const parts = line.split(':');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+            meta[key] = value;
+          }
+        });
+      }
+      return { meta, body };
+    };
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for (const path in announcementFiles) {
+      const fileData = announcementFiles[path];
+      const rawContent = fileData.default || fileData;
+      
+      if (typeof rawContent === 'string') {
+        const { meta, body } = parseMD(rawContent);
+        
+        if (meta.title && meta.date_issued) {
+          // Expiration Guard: If Notice Ends date has passed, don't show it to the public
+          if (meta.notice_ends && meta.notice_ends < todayStr) {
+            continue; 
+          }
+
+          loadedAnnouncements.push({
+            id: path,
+            title: meta.title,
+            dateIssued: meta.date_issued,
+            issuedBy: meta.issued_by || 'Battalion Staff',
+            noticeEnds: meta.notice_ends || null,
+            image: meta.image || null,
+            content: body
+          });
+        }
+      }
     }
 
-    const q = query(
-      collection(db, "announcements"), 
-      where("target", "in", targetList),
-      where("active", "==", true),
-      orderBy("timestamp", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const now = new Date().getTime();
-      
-      const filteredData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(post => {
-          // AUTO-EXPIRY LOGIC
-          return !post.expiresAt || post.expiresAt > now;
-        });
-
-      setAnnouncements(filteredData);
-    }, (error) => {
-      console.error("Firestore Error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [userData?.company]);
+    // Sort announcements chronologically (Newest first)
+    loadedAnnouncements.sort((a, b) => new Date(b.dateIssued) - new Date(a.dateIssued));
+    setAnnouncements(loadedAnnouncements);
+    setLoading(false);
+  }, []);
 
   return (
-    /* Increased pt-32 to pt-48 to push content further below the global nav */
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-48 font-sans transition-colors duration-300">
-      <div className="max-w-4xl mx-auto mt-12"> {/* Added mt-12 for extra vertical breathing room */}
+    <div className="min-h-screen bg-slate-950 text-white pt-24 pb-20 px-6 font-sans">
+      <div className="max-w-5xl mx-auto">
         
-        {/* Navigation / Return for Admins */}
-        <div className="flex justify-between items-center mb-10"> {/* Increased mb-8 to mb-10 */}
-          {(role === 'admin' || role === 'officer' || role === 'staff') ? (
-            <Link 
-              to="/admin/dashboard" 
-              className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 transition-all font-black uppercase text-[10px] tracking-widest"
-            >
-              <ChevronLeft size={16} /> Admin Dashboard
-            </Link>
-          ) : <div />}
+        {/* HEADER */}
+        <div className="text-center mb-16">
+          <div className="inline-flex p-3 bg-yellow-500/10 rounded-full text-yellow-500 mb-4 animate-pulse">
+            <Megaphone size={32} />
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-4">
+            Battalion <span className="text-yellow-500">Announcements</span>
+          </h1>
+          <p className="text-slate-400 max-w-xl mx-auto text-xs uppercase tracking-[0.2em] font-bold">
+            Stay informed on critical operations, upcoming events, and official military updates.
+          </p>
         </div>
 
-        <header className="mb-16"> {/* Increased mb-12 to mb-16 to separate header from first post */}
-          <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter flex items-center gap-4"
-          >
-            <Megaphone className="text-yellow-600 dark:text-yellow-500" size={40} /> 
-            <span>Battalion <span className="text-yellow-600 dark:text-yellow-500">Announcements</span></span>
-          </motion.h1>
-          <p className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-[0.3em] mt-3 ml-1">
-            Information for the Corps of Cadets
-          </p>
-        </header>
-
-        <div className="space-y-8"> {/* Increased space-y-6 to space-y-8 for more gap between cards */}
-          <AnimatePresence mode="popLayout">
-            {announcements.map((post, index) => (
-              <motion.div 
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none hover:border-yellow-500/30 transition-all backdrop-blur-sm relative overflow-hidden group"
+        {/* LOADING STATE */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-yellow-500"></div>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-500">Retrieving Orders...</p>
+          </div>
+        ) : announcements.length === 0 ? (
+          /* EMPTY STATE */
+          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-12 text-center max-w-xl mx-auto">
+            <AlertCircle className="text-slate-600 mx-auto mb-4" size={40} />
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-300 mb-1">No Active Notices</h3>
+            <p className="text-xs text-slate-500 font-medium">Check back later for newly published battalion updates.</p>
+          </div>
+        ) : (
+          /* ANNOUNCEMENT FEED LIST */
+          <div className="space-y-8">
+            {announcements.map((post) => (
+              <article 
+                key={post.id} 
+                className="bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden hover:border-yellow-500/20 transition-all duration-300 shadow-2xl flex flex-col md:flex-row"
               >
-                {/* Visual indicator for targeted posts */}
-                {post.target !== "All" && (
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-yellow-500/40" />
+                {/* OPTIONAL IMAGE BLOCK */}
+                {post.image && (
+                  <div className="md:w-1/3 relative min-h-[200px] md:min-h-full bg-slate-950">
+                    <img 
+                      src={post.image} 
+                      alt={post.title} 
+                      className="absolute inset-0 w-full h-full object-cover opacity-80"
+                    />
+                  </div>
                 )}
 
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="text-yellow-600 dark:text-yellow-500" size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500">
-                      Official Bulletin
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2">
-                    <Clock size={12} /> {post.timestamp?.toDate().toLocaleDateString()}
-                  </span>
-                </div>
-
-                <p className="text-lg text-slate-800 dark:text-slate-200 font-medium leading-relaxed mb-8 whitespace-pre-wrap">
-                  {post.content}
-                </p>
-
-                <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                {/* TEXT & DATA BLOCK */}
+                <div className={`p-8 flex-1 flex flex-col justify-between ${post.image ? 'md:w-2/3' : 'w-full'}`}>
                   <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter">Issuing Authority</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white uppercase italic">{post.issuer}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter">Distribution</p>
-                    <p className="text-xs font-bold text-yellow-600 dark:text-yellow-500/80 uppercase">{post.target}</p>
+                    {/* META BADGES */}
+                    <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[10px] font-black uppercase tracking-wider text-slate-400 mb-4">
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                        <Calendar size={12} className="text-yellow-500" />
+                        <span>Issued: {post.dateIssued}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                        <User size={12} className="text-yellow-500" />
+                        <span>By: {post.issuedBy}</span>
+                      </div>
+                      {post.noticeEnds && (
+                        <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-500 px-2.5 py-1 rounded-md border border-yellow-500/20">
+                          <Clock size={12} />
+                          <span>Ends: {post.noticeEnds}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* TITLE */}
+                    <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight mb-4 text-white group-hover:text-yellow-500 transition-colors">
+                      {post.title}
+                    </h2>
+
+                    {/* CONTENT BODY */}
+                    <div className="text-sm leading-relaxed text-slate-300 prose prose-invert max-w-none whitespace-pre-wrap font-medium">
+                      {post.content}
+                    </div>
                   </div>
                 </div>
-              </motion.div>
+              </article>
             ))}
-          </AnimatePresence>
-
-          {announcements.length === 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-32 bg-slate-100/50 dark:bg-slate-900/30 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5"
-            >
-              <ShieldCheck className="text-slate-300 dark:text-slate-800 mx-auto mb-4" size={48} />
-              <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">At Ease. No active announcements.</p>
-            </motion.div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
