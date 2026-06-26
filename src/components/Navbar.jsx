@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, ChevronDown } from 'lucide-react';
+import { Shield, ChevronDown, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Mobile Dropdown Accordion States
+  const [mobileCadetOpen, setMobileCadetOpen] = useState(false);
+  const [mobileBattalionOpen, setMobileBattalionOpen] = useState(false);
 
   const isActive = (path) => currentPath === path;
 
-  // Refined NavLink component
+  // Refined NavLink component for Desktop
   const NavLink = ({ to, children }) => {
     if (isActive(to)) return null;
     return (
@@ -16,6 +22,21 @@ const Navbar = () => {
         to={to} 
         className="text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-200 
                    text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:scale-105 active:scale-95"
+      >
+        {children}
+      </Link>
+    );
+  };
+
+  // Mobile Link helper that auto-closes navigation menu
+  const MobileNavLink = ({ to, children, indent = false }) => {
+    if (isActive(to)) return null;
+    return (
+      <Link
+        to={to}
+        onClick={() => setIsOpen(false)}
+        className={`block py-3 text-xs font-black uppercase tracking-[0.2em] transition-colors
+          ${indent ? 'pl-6 text-slate-400 border-l border-white/5 ml-2' : 'text-slate-200 hover:text-yellow-500'}`}
       >
         {children}
       </Link>
@@ -31,7 +52,7 @@ const Navbar = () => {
         {/* LEFT SECTION: Logo & Primary Links */}
         <div className="flex items-center gap-10">
           {!isActive('/') ? (
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 group">
               <Shield className="text-[#d4af37] group-hover:rotate-12 transition-transform" size={20} />
               <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white group-hover:text-[#d4af37] transition">
                 Home
@@ -44,6 +65,7 @@ const Navbar = () => {
             </div>
           )}
 
+          {/* DESKTOP LINKS */}
           <div className="hidden md:flex items-center gap-8">
             <NavLink to="/about">About</NavLink>
 
@@ -71,7 +93,6 @@ const Navbar = () => {
                     Promotion Board
                   </Link>
                 )}
-                {/* --- ADDED WINNING COLORS ITEM --- */}
                 {!isActive('/cadet-info/winning-colors') && (
                   <Link to="/cadet-info/winning-colors" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
                     Winning Colors
@@ -80,6 +101,7 @@ const Navbar = () => {
               </div>
             </div>
 
+            {/* --- BATTALION DROPDOWN --- */}
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
@@ -100,17 +122,83 @@ const Navbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center">
+        {/* RIGHT SECTION: Admin Actions & Hamburger Toggle */}
+        <div className="flex items-center gap-4">
           {!isActive('/admin') && (
             <Link 
               to="/admin" 
-              className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d4af37] hover:bg-[#d4af37] hover:text-white transition-all duration-300 border border-[#d4af37]/40 px-5 py-2 rounded-full"
+              onClick={() => setIsOpen(false)}
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d4af37] hover:bg-[#d4af37] hover:text-white transition-all duration-300 border border-[#d4af37]/40 px-4 py-2 rounded-full"
             >
-              Admin Portal
+              Admin
             </Link>
           )}
+
+          {/* Hamburger Action Button */}
+          <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 text-slate-600 dark:text-slate-300 hover:text-[#d4af37] transition-colors md:hidden focus:outline-none"
+            aria-label="Toggle Menu"
+          >
+            {isOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* --- HARDWARE-ACCELERATED MOBILE DRAWER OVERLAY --- */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-16 left-0 w-full bg-[#0a0c12] border-b border-white/10 shadow-2xl px-6 py-6 md:hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
+          >
+            <div className="flex flex-col space-y-1">
+              <MobileNavLink to="/about">About</MobileNavLink>
+              
+              {/* Mobile Cadet Accordion Node */}
+              <div className="py-2 border-b border-white/5">
+                <button 
+                  onClick={() => setMobileCadetOpen(!mobileCadetOpen)}
+                  className="w-full flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-slate-200 py-1"
+                >
+                  <span>Cadet Info</span>
+                  <ChevronDown size={14} className={`transform transition-transform duration-200 ${mobileCadetOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileCadetOpen && (
+                  <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
+                    <MobileNavLink to="/cadet-info" indent>General Info</MobileNavLink>
+                    <MobileNavLink to="/promotion-board" indent>Promotion Board</MobileNavLink>
+                    <MobileNavLink to="/cadet-info/winning-colors" indent>Winning Colors</MobileNavLink>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Battalion Accordion Node */}
+              <div className="py-2 border-b border-white/5">
+                <button 
+                  onClick={() => setMobileBattalionOpen(!mobileBattalionOpen)}
+                  className="w-full flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-slate-200 py-1"
+                >
+                  <span>Battalion</span>
+                  <ChevronDown size={14} className={`transform transition-transform duration-200 ${mobileBattalionOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileBattalionOpen && (
+                  <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
+                    <MobileNavLink to="/announcements" indent>Announcements</MobileNavLink>
+                    <MobileNavLink to="/photos" indent>Photo Gallery</MobileNavLink>
+                  </div>
+                )}
+              </div>
+
+              <MobileNavLink to="/leadership">Leadership</MobileNavLink>
+              <MobileNavLink to="/teams">Teams</MobileNavLink>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 };
