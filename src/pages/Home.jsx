@@ -50,7 +50,7 @@ const Home = () => {
         if (meta.name) {
           leadersList.push({
             name: meta.name.toUpperCase(),
-            role: meta.role ? meta.role.toLowerCase() : '',
+            role: meta.role ? meta.role.trim() : '',
             rank: meta.rank || '',
             image: meta.portrait || '/covers/default.webp',
             quote: meta.quote || 'Ready to lead and excel.'
@@ -59,17 +59,35 @@ const Home = () => {
       }
     }
 
-    // Filter down specifically to the Top 3 command elements
-    const filteredTopThree = leadersList.filter(l => 
-      l.role === 'battalion-commander' || 
-      l.role === 'executive-officer' || 
-      l.role === 'command-sergeant-major'
-    );
+    // Helper utility to clean roles of spaces, hyphens, and casing for comparison
+    const sanitizeRole = (roleStr) => {
+      return roleStr.toLowerCase().replace(/[\s-_]/g, '');
+    };
+
+    // Filter down specifically to the Top 3 command elements using unified sanitization
+    const filteredTopThree = leadersList.filter(l => {
+      const cleanRole = sanitizeRole(l.role);
+      return (
+        cleanRole === 'battalioncommander' || 
+        cleanRole === 'executiveofficer' || 
+        cleanRole === 'battalionxo' || 
+        cleanRole === 'commandsergeantmajor'
+      );
+    });
 
     // Enforce display ordering: BC -> XO -> CSM
     filteredTopThree.sort((a, b) => {
-      const rolesOrder = ['battalion-commander', 'executive-officer', 'command-sergeant-major'];
-      return rolesOrder.indexOf(a.role) - rolesOrder.indexOf(b.role);
+      const cleanA = sanitizeRole(a.role);
+      const cleanB = sanitizeRole(b.role);
+      
+      const getOrderWeight = (role) => {
+        if (role === 'battalioncommander') return 0;
+        if (role === 'executiveofficer' || role === 'battalionxo') return 1;
+        if (role === 'commandsergeantmajor') return 2;
+        return 3;
+      };
+
+      return getOrderWeight(cleanA) - getOrderWeight(cleanB);
     });
 
     setTopThree(filteredTopThree);
@@ -229,7 +247,7 @@ const Home = () => {
                     {leader.name}
                   </h4>
                   <p className="text-yellow-500 font-bold uppercase text-[10px] tracking-widest">
-                    {leader.rank} ({leader.role.replace('-', ' ')})
+                    {leader.rank} {leader.role ? `(${leader.role})` : ''}
                   </p>
                 </div>
                 <div className="relative">
