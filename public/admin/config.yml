@@ -26,3 +26,11 @@ collections:
           default: "None",
           hint: "Leave as None if this is a Battalion Staff or Command position."
         }
+  - name: "instructors"
+    label: "Instructors"
+    folder: "src/data/cms_instructors"
+    create: true
+    slug: "{{type}}-{{name}}"
+    fields:
+      - { label: "Instructor Type", name: "type", widget: "select", options: ["SAI", "AI"] }
+      - { label: "Rank and Last Name", name: "name", widget: "string", hint: "e.g., LTC Johnson, 1SG Chevrestt" }

@@ -1,18 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Star, Users, Award, Target, Scale, GraduationCap } from 'lucide-react';
 
 // --- DYNAMIC RANK SYMBOL ENGINE (CLEAN & SPACED) ---
 const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
   const isOfficer = type === 'officer' || type === 'officer-disk';
-  
-  // High-contrast container for the rank insignia
   const containerClass = "relative w-16 h-32 bg-black border border-white/10 rounded-md flex flex-col items-center py-4 overflow-hidden shadow-2xl";
 
   if (isOfficer) {
     const isDisk = type === 'officer-disk';
     return (
       <div className={containerClass}>
-        {/* REFINED: Removed button circle to avoid confusion with Cadet 2LT/Second Lieutenant rank disks */}
         <div className="flex flex-col gap-3 items-center justify-center h-full">
           {[...Array(count)].map((_, i) => (
             <div 
@@ -28,15 +25,12 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
     );
   }
 
-  // Enlisted Patch Logic
   const up = parseInt(count.split('/')[0]) || 0;
   const down = parseInt(count.split('/')[1]) || 0;
 
   return (
     <div className={containerClass}>
       <div className="flex flex-col h-full w-full items-center justify-between px-1 scale-[0.9]">
-        
-        {/* TOP ZONE: Up Chevrons */}
         <div className="flex flex-col gap-1 w-full items-center">
           {[...Array(up)].map((_, i) => (
             <div 
@@ -47,11 +41,9 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
           ))}
         </div>
         
-        {/* CENTER ZONE: Custom Wreath for CSM / Star / Diamond */}
         <div className="relative flex items-center justify-center h-12 w-full">
           {hasWreath && (
             <div className="absolute w-12 h-12 border-4 border-double border-yellow-500/60 rounded-full flex items-center justify-center">
-                {/* Wreath detail */}
                 <div className="absolute inset-0 border-2 border-dotted border-yellow-500/40 rounded-full rotate-45" />
             </div>
           )}
@@ -59,13 +51,9 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
           {hasDiamond && <div className="w-4 h-4 rotate-45 bg-yellow-500 border border-yellow-600 shadow-sm z-10" />}
         </div>
 
-        {/* BOTTOM ZONE: Rocker Bars (Straight and spaced) */}
         <div className="flex flex-col gap-1.5 w-full items-center">
           {[...Array(down)].map((_, i) => (
-            <div 
-              key={i} 
-              className="w-12 h-1.5 bg-yellow-500 rounded-sm shadow-sm" 
-            />
+            <div key={i} className="w-12 h-1.5 bg-yellow-500 rounded-sm shadow-sm" />
           ))}
         </div>
       </div>
@@ -96,6 +84,63 @@ const RankItem = ({ name, description, symbolProps }) => (
 );
 
 const CadetInfo = () => {
+  // Local states for dynamic data layers
+  const [commandStaff, setCommandStaff] = useState({ bc: 'Loading...', xo: 'Loading...', csm: 'Loading...' });
+  const [instructors, setInstructors] = useState({ sai: 'LTC Johnson', ai: '1SG Chevrestt' });
+
+  // --- COMPONENT DATA FETCHING (CMS SEPARATE LOOPS) ---
+  useEffect(() => {
+    // 1. Fetch Leadership Elements
+    const leadershipFiles = import.meta.glob('../data/cms/*.md', { query: '?raw', eager: true });
+    let tempStaff = { bc: 'Not Assigned', xo: 'Not Assigned', csm: 'Not Assigned' };
+
+    const parseFrontmatter = (rawStr) => {
+      const match = rawStr.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (!match) return {};
+      const obj = {};
+      match[1].split('\n').forEach(line => {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          obj[parts[0].trim()] = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+        }
+      });
+      return obj;
+    };
+
+    for (const path in leadershipFiles) {
+      const fileData = leadershipFiles[path];
+      const rawContent = fileData.default || fileData;
+      if (typeof rawContent === 'string') {
+        const meta = parseFrontmatter(rawContent);
+        if (meta.role && meta.name) {
+          const cleanRole = meta.role.toLowerCase().replace(/[\s-_]/g, '');
+          if (cleanRole === 'battalioncommander') tempStaff.bc = meta.name;
+          if (cleanRole === 'executiveofficer' || cleanRole === 'battalionxo') tempStaff.xo = meta.name;
+          if (cleanRole === 'commandsergeantmajor') tempStaff.csm = meta.name;
+        }
+      }
+    }
+    setCommandStaff(tempStaff);
+
+    // 2. Fetch Dynamic Instructors Data Array
+    const instructorFiles = import.meta.glob('../data/cms_instructors/*.md', { query: '?raw', eager: true });
+    let tempInstructors = { sai: 'LTC Johnson', ai: '1SG Chevrestt' }; // Fallback defaults
+
+    for (const path in instructorFiles) {
+      const fileData = instructorFiles[path];
+      const rawContent = fileData.default || fileData;
+      if (typeof rawContent === 'string') {
+        const meta = parseFrontmatter(rawContent);
+        if (meta.type && meta.name) {
+          const cleanType = meta.type.toUpperCase().trim();
+          if (cleanType === 'SAI') tempInstructors.sai = meta.name;
+          if (cleanType === 'AI') tempInstructors.ai = meta.name;
+        }
+      }
+    }
+    setInstructors(tempInstructors);
+  }, []);
+
   const officerRanks = [
     { name: "Cadet Colonel", desc: "3 Diamonds", props: { type: 'officer', count: 3 } },
     { name: "Cadet LTC", desc: "2 Diamonds", props: { type: 'officer', count: 2 } },
@@ -229,17 +274,17 @@ const CadetInfo = () => {
           </div>
 
           <div className="space-y-8">
-            {/* UPDATED BATTALION LEADERSHIP ELEMENTS */}
+            {/* DYNAMIC BATTALION LEADERSHIP ELEMENTS */}
             <Section title="Battalion Leadership" icon={Users} color="yellow">
               <div className="space-y-4">
                 <div className="bg-yellow-500 p-4 rounded-2xl text-slate-950 shadow-lg">
                   <p className="text-[10px] font-black uppercase opacity-60">Battalion Commander</p>
-                  <p className="text-lg font-black uppercase italic tracking-tighter">Cadet Damian Washington</p>
+                  <p className="text-lg font-black uppercase italic tracking-tighter">{commandStaff.bc}</p>
                 </div>
                 <div className="grid grid-cols-1 gap-2 text-[13px] font-black uppercase italic">
                   {[
-                    { role: "XO", name: "Cadet Max Demio" },
-                    { role: "CSM", name: "Cadet Janelly Ramos" }
+                    { role: "XO", name: commandStaff.xo },
+                    { role: "CSM", name: commandStaff.csm }
                   ].map((leader) => (
                     <div key={leader.role} className="bg-black/40 p-3 rounded-xl border border-white/5 flex justify-between items-center group hover:border-yellow-500/30 transition-all">
                       <span className="text-slate-500 not-italic text-[9px] group-hover:text-yellow-500">{leader.role}</span>
@@ -273,16 +318,16 @@ const CadetInfo = () => {
               </div>
             </Section>
 
-            {/* INSTRUCTORS */}
+            {/* INSTRUCTORS SECTION */}
             <Section title="Instructors" icon={Target} color="yellow">
               <div className="space-y-2">
                 <div className="p-4 rounded-xl border border-white/5 bg-black/20 flex items-center justify-between group hover:bg-black/40 transition-all">
                   <span className="text-[10px] text-yellow-500 font-black">SAI</span>
-                  <p className="font-black uppercase italic text-sm">LTC Johnson</p>
+                  <p className="font-black uppercase italic text-sm">{instructors.sai}</p>
                 </div>
                 <div className="p-4 rounded-xl border border-white/5 bg-black/20 flex items-center justify-between group hover:bg-black/40 transition-all">
                   <span className="text-[10px] text-yellow-500 font-black">AI</span>
-                  <p className="font-black uppercase italic text-sm">1SG Chevrestt</p>
+                  <p className="font-black uppercase italic text-sm">{instructors.ai}</p>
                 </div>
               </div>
             </Section>
