@@ -60,7 +60,7 @@ const CommanderInfo = () => {
               ...userData, 
               ...leader,
               // YOUR LOGIC: Data priority
-              displayName: leader.name || userData.displayName || userData.name || "Unknown Cadet",
+              displayName: leader.name || userData.fullName || userData.displayName || userData.name || "Unknown Cadet",
               displayRank: leader.rank || userData.rank || "Cadet",
               displayRole: (leader.teamRole || leader.role || "Team Officer").toUpperCase(),
               profileImg: profileImg,

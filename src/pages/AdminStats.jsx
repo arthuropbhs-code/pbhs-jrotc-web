@@ -1,0 +1,320 @@
+import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
+import { Navigate, Link } from 'react-router-dom';
+import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
+import {
+  BarChart3, ArrowLeft, Loader2, Users, ClipboardCheck, Shirt, Shield, Tent,
+  TrendingUp, CheckCircle2, Clock
+} from 'lucide-react';
+import Footer from '../components/Footer';
+
+const RANK_ORDER = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
+const LET_ORDER = ["LET 1", "LET 2", "LET 3", "LET 4"];
+
+const groupCount = (items, keyFn) => {
+  const counts = {};
+  items.forEach(item => {
+    const key = keyFn(item) || 'Unassigned';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return counts;
+};
+
+// Single-series magnitude-by-category: one accent color, no legend needed
+// (the section title already names the series) - see dataviz skill guidance.
+const BarRow = ({ label, count, max, color = 'bg-yellow-500' }) => (
+  <div className="flex items-center gap-3">
+    <span className="w-28 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate flex-shrink-0">{label}</span>
+    <div className="flex-1 h-5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+      <div className={`h-full ${color} rounded-full transition-all`} style={{ width: max > 0 ? `${Math.max((count / max) * 100, count > 0 ? 4 : 0)}%` : '0%' }} />
+    </div>
+    <span className="w-8 text-right text-xs font-black text-slate-900 dark:text-white flex-shrink-0">{count}</span>
+  </div>
+);
+
+const StatTile = ({ icon: Icon, label, value, sub }) => (
+  <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-5">
+    <div className="flex items-center gap-2 mb-2 text-yellow-600 dark:text-yellow-500">
+      <Icon size={16} />
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</span>
+    </div>
+    <p className="text-3xl font-black italic text-slate-900 dark:text-white leading-none">{value}</p>
+    {sub && <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase mt-1">{sub}</p>}
+  </div>
+);
+
+const SectionCard = ({ icon: Icon, title, children }) => (
+  <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8">
+    <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+      <Icon size={16} /> {title}
+    </h3>
+    {children}
+  </div>
+);
+
+const AdminStats = () => {
+  const { role, loading: authLoading } = useAuth();
+  const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
+
+  const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [uniformRequests, setUniformRequests] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [camps, setCamps] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const unsubs = [
+      onSnapshot(collection(db, "users"), snap => { setUsers(snap.docs.map(d => d.data())); setDataLoading(false); }),
+      onSnapshot(collection(db, "tasks"), snap => setTasks(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "orders"), snap => setOrders(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "events"), snap => setEvents(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "uniform_requests"), snap => setUniformRequests(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "specialTeams"), snap => setTeams(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "camps"), snap => setCamps(snap.docs.map(d => d.data())))
+    ];
+    return () => unsubs.forEach(u => u());
+  }, [isAuthorized]);
+
+  if (authLoading || (dataLoading && isAuthorized)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-yellow-600">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
+
+  // --- ROSTER BREAKDOWN ---
+  const byCompany = groupCount(users, u => u.company);
+  const byRank = groupCount(users, u => u.rank);
+  const byLet = groupCount(users, u => u.letLevel);
+  const rankKeys = [...RANK_ORDER.filter(r => byRank[r]), ...Object.keys(byRank).filter(r => !RANK_ORDER.includes(r))];
+  const letKeys = [...LET_ORDER.filter(l => byLet[l]), ...Object.keys(byLet).filter(l => !LET_ORDER.includes(l))];
+  const maxCompany = Math.max(1, ...Object.values(byCompany));
+  const maxRank = Math.max(1, ...Object.values(byRank));
+  const maxLet = Math.max(1, ...Object.values(byLet));
+
+  // --- GROWTH OVER TIME (cumulative, by month of account creation) ---
+  const monthBuckets = {};
+  users.forEach(u => {
+    const d = u.createdAt?.toDate ? u.createdAt.toDate() : null;
+    if (!d) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthBuckets[key] = (monthBuckets[key] || 0) + 1;
+  });
+  const sortedMonths = Object.keys(monthBuckets).sort();
+  let running = 0;
+  const growthPoints = sortedMonths.map(key => {
+    running += monthBuckets[key];
+    const [y, m] = key.split('-');
+    return { key, label: `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(m) - 1]} '${y.slice(2)}`, total: running };
+  });
+
+  // --- TASK / ORDER ACTIVITY ---
+  const tasksCompleted = tasks.filter(t => t.status === 'completed').length;
+  const tasksPending = tasks.length - tasksCompleted;
+
+  // --- UNIFORM LOGISTICS ---
+  const uniformCompleted = uniformRequests.filter(r => r.status === 'Completed').length;
+  const uniformPending = uniformRequests.length - uniformCompleted;
+  const byItem = groupCount(uniformRequests, r => r.item);
+  const maxItem = Math.max(1, ...Object.values(byItem));
+
+  // --- CAMP ATTENDANCE ---
+  const totalAttendanceRecords = camps.reduce((sum, c) => sum + (c.attendees?.length || 0), 0);
+  const mostRecentCamp = [...camps].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+      <div className="max-w-6xl mx-auto">
+
+        <div className="mb-8">
+          <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
+            <ArrowLeft size={14} /> Back to Command
+          </Link>
+          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+            <BarChart3 className="text-yellow-600 dark:text-yellow-500" /> Battalion Stats
+          </h1>
+        </div>
+
+        {/* HEADLINE TILES */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatTile icon={Users} label="Total Roster" value={users.length} />
+          <StatTile icon={ClipboardCheck} label="Tasks Completed" value={`${tasksCompleted}/${tasks.length}`} />
+          <StatTile icon={Shirt} label="Uniform Pending" value={uniformPending} />
+          <StatTile icon={Tent} label="Camps Logged" value={camps.length} sub={`${totalAttendanceRecords} attendance records`} />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+
+          {/* ROSTER BY COMPANY */}
+          <SectionCard icon={Users} title="Roster by Company">
+            <div className="space-y-3">
+              {Object.keys(byCompany).sort().map(key => (
+                <BarRow key={key} label={key} count={byCompany[key]} max={maxCompany} />
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* ROSTER BY LET LEVEL */}
+          <SectionCard icon={Shield} title="Roster by LET Level">
+            <div className="space-y-3">
+              {letKeys.map(key => (
+                <BarRow key={key} label={key} count={byLet[key]} max={maxLet} />
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* ROSTER BY RANK */}
+          <SectionCard icon={Shield} title="Roster by Rank">
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
+              {rankKeys.map(key => (
+                <BarRow key={key} label={key} count={byRank[key]} max={maxRank} />
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* GROWTH OVER TIME */}
+          <SectionCard icon={TrendingUp} title="Battalion Growth Over Time">
+            {growthPoints.length > 1 ? (
+              <>
+                <svg viewBox="0 0 300 100" className="w-full h-32" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#eab308" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#eab308" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {(() => {
+                    const maxTotal = Math.max(...growthPoints.map(p => p.total));
+                    const stepX = 300 / (growthPoints.length - 1);
+                    const coords = growthPoints.map((p, i) => [i * stepX, 96 - (p.total / maxTotal) * 90]);
+                    const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c[0]} ${c[1]}`).join(' ');
+                    const areaPath = `${linePath} L ${coords[coords.length - 1][0]} 100 L 0 100 Z`;
+                    return (
+                      <>
+                        <path d={areaPath} fill="url(#growthFill)" />
+                        <path d={linePath} fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </>
+                    );
+                  })()}
+                </svg>
+                <div className="flex justify-between text-[9px] font-black uppercase text-slate-400 dark:text-slate-600 mt-2">
+                  <span>{growthPoints[0].label}</span>
+                  <span>{growthPoints[growthPoints.length - 1].label} &middot; {growthPoints[growthPoints.length - 1].total} total</span>
+                </div>
+                <p className="text-[9px] text-slate-400 dark:text-slate-600 italic mt-3">
+                  Reflects when accounts were added to the digital roster, not the battalion's founding.
+                </p>
+              </>
+            ) : (
+              <p className="text-slate-400 dark:text-slate-600 text-xs italic py-8 text-center">Not enough data yet to chart growth.</p>
+            )}
+          </SectionCard>
+
+          {/* TASK & ORDER ACTIVITY */}
+          <SectionCard icon={ClipboardCheck} title="Task & Order Activity">
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle2 size={20} className="text-green-600 dark:text-green-500" />
+                <div>
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{tasksCompleted}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Tasks Completed</p>
+                </div>
+              </div>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-center gap-3">
+                <Clock size={20} className="text-yellow-600 dark:text-yellow-500" />
+                <div>
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{tasksPending}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Tasks Pending</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-white/5 pt-4">
+              <span>{orders.length} Orders Issued</span>
+              <span>{events.length} Events Scheduled</span>
+            </div>
+          </SectionCard>
+
+          {/* UNIFORM LOGISTICS */}
+          <SectionCard icon={Shirt} title="Uniform Logistics">
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle2 size={20} className="text-green-600 dark:text-green-500" />
+                <div>
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{uniformCompleted}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Issued</p>
+                </div>
+              </div>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-center gap-3">
+                <Clock size={20} className="text-yellow-600 dark:text-yellow-500" />
+                <div>
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{uniformPending}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Pending</p>
+                </div>
+              </div>
+            </div>
+            {Object.keys(byItem).length > 0 && (
+              <div className="space-y-3 border-t border-slate-100 dark:border-white/5 pt-4">
+                {Object.entries(byItem).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([key, count]) => (
+                  <BarRow key={key} label={key} count={count} max={maxItem} color="bg-blue-500" />
+                ))}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* TEAM PARTICIPATION */}
+          <SectionCard icon={Shield} title="Team Participation">
+            <div className="space-y-3">
+              {teams.map((team, i) => (
+                <div key={i} className="flex items-center justify-between bg-slate-50 dark:bg-black/20 border border-slate-100 dark:border-white/5 rounded-xl p-3">
+                  <div>
+                    <p className="text-xs font-black uppercase italic text-slate-900 dark:text-white">{team.name}</p>
+                    <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500">{team.status}</p>
+                  </div>
+                  <span className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded uppercase">
+                    {team.leadership?.length || 0} Leaders
+                  </span>
+                </div>
+              ))}
+              {teams.length === 0 && <p className="text-slate-400 dark:text-slate-600 text-xs italic">No teams logged yet.</p>}
+            </div>
+          </SectionCard>
+
+          {/* CAMP ATTENDANCE */}
+          <SectionCard icon={Tent} title="Camp Attendance">
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-slate-50 dark:bg-black/20 border border-slate-100 dark:border-white/5 rounded-xl p-4">
+                <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{camps.length}</p>
+                <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Camps Logged</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-black/20 border border-slate-100 dark:border-white/5 rounded-xl p-4">
+                <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{totalAttendanceRecords}</p>
+                <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Attendance Records</p>
+              </div>
+            </div>
+            {mostRecentCamp ? (
+              <div className="border-t border-slate-100 dark:border-white/5 pt-4">
+                <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1">Most Recent</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{mostRecentCamp.name} &middot; {mostRecentCamp.date}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mt-1">{mostRecentCamp.attendees?.length || 0} attendees</p>
+              </div>
+            ) : (
+              <p className="text-slate-400 dark:text-slate-600 text-xs italic">No camps logged yet.</p>
+            )}
+          </SectionCard>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminStats;

@@ -12,13 +12,13 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { ROLE_HIERARCHY, EVENT_TYPES } from '../constants';
-import { 
-  Send, 
-  Calendar, 
-  Bell, 
-  CheckCircle, 
-  ChevronLeft,
+import { ROLE_HIERARCHY, EVENT_TYPES, STAFF_LEVEL } from '../constants';
+import {
+  Send,
+  Calendar,
+  Bell,
+  CheckCircle,
+  ArrowLeft,
   Check,
   Trash2,
   RefreshCcw,
@@ -27,6 +27,7 @@ import {
   X,
   Target
 } from 'lucide-react';
+import Footer from '../components/Footer';
 
 const AdminOrders = () => {
   const { userData, role } = useAuth();
@@ -48,15 +49,9 @@ const AdminOrders = () => {
 
   const targetOptions = [
     `${userData?.company} Company`,
-    "Platoon 1",
-    "Platoon 2",
-    "Platoon Leaders",
-    "Platoon Sergeants",
-    "Squad Leaders",
-    "Squad Members"
   ];
 
-  if (role === 'battalion_4' || role === 'battalion_staff') {
+  if ((ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL) {
     if (!targetOptions.includes("All Battalion")) {
       targetOptions.unshift("All Battalion", "Staff", "Top 4");
     }
@@ -114,7 +109,7 @@ const AdminOrders = () => {
       const payload = mode === 'order' ? {
         content: orderText,
         targets: selectedTargets,
-        issuer: `${userData?.rank} ${userData?.name}`,
+        issuer: `${userData?.rank} ${userData?.fullName || userData?.name}`,
         issuerRole: role,
         company: userData?.company || "Battalion",
         timestamp: serverTimestamp(),
@@ -122,7 +117,7 @@ const AdminOrders = () => {
       } : {
         ...eventData,
         targets: selectedTargets,
-        issuer: `${userData?.rank} ${userData?.name}`,
+        issuer: `${userData?.rank} ${userData?.fullName || userData?.name}`,
         issuerRole: role,
         company: userData?.company || "Battalion",
         timestamp: serverTimestamp()
@@ -156,15 +151,15 @@ const AdminOrders = () => {
       )}
 
       <div className="max-w-4xl mx-auto">
-        <Link to="/admin/dashboard" className="flex items-center gap-2 text-blue-400 dark:text-slate-500 hover:text-[#d4af37] transition-colors mb-8 text-[10px] font-black uppercase tracking-[0.2em]">
-          <ChevronLeft size={14} /> Back to Command Dashboard
+        <Link to="/admin/dashboard" className="flex items-center gap-2 text-blue-400 dark:text-slate-500 hover:text-yellow-500 transition-colors mb-8 text-[10px] font-black uppercase tracking-[0.2em]">
+          <ArrowLeft size={14} /> Back to Command
         </Link>
 
         {/* HEADER */}
         <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="w-full md:w-auto text-center md:text-left">
             <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
-              Command <span className="text-[#d4af37]">Ops</span>
+              Orders <span className="text-yellow-500">& Events</span>
             </h1>
             <p className="text-blue-300 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
               Authorized Personnel | {userData?.company || "Battalion"}
@@ -173,11 +168,11 @@ const AdminOrders = () => {
 
           <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">
             <button type="button" onClick={() => setMode('order')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'order' ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'order' ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
               <Bell size={14} /> Issue Order
             </button>
             <button type="button" onClick={() => setMode('event')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'event' ? 'bg-[#d4af37] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'event' ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
               <Calendar size={14} /> Create Event
             </button>
           </div>
@@ -188,14 +183,14 @@ const AdminOrders = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div>
               <label className="flex items-center gap-2 text-[10px] font-black text-blue-400 dark:text-slate-500 uppercase tracking-widest mb-4">
-                <Target size={14} className="text-[#d4af37]" /> Target Audience
+                <Target size={14} className="text-yellow-500" /> Target Audience
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 {targetOptions.map((t) => (
                   <button key={t} type="button" onClick={() => toggleTarget(t)}
                     className={`px-3 py-3.5 rounded-2xl text-[9px] font-bold uppercase transition-all border-2 flex items-center justify-between ${
                       selectedTargets.includes(t) 
-                        ? 'bg-blue-50/50 border-[#d4af37] text-[#d4af37] dark:bg-yellow-500/10' 
+                        ? 'bg-blue-50/50 border-yellow-500 text-yellow-500 dark:bg-yellow-500/10' 
                         : 'bg-white dark:bg-slate-950 border-blue-50 dark:border-white/5 text-slate-400 hover:border-blue-100'
                     }`}
                   >
@@ -210,31 +205,31 @@ const AdminOrders = () => {
               <textarea 
                 value={orderText} 
                 onChange={(e) => setOrderText(e.target.value)}
-                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all min-h-[160px] placeholder:text-blue-200 font-medium shadow-inner"
+                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all min-h-[160px] placeholder:text-blue-200 font-medium shadow-inner"
                 placeholder="Enter battalion orders for broadcast..." 
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
                   placeholder="Event Title" 
                   value={eventData.title} 
                   onChange={(e) => setEventData({...eventData, title: e.target.value})} 
                 />
                 <input 
                   type="date"
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-400 text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all shadow-inner" 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-400 text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all shadow-inner" 
                   value={eventData.date} 
                   onChange={(e) => setEventData({...eventData, date: e.target.value})} 
                 />
                 <input 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
                   placeholder="Location" 
                   value={eventData.location} 
                   onChange={(e) => setEventData({...eventData, location: e.target.value})} 
                 />
                 <select 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-[#d4af37] focus:bg-white outline-none transition-all shadow-inner" 
+                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all shadow-inner" 
                   value={eventData.type} 
                   onChange={(e) => setEventData({...eventData, type: e.target.value})}
                 >
@@ -250,7 +245,7 @@ const AdminOrders = () => {
               className={`w-full font-black uppercase py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl transform active:scale-[0.98] ${
                 status.success 
                   ? 'bg-green-500 text-white shadow-green-500/20' 
-                  : 'bg-[#d4af37] text-white hover:bg-[#b8962d] shadow-yellow-500/30 disabled:opacity-50'
+                  : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-yellow-500/30 disabled:opacity-50'
               }`}
             >
               {status.loading ? <RefreshCcw className="animate-spin" size={20} /> : status.success ? <CheckCircle size={20} /> : <Send size={20} />}
@@ -270,13 +265,13 @@ const AdminOrders = () => {
           
           <div className="grid gap-4">
             {recentItems.map((item) => (
-              <div key={item.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-6 rounded-[2rem] flex justify-between items-center group transition-all hover:border-[#d4af37]/30 shadow-sm">
-                <div className="max-w-[80%] pl-4 border-l-[3px] border-[#d4af37] rounded-sm">
+              <div key={item.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-6 rounded-[2rem] flex justify-between items-center group transition-all hover:border-yellow-500/30 shadow-sm">
+                <div className="max-w-[80%] pl-4 border-l-[3px] border-yellow-500 rounded-sm">
                   <p className="text-sm text-slate-800 dark:text-slate-200 font-bold mb-1.5 leading-tight">
                     {mode === 'order' ? item.content : item.title}
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
-                    <span className="text-[9px] font-black text-[#d4af37] uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>
+                    <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>
                     <span className="text-[9px] text-blue-300 dark:text-slate-600 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
                   </div>
                 </div>
@@ -313,6 +308,7 @@ const AdminOrders = () => {
         )}
 
       </div>
+      <Footer />
     </div>
   );
 };

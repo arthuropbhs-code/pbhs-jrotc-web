@@ -80,7 +80,7 @@ const MyDuties = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="w-6 h-6 border-2 border-[#d4af37]/20 border-t-[#d4af37] rounded-full animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
         <p className="text-blue-400 dark:text-slate-500 animate-pulse text-[10px] font-black uppercase tracking-[0.2em]">
           Syncing HQ Transmissions...
         </p>
@@ -93,8 +93,8 @@ const MyDuties = () => {
       {/* --- SECTION 1: ACTIVE ORDERS (TRANSMISSIONS) --- */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <div className="w-1 h-4 bg-[#d4af37] rounded-full"></div>
-          <h4 className="text-[10px] font-black text-[#d4af37] uppercase tracking-widest flex items-center gap-2">
+          <div className="w-1 h-4 bg-yellow-500 rounded-full"></div>
+          <h4 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
             <Bell size={14} /> Priority Orders
           </h4>
         </div>
@@ -111,7 +111,7 @@ const MyDuties = () => {
                 className="group relative bg-blue-50/50 dark:bg-slate-950/50 border border-blue-100 dark:border-white/5 p-5 rounded-2xl transition-all shadow-sm"
               >
                 {/* Visual Identity Strip */}
-                <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-[#d4af37] rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.3)]"></div>
+                <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-yellow-500 rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.3)]"></div>
                 
                 <div className="flex justify-between items-start pl-3">
                   <div className="space-y-2">
@@ -121,7 +121,7 @@ const MyDuties = () => {
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest">
                       <span className="text-blue-400 dark:text-slate-500">Issuer: {order.issuer}</span>
                       <span className="w-1 h-1 bg-blue-200 dark:bg-slate-800 rounded-full"></span>
-                      <span className="text-[#d4af37] opacity-80">Command Feed</span>
+                      <span className="text-yellow-500 opacity-80">Command Feed</span>
                     </div>
                   </div>
                   <span className="text-[9px] font-black text-blue-300 dark:text-slate-700 tabular-nums">

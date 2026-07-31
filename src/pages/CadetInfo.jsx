@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Star, Users, Award, Target, Scale, GraduationCap } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_CADET_INFO } from '../data/defaultPageContent';
 
 // --- DYNAMIC RANK SYMBOL ENGINE (CLEAN & SPACED) ---
 const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
@@ -87,58 +90,40 @@ const CadetInfo = () => {
   // Local states for dynamic data layers
   const [commandStaff, setCommandStaff] = useState({ bc: 'Loading...', xo: 'Loading...', csm: 'Loading...' });
   const [instructors, setInstructors] = useState({ sai: 'LTC Johnson', ai: '1SG Chevrestt' });
+  const [content, setContent] = useState(DEFAULT_CADET_INFO);
 
-  // --- COMPONENT DATA FETCHING (CMS SEPARATE LOOPS) ---
+  // --- COMPONENT DATA FETCHING (LIVE FIRESTORE) ---
   useEffect(() => {
-    // 1. Fetch Leadership Elements
-    const leadershipFiles = import.meta.glob('../data/cms/*.md', { query: '?raw', eager: true });
-    let tempStaff = { bc: 'Not Assigned', xo: 'Not Assigned', csm: 'Not Assigned' };
+    const unsubContent = onSnapshot(doc(db, "pageContent", "cadet-info"), (snap) => {
+      if (snap.exists()) setContent({ ...DEFAULT_CADET_INFO, ...snap.data() });
+    });
 
-    const parseFrontmatter = (rawStr) => {
-      const match = rawStr.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      if (!match) return {};
-      const obj = {};
-      match[1].split('\n').forEach(line => {
-        const parts = line.split(':');
-        if (parts.length >= 2) {
-          obj[parts[0].trim()] = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
-        }
+    const unsubLeadership = onSnapshot(collection(db, "leadership"), (snapshot) => {
+      let tempStaff = { bc: 'Not Assigned', xo: 'Not Assigned', csm: 'Not Assigned' };
+      snapshot.docs.forEach(docSnap => {
+        const meta = docSnap.data();
+        if (!meta.role || !meta.name) return;
+        const cleanRole = meta.role.toLowerCase().replace(/[\s-_]/g, '');
+        if (cleanRole === 'battalioncommander') tempStaff.bc = meta.name;
+        if (cleanRole === 'executiveofficer' || cleanRole === 'battalionxo') tempStaff.xo = meta.name;
+        if (cleanRole === 'commandsergeantmajor') tempStaff.csm = meta.name;
       });
-      return obj;
-    };
+      setCommandStaff(tempStaff);
+    });
 
-    for (const path in leadershipFiles) {
-      const fileData = leadershipFiles[path];
-      const rawContent = fileData.default || fileData;
-      if (typeof rawContent === 'string') {
-        const meta = parseFrontmatter(rawContent);
-        if (meta.role && meta.name) {
-          const cleanRole = meta.role.toLowerCase().replace(/[\s-_]/g, '');
-          if (cleanRole === 'battalioncommander') tempStaff.bc = meta.name;
-          if (cleanRole === 'executiveofficer' || cleanRole === 'battalionxo') tempStaff.xo = meta.name;
-          if (cleanRole === 'commandsergeantmajor') tempStaff.csm = meta.name;
-        }
-      }
-    }
-    setCommandStaff(tempStaff);
+    const unsubInstructors = onSnapshot(collection(db, "instructors"), (snapshot) => {
+      let tempInstructors = { sai: 'LTC Johnson', ai: '1SG Chevrestt' }; // Fallback defaults
+      snapshot.docs.forEach(docSnap => {
+        const meta = docSnap.data();
+        if (!meta.type || !meta.name) return;
+        const cleanType = meta.type.toUpperCase().trim();
+        if (cleanType === 'SAI') tempInstructors.sai = meta.name;
+        if (cleanType === 'AI') tempInstructors.ai = meta.name;
+      });
+      setInstructors(tempInstructors);
+    });
 
-    // 2. Fetch Dynamic Instructors Data Array
-    const instructorFiles = import.meta.glob('../data/cms_instructors/*.md', { query: '?raw', eager: true });
-    let tempInstructors = { sai: 'LTC Johnson', ai: '1SG Chevrestt' }; // Fallback defaults
-
-    for (const path in instructorFiles) {
-      const fileData = instructorFiles[path];
-      const rawContent = fileData.default || fileData;
-      if (typeof rawContent === 'string') {
-        const meta = parseFrontmatter(rawContent);
-        if (meta.type && meta.name) {
-          const cleanType = meta.type.toUpperCase().trim();
-          if (cleanType === 'SAI') tempInstructors.sai = meta.name;
-          if (cleanType === 'AI') tempInstructors.ai = meta.name;
-        }
-      }
-    }
-    setInstructors(tempInstructors);
+    return () => { unsubContent(); unsubLeadership(); unsubInstructors(); };
   }, []);
 
   const officerRanks = [
@@ -183,19 +168,19 @@ const CadetInfo = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-yellow-500 p-6 rounded-3xl text-slate-950 shadow-lg shadow-yellow-500/10">
             <h3 className="text-xs font-black uppercase mb-1 opacity-70 tracking-widest">The Mission</h3>
-            <p className="text-xl font-black uppercase italic leading-tight">To motivate young people to be better citizens.</p>
+            <p className="text-xl font-black uppercase italic leading-tight">{content.missionText}</p>
           </div>
           <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl">
             <h3 className="text-xs font-black uppercase mb-2 text-yellow-500 tracking-widest">Definitions</h3>
             <div className="space-y-1 text-sm font-bold uppercase italic">
-              <p><span className="text-slate-500 not-italic mr-2 text-[10px]">JROTC:</span> Junior Reserve Officer Training Corps</p>
-              <p><span className="text-slate-500 not-italic mr-2 text-[10px]">LET:</span> Leadership Education Training</p>
+              <p><span className="text-slate-500 not-italic mr-2 text-[10px]">JROTC:</span> {content.jrotcDefinition}</p>
+              <p><span className="text-slate-500 not-italic mr-2 text-[10px]">LET:</span> {content.letDefinition}</p>
             </div>
           </div>
           <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl">
             <h3 className="text-xs font-black uppercase mb-2 text-yellow-500 tracking-widest">Leadership</h3>
             <p className="text-[11px] leading-relaxed text-slate-400 font-medium">
-              The ability to influence others to accomplish a mission by providing <span className="text-white">purpose, direction, and motivation.</span>
+              {content.leadershipDefinition}
             </p>
           </div>
         </div>
@@ -237,33 +222,14 @@ const CadetInfo = () => {
             {/* THE CREED */}
             <Section title="The Cadet Creed" icon={Shield} color="yellow">
               <p className="text-sm leading-relaxed italic text-slate-300 whitespace-pre-line border-l-2 border-yellow-500/50 pl-6 py-2">
-                I am an Army Junior R.O.T.C. Cadet.{"\n"}
-                I will always conduct myself to bring credit to my family, country, school, and the Corps of Cadets.{"\n"}
-                I am loyal and patriotic. I am the future of the United States of America.{"\n"}
-                I do not lie, cheat, or steal, and will always be held accountable for my actions and deeds.{"\n"}
-                I will always practice good citizenship and patriotism.{"\n"}
-                I will work hard to improve my mind and strengthen my body.{"\n"}
-                I will seek the mantle of leadership and stand prepared to uphold the Constitution and the American Way of Life.{"\n"}
-                May God grant me the strength to always live by this creed.
+                {content.cadetCreed}
               </p>
             </Section>
 
             {/* 11 PRINCIPLES */}
             <Section title="11 Principles of Leadership" icon={Scale} color="blue">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  "Know yourself and seek self-improvement.",
-                  "Be technically and tactically proficient.",
-                  "Set the example.",
-                  "Ensure the task is understood, supervised, and accomplished.",
-                  "Know your subordinates and look out for their welfare.",
-                  "Seek responsibility and take responsibility for your actions.",
-                  "Make sound and timely decisions.",
-                  "Keep your subordinates informed.",
-                  "Develop a sense of responsibility among your subordinates.",
-                  "Employ your subordinates in accordance with their capabilities.",
-                  "Train your subordinates as a team."
-                ].map((p, i) => (
+                {content.principles.map((p, i) => (
                   <div key={i} className="flex gap-3 text-[11px] bg-black/40 p-3 rounded-xl border border-white/5 group hover:border-blue-500/30 transition-colors">
                     <span className="text-blue-500 font-black">{i + 1}</span>
                     <span className="text-slate-300 group-hover:text-white transition-colors">{p}</span>
@@ -298,15 +264,7 @@ const CadetInfo = () => {
             {/* ARMY VALUES */}
             <Section title="Army Values" icon={Award} color="yellow">
               <div className="space-y-3">
-                {[
-                  { l: "L", v: "Loyalty", d: "True faith and allegiance." },
-                  { l: "D", v: "Duty", d: "Fulfill your obligations." },
-                  { l: "R", v: "Respect", d: "Treat others as they should be." },
-                  { l: "S", v: "Selfless Service", d: "Nation before self." },
-                  { l: "H", v: "Honor", d: "Live up to all values." },
-                  { l: "I", v: "Integrity", d: "Do what is right." },
-                  { l: "P", v: "Personal Courage", d: "Face fear or adversity." }
-                ].map((item) => (
+                {content.armyValues.map((item) => (
                   <div key={item.l} className="group">
                     <div className="flex items-center gap-3">
                       <span className="text-xl font-black text-yellow-500 group-hover:scale-110 transition-transform">{item.l}</span>

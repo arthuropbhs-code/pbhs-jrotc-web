@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
+import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
 
 // --- COMPONENTS ---
 import Navbar from './components/Navbar'; 
@@ -24,13 +25,18 @@ import UniformRequests from './pages/UniformRequests';
 import CommanderInfo from './pages/CommanderInfo';
 import AdminTeams from './pages/AdminTeams';
 import AdminUsers from './pages/AdminUsers';
+import AdminLeadership from './pages/AdminLeadership';
+import AdminContent from './pages/AdminContent';
+import AdminCamps from './pages/AdminCamps';
+import AdminStats from './pages/AdminStats';
+import MyProfile from './pages/MyProfile';
 import AboutPage from './pages/AboutPage';
 import CalendarPage from './pages/CalendarPage';
 import WinningColors from './pages/WinningColors'; // <--- ADDED IMPORT FOR THE ASSESSMENT PAGE
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   const { user, role, loading } = useAuth();
-  
+
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-yellow-500"></div>
@@ -39,7 +45,15 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!user) return <Navigate to="/admin" />;
 
-  if (allowedRoles && !allowedRoles.includes(role)) {
+  const userLevel = ROLE_HIERARCHY[role] || 0;
+
+  // allowedRoles isolates specific roles (e.g. S5/S6) that a level threshold
+  // can't express on its own, since they're tied with every other S-role at
+  // STAFF_LEVEL. Top command can always override, same as everywhere else.
+  if (allowedRoles) {
+    const hasAccess = allowedRoles.includes(role) || userLevel >= ADMIN_LEVEL;
+    if (!hasAccess) return <Navigate to="/admin/dashboard" />;
+  } else if (minLevel && userLevel < minLevel) {
     return <Navigate to="/admin/dashboard" />;
   }
 
@@ -84,30 +98,85 @@ const AppContent = () => {
 
           {/* --- PROTECTED ADMIN ROUTES --- */}
           <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/assign-tasks" element={<ProtectedRoute><TaskManagement /></ProtectedRoute>} />
-          <Route path="/admin/orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
+          <Route
+            path="/admin/assign-tasks"
+            element={
+              <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                <TaskManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                <AdminOrders />
+              </ProtectedRoute>
+            }
+          />
+          {/* No minLevel here: any signed-in cadet needs to see their own uniform request status */}
           <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
 
           {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
-          <Route 
-            path="/admin/announcements" 
+          <Route
+            path="/admin/announcements"
             element={
-              <ProtectedRoute allowedRoles={['battalion_4', 'battalion_staff']}>
+              <ProtectedRoute minLevel={STAFF_LEVEL}>
                 <AdminAnnouncements />
               </ProtectedRoute>
-            } 
+            }
           />
 
-          <Route 
-            path="/admin/users" 
+          <Route
+            path="/admin/users"
             element={
-              <ProtectedRoute allowedRoles={['battalion_4', 'battalion_staff']}>
+              <ProtectedRoute minLevel={STAFF_LEVEL}>
                 <AdminUsers />
               </ProtectedRoute>
-            } 
+            }
           />
 
+          {/* No minLevel here: AdminTeams.jsx gates per-team access itself via commanderEmails, independent of rank */}
           <Route path="/admin/teams" element={<ProtectedRoute><AdminTeams /></ProtectedRoute>} />
+
+          <Route
+            path="/admin/leadership"
+            element={
+              <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <AdminLeadership />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/content"
+            element={
+              <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <AdminContent />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/camps"
+            element={
+              <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <AdminCamps />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/stats"
+            element={
+              <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <AdminStats />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* No minLevel here: every signed-in user manages their own profile */}
+          <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
           {/* CATCH ALL */}
           <Route path="*" element={<Navigate to="/" />} />

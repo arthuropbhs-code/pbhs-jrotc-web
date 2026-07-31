@@ -1,15 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Send, ClipboardList, ArrowLeft } from 'lucide-react';
+import { Send, ClipboardList, ArrowLeft, Clock, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import Footer from '../components/Footer';
 
 const TaskManagement = () => {
-  const { userData } = useAuth();
+  const { userData, role } = useAuth();
   const [task, setTask] = useState('');
   const [targetPos, setTargetPos] = useState('Company XO');
   const [isSending, setIsSending] = useState(false);
+  const [recentTasks, setRecentTasks] = useState([]);
+
+  const canDelete = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
+
+  useEffect(() => {
+    const q = query(collection(db, "tasks"), orderBy("timestamp", "desc"), limit(10));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setRecentTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
 
   const handleAssign = async (e) => {
     e.preventDefault();
@@ -19,9 +32,9 @@ const TaskManagement = () => {
     try {
       await addDoc(collection(db, "tasks"), {
         taskContent: task,
-        assignedBy: userData.name,
-        assignedByPos: userData.position, 
-        assignedToPosition: targetPos,    
+        assignedBy: userData.fullName || userData.name,
+        assignedByPos: userData.position,
+        assignedToPosition: targetPos,
         status: 'pending',
         timestamp: serverTimestamp(),
       });
@@ -32,6 +45,16 @@ const TaskManagement = () => {
       alert("Failed to deploy task. Check console.");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm("Delete this task?")) return;
+    try {
+      await deleteDoc(doc(db, "tasks", id));
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      alert("Failed to delete task. Check console.");
     }
   };
 
@@ -46,7 +69,7 @@ const TaskManagement = () => {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <ClipboardList className="text-yellow-500" size={24} />
-              <h2 className="text-2xl font-black uppercase italic tracking-tighter">Publish Operations</h2>
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter">Task Management</h2>
             </div>
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Battalion Command Channel</p>
           </header>
@@ -79,8 +102,8 @@ const TaskManagement = () => {
               />
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isSending}
               className={`w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest ${
                 isSending ? 'bg-slate-800 text-slate-500' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'
@@ -90,10 +113,37 @@ const TaskManagement = () => {
             </button>
           </form>
         </div>
+
+        <div className="mt-10 space-y-4">
+          <h3 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
+            <Clock size={14} /> Recent Tasks
+          </h3>
+          <div className="space-y-3">
+            {recentTasks.length === 0 ? (
+              <p className="text-slate-600 text-xs italic py-6 text-center">No tasks published yet.</p>
+            ) : (
+              recentTasks.map(t => (
+                <div key={t.id} className="bg-slate-900 border border-white/5 rounded-2xl p-5 flex justify-between items-start gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-200 font-bold leading-tight">{t.taskContent}</p>
+                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-2">
+                      To: {t.assignedToPosition} &middot; By: {t.assignedBy}
+                    </p>
+                  </div>
+                  {canDelete && (
+                    <button onClick={() => handleDeleteTask(t.id)} className="text-slate-600 hover:text-red-500 transition-colors flex-shrink-0">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 };
 
-// CRITICAL: This is the line your App.jsx is looking for!
 export default TaskManagement;

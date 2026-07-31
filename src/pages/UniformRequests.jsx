@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import constants
-import { ROLE_HIERARCHY } from '../constants';
+import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
+import Footer from '../components/Footer';
 
 const UniformRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -24,8 +25,8 @@ const UniformRequests = () => {
   const [formData, setFormData] = useState({
     issuedBy: '',   
     cadetName: '',  
-    company: 'Uniform', 
-    rank: '', 
+    company: 'Zulu',
+    rank: '',
     item: '', 
     detail: '', 
     notes: ''
@@ -40,14 +41,14 @@ const UniformRequests = () => {
   const userRole = userProfile?.role || 'cadet';
   const userLevel = ROLE_HIERARCHY[userRole] || 1;
 
-  // Level 80 (S4) and 90-100 (Grayson/Top Command)
-  const isS4Master = userRole === 's4_logistics' || userLevel >= 90;
-  
-  // General Staff (S1-S7) excluding S4
-  const isStaffObserver = userLevel >= 70 && userLevel <= 80 && userRole !== 's4_logistics';
+  // S4 specifically, plus Sergeant Major and above (top command)
+  const isS4Master = userRole === 's4_logistics' || userLevel >= ADMIN_LEVEL;
 
-  // Company Leadership (Level 40-55)
-  const isCompanyLeadership = userLevel >= 40 && userLevel <= 55;
+  // General Staff (S1-S7) excluding S4
+  const isStaffObserver = userLevel === STAFF_LEVEL && userRole !== 's4_logistics';
+
+  // Company Leadership (Company Commander through First Sergeant)
+  const isCompanyLeadership = userLevel >= 45 && userLevel <= 55;
 
   // S4 Assistant (Specifically Level 35)
   const isS4Assistant = userRole.includes('s4_assistant') && userLevel === 35;
@@ -68,7 +69,7 @@ const UniformRequests = () => {
             ...prev, 
             // FIX 2: Issued By defaults to current user if they are S4 Staff
             issuedBy: (isS4Master || isS4Assistant) ? (data.fullName || '') : '',
-            company: data.company || 'Uniform'
+            company: data.company || 'Zulu'
           }));
         }
       }
@@ -217,12 +218,8 @@ const UniformRequests = () => {
             <ArrowLeft size={14} /> Back to Command
           </Link>
           <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Package className="text-yellow-500" /> S-4 Logistics
+            <Package className="text-yellow-500" /> Uniform Items
           </h1>
-          <div className="flex gap-2 mt-2">
-            <span className="bg-yellow-500 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">Level {userLevel}</span>
-            <p className="text-slate-500 text-[10px] font-bold uppercase">{userRole.replace('_', ' ')}</p>
-          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -340,13 +337,13 @@ const UniformRequests = () => {
                     <select 
                       className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white" 
                       value={formData.company} 
-                      onChange={e => setFormData({...formData, company: e.target.value || 'Uniform'})}
+                      onChange={e => setFormData({...formData, company: e.target.value || 'Zulu'})}
                     >
-                      <option value="Uniform">Uniform</option>
-                      <option value="Victor">Victor</option>
-                      <option value="Whisky">Whisky</option>
-                      <option value="X-Ray">X-Ray</option>
-                      <option value="Yankee">Yankee</option>
+                      <option value="Zulu">Zulu</option>
+                      <option value="Alpha">Alpha</option>
+                      <option value="Bravo">Bravo</option>
+                      <option value="Charlie">Charlie</option>
+                      <option value="Delta">Delta</option>
                       <option value="Battalion">Battalion</option>
                     </select>
                   </div>
@@ -389,6 +386,7 @@ const UniformRequests = () => {
           </div>
         )}
       </AnimatePresence>
+      <Footer />
     </div>
   );
 };

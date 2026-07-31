@@ -1,0 +1,267 @@
+import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import {
+  collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
+} from 'firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
+import { Navigate, Link } from 'react-router-dom';
+import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
+import {
+  Tent, ArrowLeft, Plus, Edit3, Trash2, X, Loader2, CheckCircle2, UserPlus, Users
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Footer from '../components/Footer';
+
+const initialCampForm = { name: '', date: '', location: '', notes: '', attendees: [] };
+
+const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white";
+const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1";
+
+const AdminCamps = () => {
+  const { user, role, loading: authLoading } = useAuth();
+  const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
+
+  const [camps, setCamps] = useState([]);
+  const [personnel, setPersonnel] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingCamp, setEditingCamp] = useState(null);
+  const [campForm, setCampForm] = useState(initialCampForm);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const unsubCamps = onSnapshot(query(collection(db, "camps"), orderBy("date", "desc")), (snap) => {
+      setCamps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setDataLoading(false);
+    }, () => setDataLoading(false));
+
+    const unsubPersonnel = onSnapshot(collection(db, "users"), (snap) => {
+      const roster = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => p.fullName)
+        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+      setPersonnel(roster);
+    });
+
+    return () => { unsubCamps(); unsubPersonnel(); };
+  }, [isAuthorized]);
+
+  const showStatus = (msg) => {
+    setStatus(msg);
+    setTimeout(() => setStatus(null), 3000);
+  };
+
+  const openAdd = () => { setEditingCamp(null); setCampForm(initialCampForm); setShowModal(true); };
+  const openEdit = (camp) => { setEditingCamp(camp); setCampForm({ ...initialCampForm, ...camp }); setShowModal(true); };
+
+  const addAttendeeRow = () => {
+    setCampForm({ ...campForm, attendees: [...campForm.attendees, { uid: '', name: '', rank: '', company: '' }] });
+  };
+
+  const removeAttendeeRow = (index) => {
+    setCampForm({ ...campForm, attendees: campForm.attendees.filter((_, i) => i !== index) });
+  };
+
+  // Fills name/rank/company from the selected roster account, same reasoning
+  // as AdminTeams.jsx's leadership picker: real cadets, not free text.
+  const selectAttendee = (index, uid) => {
+    const person = personnel.find(p => p.id === uid);
+    const attendees = [...campForm.attendees];
+    attendees[index] = {
+      uid,
+      name: person?.fullName || '',
+      rank: person?.rank || '',
+      company: person?.company || ''
+    };
+    setCampForm({ ...campForm, attendees });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = { ...campForm, attendees: campForm.attendees.filter(a => a.uid) };
+      if (editingCamp) {
+        await updateDoc(doc(db, "camps", editingCamp.id), { ...payload, updatedAt: serverTimestamp() });
+      } else {
+        await addDoc(collection(db, "camps"), { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: user.uid });
+      }
+      setShowModal(false);
+      setEditingCamp(null);
+      setCampForm(initialCampForm);
+      showStatus("Camp Saved");
+    } catch (err) {
+      console.error("Camp save failed:", err);
+      showStatus("Save Failed");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteDoc(doc(db, "camps", deleteConfirm.id));
+      setDeleteConfirm({ open: false, id: null, name: '' });
+      showStatus("Camp Removed");
+    } catch (err) {
+      showStatus("Delete Failed");
+    }
+  };
+
+  if (authLoading || (dataLoading && isAuthorized)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-yellow-600">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+      <div className="max-w-4xl mx-auto">
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+          <div>
+            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
+              <ArrowLeft size={14} /> Back to Command
+            </Link>
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+              <Tent className="text-yellow-600 dark:text-yellow-500" /> Camp Attendance
+            </h1>
+          </div>
+          <button onClick={openAdd} className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all">
+            <Plus size={18} /> Log Camp
+          </button>
+        </div>
+
+        <div className="grid gap-4">
+          {camps.map(camp => (
+            <div key={camp.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-6 rounded-[2rem] flex flex-wrap items-center justify-between gap-6 hover:shadow-md transition-all">
+              <div>
+                <h3 className="font-black uppercase italic text-lg">{camp.name || "Unnamed Camp"}</h3>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {camp.date && <span className="text-[9px] font-black text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded uppercase">{camp.date}</span>}
+                  {camp.location && <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded uppercase">{camp.location}</span>}
+                  <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                    <Users size={10} /> {camp.attendees?.length || 0} Attendees
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => openEdit(camp)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                  <Edit3 size={18} />
+                </button>
+                <button onClick={() => setDeleteConfirm({ open: true, id: camp.id, name: camp.name })} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {camps.length === 0 && (
+            <div className="text-center py-16 text-slate-400 dark:text-slate-600 text-xs font-bold uppercase tracking-widest">No camps logged yet</div>
+          )}
+        </div>
+      </div>
+
+      {/* CAMP MODAL */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 md:p-10 rounded-[3rem] max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+                  {editingCamp ? 'Edit Camp' : 'Log New Camp'}
+                </h2>
+                <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
+              </div>
+
+              <form onSubmit={handleSave} className="space-y-5">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Camp Name</label>
+                    <input required className={inputClass} placeholder="e.g. JCLC Summer 2026" value={campForm.name} onChange={e => setCampForm({ ...campForm, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Date</label>
+                    <input type="date" required className={inputClass} value={campForm.date} onChange={e => setCampForm({ ...campForm, date: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Location</label>
+                  <input className={inputClass} value={campForm.location} onChange={e => setCampForm({ ...campForm, location: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelClass}>Notes</label>
+                  <textarea className={`${inputClass} h-20 resize-none`} value={campForm.notes} onChange={e => setCampForm({ ...campForm, notes: e.target.value })} />
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass + " mb-0"}>Attendees</label>
+                    <button type="button" onClick={addAttendeeRow} className="text-[9px] bg-yellow-500 text-slate-950 px-4 py-2 rounded-full font-black hover:bg-yellow-400 transition-all flex items-center gap-1">
+                      <UserPlus size={12} /> Add Attendee
+                    </button>
+                  </div>
+                  {campForm.attendees.map((attendee, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        className={inputClass}
+                        value={attendee.uid || ''}
+                        onChange={e => selectAttendee(i, e.target.value)}
+                      >
+                        <option value="" disabled>Select Cadet...</option>
+                        {personnel.map(p => (
+                          <option key={p.id} value={p.id}>{p.fullName}{p.rank ? ` (${p.rank})` : ''}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => removeAttendeeRow(i)} className="p-3 text-slate-400 hover:text-red-500 flex-shrink-0">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {campForm.attendees.length === 0 && (
+                    <p className="text-slate-400 dark:text-slate-600 text-[11px] italic">No attendees added yet.</p>
+                  )}
+                </div>
+
+                <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all mt-4 text-sm shadow-lg shadow-yellow-500/20">
+                  {editingCamp ? 'Update Camp' : 'Save Camp'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE CONFIRM */}
+      {deleteConfirm.open && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl">
+            <Trash2 size={40} className="text-red-500 mx-auto mb-6" />
+            <h3 className="text-xl font-black uppercase italic mb-3 text-slate-900 dark:text-white">Delete Camp Record?</h3>
+            <p className="text-slate-500 text-xs mb-8 leading-relaxed">Permanently remove <span className="text-red-600 font-bold">{deleteConfirm.name}</span> and its attendance record.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleDelete} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Delete</button>
+              <button onClick={() => setDeleteConfirm({ open: false, id: null, name: '' })} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest bg-slate-100 dark:bg-white/5">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STATUS TOAST */}
+      <AnimatePresence>
+        {status && (
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="fixed bottom-8 right-8 bg-yellow-500 text-slate-950 px-8 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-3 shadow-2xl z-[200]">
+            <CheckCircle2 size={18} /> {status}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminCamps;

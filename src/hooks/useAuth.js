@@ -10,15 +10,24 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unsubscribeDoc = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // Tear down the previous user's doc listener before attaching a new one
+      // (or clearing state) - this callback can fire again for the same effect run.
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
+
       if (firebaseUser) {
         // 1. Set the basic user object first
         setUser(firebaseUser);
 
         // 2. Start the listener for the Firestore user document
         const userDocRef = doc(db, "users", firebaseUser.uid);
-        
-        const unsubscribeDoc = onSnapshot(userDocRef, 
+
+        unsubscribeDoc = onSnapshot(userDocRef,
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
@@ -30,16 +39,13 @@ export const useAuth = () => {
               setRole('guest');
             }
             setLoading(false);
-          }, 
+          },
           (error) => {
             console.warn("Firestore: Access pending or denied.", error);
             setRole('guest');
             setLoading(false);
           }
         );
-
-        // Cleanup doc listener if auth changes
-        return () => unsubscribeDoc();
       } else {
         // No user logged in
         setUser(null);
@@ -49,7 +55,10 @@ export const useAuth = () => {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDoc) unsubscribeDoc();
+    };
   }, []);
 
   return { user, role, userData, loading };

@@ -1,36 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Users } from 'lucide-react';
-
-// --- DATA FETCHING ENGINE ---
-const fetchCmsData = () => {
-  // 1. Tell Vite to pull files purely as uncompiled raw text chunks
-  const files = import.meta.glob('/src/data/cms/*.md', { query: '?raw', eager: true });
-  
-  return Object.values(files).map((module) => {
-    const rawContent = module.default || '';
-    const data = {};
-    
-    // 2. Extract standard frontmatter key: value pairs cleanly via regex
-    const matches = rawContent.matchAll(/^([a-zA-Z0-9_-]+):\s*(.+)$/gm);
-    for (const match of matches) {
-      const key = match[1].trim();
-      // Remove surrounding quotes if they exist
-      const value = match[2].trim().replace(/^["']|["']$/g, '');
-      data[key] = value;
-    }
-    
-    return data;
-  });
-};
+import { db } from '../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 const Leadership = () => {
   const [activeTab, setActiveTab] = useState('staff');
   const [cmsEntries, setCmsEntries] = useState([]);
 
   useEffect(() => {
-    const rawData = fetchCmsData();
-    setCmsEntries(rawData);
+    const unsubscribe = onSnapshot(collection(db, "leadership"), (snapshot) => {
+      setCmsEntries(snapshot.docs.map(d => d.data()));
+    });
+    return () => unsubscribe();
   }, []);
 
   // --- 1. COMMAND TEAM FILTERS ---
@@ -83,7 +65,7 @@ const Leadership = () => {
   }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
 
   // --- 3. DYNAMIC COMPANY GENERATOR ---
-  const companyNames = ["Alpha Company", "Bravo Company", "Charlie Company", "Delta Company", "Echo Company"];
+  const companyNames = ["Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
   
   const companies = companyNames.map((companyName) => {
     const companyMembers = cmsEntries.filter((item) => {

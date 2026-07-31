@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, ChevronDown, Menu, X } from 'lucide-react';
+import { Shield, ChevronDown, Menu, X, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../hooks/useAuth';
+
+// Best-effort initials from "LASTNAME, FIRSTNAME" (or plain "First Last").
+export const getInitials = (fullName) => {
+  if (!fullName) return '';
+  const commaParts = fullName.split(',').map(s => s.trim()).filter(Boolean);
+  if (commaParts.length === 2) {
+    const [last, first] = commaParts;
+    return `${first[0] || ''}${last[0] || ''}`.toUpperCase();
+  }
+  const words = fullName.split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+};
 
 const Navbar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const [isOpen, setIsOpen] = useState(false);
-  
+  const { user, userData } = useAuth();
+
   // Mobile Dropdown Accordion States
   const [mobileCadetOpen, setMobileCadetOpen] = useState(false);
   const [mobileBattalionOpen, setMobileBattalionOpen] = useState(false);
@@ -53,14 +67,14 @@ const Navbar = () => {
         <div className="flex items-center gap-10">
           {!isActive('/') ? (
             <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 group">
-              <Shield className="text-[#d4af37] group-hover:rotate-12 transition-transform" size={20} />
-              <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white group-hover:text-[#d4af37] transition">
+              <Shield className="text-yellow-500 group-hover:rotate-12 transition-transform" size={20} />
+              <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white group-hover:text-yellow-500 transition">
                 Home
               </span>
             </Link>
           ) : (
             <div className="flex items-center gap-3 opacity-40 cursor-default">
-              <Shield className="text-[#d4af37]" size={20} />
+              <Shield className="text-yellow-500" size={20} />
               <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white">Home</span>
             </div>
           )}
@@ -74,7 +88,7 @@ const Navbar = () => {
               <div className="flex items-center gap-1 cursor-pointer">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
                   ${currentPath.includes('cadet') || currentPath === '/promotion-board' || currentPath.includes('winning-colors') 
-                  ? 'text-[#d4af37]' 
+                  ? 'text-yellow-500' 
                   : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                   Cadet Info
                 </span>
@@ -105,7 +119,7 @@ const Navbar = () => {
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
-                  ${['/announcements', '/photos'].includes(currentPath) ? 'text-[#d4af37]' : 'group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                  ${['/announcements', '/photos'].includes(currentPath) ? 'text-yellow-500' : 'group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                   Battalion
                 </span>
                 <ChevronDown size={14} />
@@ -124,20 +138,33 @@ const Navbar = () => {
 
         {/* RIGHT SECTION: Admin Actions & Hamburger Toggle */}
         <div className="flex items-center gap-4">
-          {!isActive('/admin') && (
-            <Link 
-              to="/admin" 
+          {user ? (
+            <Link
+              to="/admin/dashboard"
               onClick={() => setIsOpen(false)}
-              className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d4af37] hover:bg-[#d4af37] hover:text-white transition-all duration-300 border border-[#d4af37]/40 px-4 py-2 rounded-full"
+              title={userData?.fullName || 'Command Dashboard'}
+              className="flex items-center gap-2 group"
             >
-              Admin
+              <div className="w-8 h-8 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-[11px] font-black uppercase group-hover:scale-105 transition-transform overflow-hidden">
+                {getInitials(userData?.fullName) || <UserCircle size={20} />}
+              </div>
             </Link>
+          ) : (
+            !isActive('/admin') && (
+              <Link
+                to="/admin"
+                onClick={() => setIsOpen(false)}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 hover:bg-yellow-500 hover:text-slate-950 transition-all duration-300 border border-yellow-500/40 px-4 py-2 rounded-full"
+              >
+                Admin
+              </Link>
+            )
           )}
 
           {/* Hamburger Action Button */}
           <button 
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 text-slate-600 dark:text-slate-300 hover:text-[#d4af37] transition-colors md:hidden focus:outline-none"
+            className="p-1 text-slate-600 dark:text-slate-300 hover:text-yellow-500 transition-colors md:hidden focus:outline-none"
             aria-label="Toggle Menu"
           >
             {isOpen ? <X size={22} /> : <Menu size={22} />}
@@ -195,6 +222,16 @@ const Navbar = () => {
 
               <MobileNavLink to="/leadership">Leadership</MobileNavLink>
               <MobileNavLink to="/teams">Teams</MobileNavLink>
+
+              <div className="pt-4 mt-2 border-t border-white/5">
+                {user ? (
+                  <MobileNavLink to="/admin/dashboard">
+                    {userData?.fullName || 'Command Dashboard'}
+                  </MobileNavLink>
+                ) : (
+                  <MobileNavLink to="/admin">Admin</MobileNavLink>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

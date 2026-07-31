@@ -28,10 +28,10 @@ const Footer = () => {
           {/* COLUMN 1: BRANDING */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <Shield className="text-[#d4af37]" size={28} />
+              <Shield className="text-yellow-500" size={28} />
               <div>
                 <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">
-                  PBHS <span className="text-[#d4af37]">JROTC</span>
+                  PBHS <span className="text-yellow-500">JROTC</span>
                 </h2>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">
                   Tornado Battalion
@@ -46,7 +46,7 @@ const Footer = () => {
                 href="https://www.instagram.com/pbhs.battalion" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-[#d4af37] transition-colors"
+                className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-yellow-500 transition-colors"
               >
                 <Instagram size={18} />
               </a>
@@ -55,12 +55,12 @@ const Footer = () => {
 
           {/* COLUMN 2: QUICK RESOURCES */}
           <div>
-            <h4 className="text-[#d4af37] font-black uppercase text-xs mb-6 tracking-widest">Resources</h4>
+            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Resources</h4>
             <ul className="space-y-4">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
                   <Link to={link.path} className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2 group">
-                    <div className="w-1 h-1 bg-[#d4af37] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                     {link.name}
                   </Link>
                 </li>
@@ -70,12 +70,12 @@ const Footer = () => {
 
           {/* COLUMN 3: BATTALION */}
           <div>
-            <h4 className="text-[#d4af37] font-black uppercase text-xs mb-6 tracking-widest">Battalion</h4>
+            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Battalion</h4>
             <ul className="space-y-4">
               {footerLinks.battalion.map((link) => (
                 <li key={link.name}>
                   <Link to={link.path} className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2 group">
-                    <div className="w-1 h-1 bg-[#d4af37] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                     {link.name}
                   </Link>
                 </li>
@@ -85,14 +85,14 @@ const Footer = () => {
 
           {/* COLUMN 4: CONTACT / LOCATION */}
           <div className="space-y-6">
-            <h4 className="text-[#d4af37] font-black uppercase text-xs mb-6 tracking-widest">Contact</h4>
+            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Contact</h4>
             <div className="space-y-4 text-sm text-slate-400">
               <div className="flex items-start gap-3">
-                <MapPin size={18} className="text-[#d4af37] shrink-0" />
+                <MapPin size={18} className="text-yellow-500 shrink-0" />
                 <span>600 NE 13th Ave,<br />Pompano Beach, FL 33060</span>
               </div>
               <div className="flex items-center gap-3">
-                <Mail size={18} className="text-[#d4af37] shrink-0" />
+                <Mail size={18} className="text-yellow-500 shrink-0" />
                 <span>info@pbhsjrotc.com</span>
               </div>
             </div>
@@ -103,7 +103,7 @@ const Footer = () => {
         {/* DISCLAIMER BOX */}
         <div className="mb-8 p-4 bg-white/5 border border-white/10 rounded-xl">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider leading-relaxed text-center">
-            <span className="text-[#d4af37] font-black">Disclaimer:</span> This current website is not affiliated with PBHS JROTC Tornado Battalion BCPS, Army JROTC, or Pompano Beach High. This is an independent project.
+            <span className="text-yellow-500 font-black">Disclaimer:</span> This current website is not affiliated with PBHS JROTC Tornado Battalion BCPS, Army JROTC, or Pompano Beach High. This is an independent project.
           </p>
         </div>
 
@@ -113,7 +113,7 @@ const Footer = () => {
             © {currentYear} PBHS JROTC Tornado Battalion.
           </p>
           <div className="flex items-center gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-            <Link to="/admin" className="hover:text-[#d4af37] transition-colors">Admin Portal</Link>
+            <Link to="/admin" className="hover:text-yellow-500 transition-colors">Admin Portal</Link>
             <a 
               href="https://www.usarmyjrotc.com/" 
               target="_blank" 

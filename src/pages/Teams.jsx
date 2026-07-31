@@ -77,7 +77,7 @@ const handleContactCommander = () => {
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6 text-left font-sans">
       <div className="max-w-6xl mx-auto">
         
-        <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-8 transition-colors text-sm font-bold uppercase tracking-widest">
+        <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-8 transition-colors text-sm font-bold uppercase tracking-widest">
           <ArrowLeft size={16} /> Back to Command
         </Link>
 

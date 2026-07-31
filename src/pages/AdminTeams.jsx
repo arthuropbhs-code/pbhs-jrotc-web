@@ -8,7 +8,8 @@ import {
   ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
   UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks
 } from 'lucide-react';
-import { ROLE_HIERARCHY } from '../constants';
+import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import Footer from '../components/Footer';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
@@ -21,14 +22,15 @@ const AdminTeams = () => {
 
   const [formData, setFormData] = useState({
     name: '', status: 'Open Practice', description: '', practice: '', location: '',
-    requirements: '', disciplines: '', leadership: [] 
+    requirements: '', disciplines: '', leadership: []
   });
 
   const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
   const [uploading, setUploading] = useState(false);
+  const [personnel, setPersonnel] = useState([]);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
-  const isPowerUser = userLevel >= 90; 
+  const isPowerUser = userLevel >= ADMIN_LEVEL;
   const userEmail = user?.email?.toLowerCase().trim();
 
   // Sync Teams Data
@@ -39,6 +41,20 @@ const AdminTeams = () => {
         setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setDataLoading(false);
       }, () => setDataLoading(false));
+      return () => unsubscribe();
+    }
+  }, [authLoading, user]);
+
+  // Sync Roster (for the Command Structure "select an existing cadet" picker)
+  useEffect(() => {
+    if (!authLoading && user) {
+      const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+        const roster = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(p => p.fullName && p.email)
+          .sort((a, b) => a.fullName.localeCompare(b.fullName));
+        setPersonnel(roster);
+      });
       return () => unsubscribe();
     }
   }, [authLoading, user]);
@@ -113,6 +129,20 @@ const AdminTeams = () => {
     setFormData({ ...formData, leadership: updatedLeadership });
   };
 
+  // Fills name/rank/email from the selected roster account, so leadership
+  // entries always point at a real registered cadet instead of free text.
+  const selectLeaderPerson = (index, selectedEmail) => {
+    const person = personnel.find(p => (p.email || '').toLowerCase() === selectedEmail.toLowerCase());
+    const updatedLeadership = [...formData.leadership];
+    updatedLeadership[index] = {
+      ...updatedLeadership[index],
+      name: person?.fullName || '',
+      rank: person?.rank || '',
+      email: person?.email || selectedEmail
+    };
+    setFormData({ ...formData, leadership: updatedLeadership });
+  };
+
   const handleEdit = (team) => {
     setEditingId(team.id);
     setFormData({
@@ -155,11 +185,11 @@ const AdminTeams = () => {
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all">
-              <ArrowLeft size={14} /> Back to Operations
+              <ArrowLeft size={14} /> Back to Command
             </Link>
             <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter flex items-center gap-4">
-              <ShieldAlert className="text-yellow-600 dark:text-yellow-500" size={36} /> 
-              {isPowerUser ? "Battalion" : "Unit"} <span className="text-yellow-600 dark:text-yellow-500">Command</span>
+              <ShieldAlert className="text-yellow-600 dark:text-yellow-500" size={36} />
+              Manage <span className="text-yellow-600 dark:text-yellow-500">Teams</span>
             </h1>
           </div>
           
@@ -185,7 +215,7 @@ const AdminTeams = () => {
               <form onSubmit={handleSaveTeam} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 md:p-10 rounded-[2.5rem] shadow-xl dark:shadow-none space-y-8">
                 <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-6">
                   <h2 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">
-                    {editingId ? `Modifying: ${formData.name}` : "Initialize New Strategic Unit"}
+                    {editingId ? `Modifying: ${formData.name}` : "Add New Team"}
                   </h2>
                   {editingId && (
                     <button type="button" onClick={() => { setEditingId(null); setFormData({name:'', status:'Open Practice', description:'', practice:'', location:'', requirements:'', disciplines:'', leadership:[]}); }} className="text-[10px] font-black text-slate-400 uppercase hover:text-red-500 transition-colors">Reset</button>
@@ -230,17 +260,27 @@ const AdminTeams = () => {
                       <button type="button" onClick={() => setFormData({...formData, leadership: formData.leadership.filter((_, i) => i !== index)})} className="absolute top-4 right-4 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
                     )}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <input value={leader.name} onChange={(e) => updateLeader(index, 'name', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs" placeholder="Name" />
-                      <input value={leader.rank} onChange={(e) => updateLeader(index, 'rank', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs" placeholder="Rank" />
+                      <select
+                        value={leader.email || ''}
+                        onChange={(e) => selectLeaderPerson(index, e.target.value)}
+                        className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs"
+                      >
+                        <option value="" disabled>Select Cadet...</option>
+                        {personnel.map(p => (
+                          <option key={p.id} value={p.email}>{p.fullName}{p.rank ? ` (${p.rank})` : ''}</option>
+                        ))}
+                      </select>
                       <select value={leader.teamRole || 'Team Member'} onChange={(e) => updateLeader(index, 'teamRole', e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-xs text-yellow-600 font-bold uppercase outline-none">
                         <option value="Commander">Commander</option>
                         <option value="Co-Commander">Co-Commander</option>
                         <option value="Team Member">Team Member</option>
                       </select>
-                      <div className="lg:col-span-2 relative">
-                        <Mail size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input readOnly={!isPowerUser} value={leader.email} onChange={(e) => updateLeader(index, 'email', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 pl-10 rounded-xl text-xs" placeholder="Email" />
-                      </div>
+                      {leader.email && (
+                        <div className="lg:col-span-3 flex items-center gap-4 text-[10px] text-slate-400 dark:text-slate-500 px-1">
+                          {leader.rank && <span className="font-black text-yellow-600 dark:text-yellow-500 uppercase">{leader.rank}</span>}
+                          <span className="flex items-center gap-1 truncate"><Mail size={10} /> {leader.email}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -305,6 +345,8 @@ const AdminTeams = () => {
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* CONFIRMATION MODAL */}
       {deleteConfirm.open && (

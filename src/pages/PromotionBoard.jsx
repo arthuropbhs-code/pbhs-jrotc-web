@@ -2,156 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, CheckCircle, Shield, ChevronLeft, LayoutGrid } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_PROMOTION_BOARD } from '../data/defaultPageContent';
 
 const PromotionBoard = () => {
   const [selectedRank, setSelectedRank] = useState('Squad Member');
   const [activeAsst, setActiveAsst] = useState('S-1');
+  const [content, setContent] = useState(DEFAULT_PROMOTION_BOARD);
 
   // Ensure page starts at top
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const boardData = {
-    'Squad Member': {
-      knowledge: ["Cadet Creed", "JROTC Meaning", "LET Meaning", "SAI (Who & Meaning)", "AI (Who & Meaning)", "Mission Statement", "LDRSHIP Meaning", "10 Ranks", "Military Bearing", "Company & Battalion Org"],
-      duties: [
-        "Maintain and wear the entire uniform immaculately when told",
-        "Properly care for all equipment and materials given to you",
-        "Ensure you are on time for all official formations",
-        "Conduct yourself in a manner that brings credit to the Tornado Battalion",
-        "If called upon be ready to perform as squad leader"
-      ],
-      leadership: "5/11 Principles",
-    },
-    'Squad Leader': {
-      knowledge: ["Cadet Creed", "LDRSHIP with definitions", "JROTC/LET Meaning", "Mission Statement", "SAI & AI Roles", "Company Leadership to squad members", "All Cadet Ranks"],
-      duties: [
-        "Responsible for all squad activities",
-        "Sets the standard and direction of their squad",
-        "Communicates information and end dates from leadership to squad members",
-        "Encourages squad members to act appropriately in compliance with policies",
-        "Responsible for personal accountability, uniform, equipment, and training plans"
-      ],
-      leadership: "5/11 Principles",
-    },
-    'Platoon Sergeant': {
-      knowledge: ["Cadet Creed", "LDRSHIP with definitions", "JROTC/LET Meaning", "SAI & AI Roles", "Company Leadership to Platoon", "All Cadet Ranks"],
-      duties: [
-        "Responsible for all platoon activities",
-        "Sets the standard and direction of their platoon",
-        "Communicates information and end dates from leadership to platoon",
-        "Encourages platoon to act appropriately in compliance with policies",
-        "Responsible for personal accountability, uniform, equipment, and training plans"
-      ],
-      leadership: "5/11 Principles",
-    },
-    'Platoon Leader': {
-      knowledge: ["Cadet Creed", "LDRSHIP with definitions", "JROTC/LET Meaning", "Mission Statement", "SAI & AI Roles", "Company Leadership to Squad Leaders", "All Cadet Ranks"],
-      duties: [
-        "Responsible for all platoon activities",
-        "Sets the standard and direction of their platoon",
-        "Communicates information and end dates from leadership to platoon sergeant",
-        "Encourages platoon to act appropriately in compliance with policies",
-        "Responsible for personal accountability, uniform, equipment, and training plans"
-      ],
-      leadership: "7/11 Principles",
-    },
-    'Company 1SG': {
-      knowledge: ["Cadet Creed", "LDRSHIP definitions", "SAI & AI Roles", "Top 5 & Company Chain of Command", "All Cadet Ranks"],
-      duties: [
-        "Coordinating with platoon sergeants to ensure proper training",
-        "Responsible for passing information and data from platoon to CC and CC to platoon",
-        "Advises CC on planning and coordinating company activities and training",
-        "Accomplishes duties that are given by the CC, XO, and/or Army Instructor",
-        "Responsible for the safety and risk assessment of all company events"
-      ],
-      leadership: "8/11 Principles",
-    },
-    'Company XO': {
-      knowledge: ["Cadet Creed", "LDRSHIP definitions", "SAI & AI Roles", "Top 5 & Company Chain of Command", "All Cadet Ranks"],
-      duties: [
-        "Assumes command and responsibilities in CC absence",
-        "Serves as Chief of Staff; supervises and coordinates company staff",
-        "Responsible for passing information/data between company staff and CC",
-        "Accomplishes those duties that are given by the company commander",
-        "Responsible for the safety and risk assessment of all company events"
-      ],
-      leadership: "8/11 Principles",
-    },
-    'Company Commander': {
-      knowledge: ["Cadet Creed", "LDRSHIP definitions", "SAI & AI Roles", "Top 5 & Company Chain", "Mission Statement", "All Cadet Ranks"],
-      duties: [
-        "Responsible for all company level activities",
-        "Keeps the battalion commander informed of the status of the company",
-        "Ensures the company is prepared to accomplish its assigned mission",
-        "Build effective company chain of command",
-        "Sets the standard and direction of the company",
-        "Consult training schedules and ensure peer preparation to instruct",
-        "Execute the orders of the battalion commander"
-      ],
-      leadership: "9/11 Principles",
-    },
-    'Staff Assistants': {
-      knowledge: ["Cadet Creed", "LDRSHIP definitions", "JROTC/LET Meaning", "SAI & AI Roles", "Leadership: Co. to Squad Leaders of Platoon", "All Cadet Ranks"],
-      leadership: "5/11 Principles",
-      sections: [
-        { 
-          id: "S-1", 
-          title: "Administrative Assistant", 
-          asst: [
-            "Responsible for all matters concerning human resources within the company",
-            "Provide administrative support within the company",
-            "Responsible for the recording of all company data",
-            "Responsible for the execution of all company level award ceremonies"
-          ]
-        },
-        { 
-          id: "S-2", 
-          title: "Safety & Security Assistant", 
-          asst: [
-            "Supervises company physical security and makes periodic inspections of all drill weapons",
-            "Ensures that all Company activities are conducted in a safe manner",
-            "Serves on event staff for planning and conducting company training events"
-          ]
-        },
-        { 
-          id: "S-3", 
-          title: "Training Assistant", 
-          asst: [
-            "Responsible for all matters concerning training operations and plans within the company",
-            "Plans, organizes and supervises the conduct of cadet training within the company",
-            "Ensures that all training listed within scheduling is rehearsed by the company",
-            "Ensures the use of all schedules provided by the Battalion (S-3)"
-          ]
-        },
-        { 
-          id: "S-4", 
-          title: "Supply Assistant", 
-          asst: [
-            "Responsible for the distribution and maintenance of supply within the company",
-            "Serve as a link between cadets and the Battalion (S-4)",
-            "Serves on event staff for planning and conducting company training events"
-          ]
-        },
-        { 
-          id: "S-5", 
-          title: "Public Affairs Assistant", 
-          asst: [
-            "Responsible for taking video and picture documentation of all events within the company"
-          ]
-        },
-        { 
-          id: "S-6", 
-          title: "Automation Assistant", 
-          asst: [
-            "Assist in making periodic inspections of automation equipment",
-            "Maintain and ensure the proper operation of all automation equipment used within the company"
-          ]
-        }
-      ]
-    }
-  };
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "pageContent", "promotion-board"), (snap) => {
+      if (snap.exists()) setContent({ ...DEFAULT_PROMOTION_BOARD, ...snap.data() });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Reshape the array-based Firestore doc back into the name-keyed lookup
+  // the rest of this component was already written around.
+  const boardData = {};
+  content.ranks.forEach(r => {
+    boardData[r.name] = { knowledge: r.knowledge, duties: r.duties, leadership: r.leadership };
+  });
+  boardData['Staff Assistants'] = content.staffAssistants;
 
   const currentAsst = boardData['Staff Assistants'].sections.find(s => s.id === activeAsst);
 
@@ -222,7 +100,7 @@ const PromotionBoard = () => {
                     </h3>
                     <div className="text-right">
                       <p className="text-[10px] text-slate-500 uppercase font-black">Principles of Leadership Requirement</p>
-                      <p className="text-sm font-bold text-white uppercase">5/11 Principles</p>
+                      <p className="text-sm font-bold text-white uppercase">{boardData['Staff Assistants'].leadership}</p>
                     </div>
                   </div>
 

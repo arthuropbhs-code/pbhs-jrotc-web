@@ -28,6 +28,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Requires the military roster convention: "LASTNAME, FIRSTNAME" (each side
+// may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
+const FULL_NAME_PATTERN = /^[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*,\s*[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*$/;
+
 const SignUp = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -48,19 +52,37 @@ const SignUp = () => {
   const [linkData, setLinkData] = useState(null); 
   const navigate = useNavigate();
 
-  const BATTALION_SECRET = "PBHS2026"; 
-  
+  // SHA-256 of the real code - kept as a hash so the plaintext code isn't
+  // sitting in the shipped JS bundle. This raises the bar (no longer a
+  // trivial devtools/view-source read) but is still a client-side check,
+  // not a real security boundary - a determined attacker could still brute
+  // force it offline since there's no rate limiting or server-side gate.
+  const BATTALION_SECRET_HASH = "3cb114732fd8eb6d2bd5600f808604727ed86f4ba6fc0e6344fadb9b6cebfea5";
+
+  const sha256Hex = async (text) => {
+    const data = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+
   const ranks = ["CDT PVT No Insignia", "CDT PVT", "CDT PFC", "CDT CPL", "CDT SGT", "CDT SSG", "CDT SFC", "CDT MSG", "CDT SG", "CDT SGM", "CDT CSM", "CDT 2LT", "CDT 1LT", "CDT CPT", "CDT MAJ", "CDT LTC", "CDT COL"];
   const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO" , "Company Commander", "S1 Assistant", "S2 Assistant", "S3 Assistant", "S4 Assistant", "S5 Assistant", "S6 Assistant", "S7 Assistant", "Battalion S1", "Battalion S2", "Battalion S3", "Battalion S4", "Battalion S5", "Battalion S6"];
-  const companies = ["Uniform", "Victor", "Whisky" , "X-Ray", "Yankee", "Battalion"];
+  const companies = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta", "Battalion"];
   const platoons = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const squads = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
 
   const handleSignUpAttempt = async (e) => {
     e.preventDefault();
     setError('');
-    
-    if (formData.secretCode !== BATTALION_SECRET) {
+
+    if (!FULL_NAME_PATTERN.test(formData.name.trim())) {
+      setError("FULL NAME MUST BE FORMATTED AS: LASTNAME, FIRSTNAME");
+      return;
+    }
+
+    const enteredHash = await sha256Hex(formData.secretCode.trim());
+    if (enteredHash !== BATTALION_SECRET_HASH) {
       setError("INVALID SECRET CODE: ACCESS DENIED.");
       return;
     }
@@ -201,22 +223,35 @@ const SignUp = () => {
               </select>
             </div>
 
-            {/* Platoon Selection */}
-            <div className="relative">
-              <select required value={formData.platoon} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, platoon: e.target.value})}>
-                {platoons.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
-              </select>
-            </div>
+            {/* Platoon Selection - not applicable at Battalion level */}
+            {formData.company !== 'Battalion' && (
+              <div className="relative">
+                <select required value={formData.platoon} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, platoon: e.target.value})}>
+                  {platoons.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
+                </select>
+              </div>
+            )}
 
-            {/* Squad Selection */}
-            <div className="relative">
-              <select required value={formData.squad} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, squad: e.target.value})}>
-                {squads.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
-              </select>
-            </div>
+            {/* Squad Selection - not applicable at Battalion level */}
+            {formData.company !== 'Battalion' && (
+              <div className="relative">
+                <select required value={formData.squad} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, squad: e.target.value})}>
+                  {squads.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                </select>
+              </div>
+            )}
 
             <div className="relative col-span-full">
-              <select required value={formData.company} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none text-center font-black text-white" onChange={(e) => setFormData({...formData, company: e.target.value})}>
+              <select required value={formData.company} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none text-center font-black text-white" onChange={(e) => {
+                const nextCompany = e.target.value;
+                setFormData({
+                  ...formData,
+                  company: nextCompany,
+                  ...(nextCompany === 'Battalion'
+                    ? { platoon: 'HQ Platoon', squad: 'Staff' }
+                    : (formData.company === 'Battalion' ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
+                });
+              }}>
                 <option value="" disabled>— ASSIGN COMPANY —</option>
                 {companies.map(c => <option key={c} value={c} className="bg-slate-900">{c} Company</option>)}
               </select>

@@ -22,75 +22,58 @@ const Home = () => {
     { url: "/covers/JV_Raiders.webp", title: "TRAINING", subtitle: "THE NEXT GENERATION" }
   ];
 
-  // --- PARSE CMS MARKDOWN FOR LEADERSHIP & QUOTES ---
+  // --- LIVE FIRESTORE LEADERSHIP DATA FOR TOP 3 & QUOTES ---
   useEffect(() => {
-    const rawFiles = import.meta.glob('../data/cms/*.md', { query: '?raw', eager: true });
-    const leadersList = [];
-
-    const parseFrontmatter = (rawStr) => {
-      const match = rawStr.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      if (!match) return {};
-      const obj = {};
-      match[1].split('\n').forEach(line => {
-        const parts = line.split(':');
-        if (parts.length >= 2) {
-          const key = parts[0].trim();
-          const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
-          obj[key] = value;
-        }
-      });
-      return obj;
-    };
-
-    for (const path in rawFiles) {
-      const fileData = rawFiles[path];
-      const rawContent = fileData.default || fileData;
-      if (typeof rawContent === 'string') {
-        const meta = parseFrontmatter(rawContent);
-        if (meta.name) {
-          leadersList.push({
+    const unsubscribe = onSnapshot(collection(db, "leadership"), (snapshot) => {
+      const leadersList = snapshot.docs
+        .map(d => {
+          const meta = d.data();
+          if (!meta.name) return null;
+          return {
             name: meta.name.toUpperCase(),
             role: meta.role ? meta.role.trim() : '',
             rank: meta.rank || '',
             image: meta.portrait || '/covers/default.webp',
             quote: meta.quote || 'Ready to lead and excel.'
-          });
-        }
-      }
-    }
+          };
+        })
+        .filter(Boolean);
 
-    // Helper utility to clean roles of spaces, hyphens, and casing for comparison
-    const sanitizeRole = (roleStr) => {
-      return roleStr.toLowerCase().replace(/[\s-_]/g, '');
-    };
-
-    // Filter down specifically to the Top 3 command elements using unified sanitization
-    const filteredTopThree = leadersList.filter(l => {
-      const cleanRole = sanitizeRole(l.role);
-      return (
-        cleanRole === 'battalioncommander' || 
-        cleanRole === 'executiveofficer' || 
-        cleanRole === 'battalionxo' || 
-        cleanRole === 'commandsergeantmajor'
-      );
-    });
-
-    // Enforce display ordering: BC -> XO -> CSM
-    filteredTopThree.sort((a, b) => {
-      const cleanA = sanitizeRole(a.role);
-      const cleanB = sanitizeRole(b.role);
-      
-      const getOrderWeight = (role) => {
-        if (role === 'battalioncommander') return 0;
-        if (role === 'executiveofficer' || role === 'battalionxo') return 1;
-        if (role === 'commandsergeantmajor') return 2;
-        return 3;
+      // Helper utility to clean roles of spaces, hyphens, and casing for comparison
+      const sanitizeRole = (roleStr) => {
+        return roleStr.toLowerCase().replace(/[\s-_]/g, '');
       };
 
-      return getOrderWeight(cleanA) - getOrderWeight(cleanB);
+      // Filter down specifically to the Top 3 command elements using unified sanitization
+      const filteredTopThree = leadersList.filter(l => {
+        const cleanRole = sanitizeRole(l.role);
+        return (
+          cleanRole === 'battalioncommander' ||
+          cleanRole === 'executiveofficer' ||
+          cleanRole === 'battalionxo' ||
+          cleanRole === 'commandsergeantmajor'
+        );
+      });
+
+      // Enforce display ordering: BC -> XO -> CSM
+      filteredTopThree.sort((a, b) => {
+        const cleanA = sanitizeRole(a.role);
+        const cleanB = sanitizeRole(b.role);
+
+        const getOrderWeight = (role) => {
+          if (role === 'battalioncommander') return 0;
+          if (role === 'executiveofficer' || role === 'battalionxo') return 1;
+          if (role === 'commandsergeantmajor') return 2;
+          return 3;
+        };
+
+        return getOrderWeight(cleanA) - getOrderWeight(cleanB);
+      });
+
+      setTopThree(filteredTopThree);
     });
 
-    setTopThree(filteredTopThree);
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
