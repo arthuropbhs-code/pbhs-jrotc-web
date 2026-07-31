@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../components/Navbar';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendResetPasswordEmail } from '../utils/emailjs';
 import { ROLE_LABELS } from '../constants';
 import Footer from '../components/Footer';
 import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle } from 'lucide-react';
@@ -64,10 +64,21 @@ const MyProfile = () => {
     }
   };
 
+  // Generates the reset link server-side (api/admin-update-account.js) and
+  // sends it ourselves via EmailJS with a fully custom HTML template,
+  // instead of Firebase's own auto-sent email.
   const handlePasswordReset = async () => {
-    if (!user?.email) return;
+    if (!user) return;
     try {
-      await sendPasswordResetEmail(auth, user.email);
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'reset-password', targetUid: user.uid })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
+      await sendResetPasswordEmail(data.email, data.resetLink);
       setResetSent(true);
       setTimeout(() => setResetSent(false), 5000);
     } catch (err) {

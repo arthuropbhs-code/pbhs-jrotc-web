@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import {
   collection, doc, updateDoc, onSnapshot, query,
   addDoc, serverTimestamp, deleteDoc
 } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendResetPasswordEmail } from '../utils/emailjs';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
@@ -153,14 +153,25 @@ const AdminUsers = () => {
     }
   };
 
-  // sendPasswordResetEmail works for any registered email with no special
-  // permission needed - it's the same "Forgot Password?" flow, just
-  // triggered on the cadet's behalf instead of by them.
+  // Generates the reset link server-side (api/admin-update-account.js,
+  // gated the same as Update Login Email) and sends it ourselves via
+  // EmailJS with a fully custom HTML template, instead of Firebase's own
+  // auto-sent email. The endpoint resolves the target's real current email
+  // itself rather than trusting editingRecord.email, so this always lands
+  // on the account that's actually signed in.
   const handleResetPassword = async () => {
-    if (!editingRecord?.email) return;
+    if (!editingRecord) return;
     setResetPasswordStatus('sending');
     try {
-      await sendPasswordResetEmail(auth, editingRecord.email);
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'reset-password', targetUid: editingRecord.id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
+      await sendResetPasswordEmail(data.email, data.resetLink);
       setResetPasswordStatus('success');
       setTimeout(() => setResetPasswordStatus(null), 3000);
     } catch (err) {

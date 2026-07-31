@@ -99,14 +99,14 @@ async function getAccessToken() {
   return cachedToken.value;
 }
 
-async function getUserRole(accessToken, projectId, uid) {
+async function getUserField(accessToken, projectId, uid, field) {
   const res = await fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!res.ok) return null;
   const data = await res.json();
-  return data.fields?.role?.stringValue || null;
+  return data.fields?.[field]?.stringValue || null;
 }
 
 export default async function handler(req, res) {
@@ -120,9 +120,10 @@ export default async function handler(req, res) {
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
 
-    const { targetUid, newEmail } = req.body || {};
-    if (!targetUid || !newEmail) {
-      return res.status(400).json({ error: 'targetUid and newEmail are required' });
+    const { type = 'update-email', targetUid, newEmail } = req.body || {};
+    if (!targetUid) return res.status(400).json({ error: 'targetUid is required' });
+    if (type === 'update-email' && !newEmail) {
+      return res.status(400).json({ error: 'newEmail is required' });
     }
 
     const account = getServiceAccount();
@@ -133,6 +134,7 @@ export default async function handler(req, res) {
     // critical path (this endpoint makes several external HTTPS calls, and
     // Vercel's function timeout is short enough that latency here matters).
     let callerUid;
+    let callerEmail;
     let accessToken;
     try {
       const [verifyResult, token] = await Promise.all([
@@ -143,30 +145,52 @@ export default async function handler(req, res) {
         getAccessToken(),
       ]);
       callerUid = verifyResult.payload.sub;
+      callerEmail = verifyResult.payload.email;
       accessToken = token;
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
     }
 
-    // Changing your own login email is always allowed - it's your account.
-    // Changing someone else's is restricted to the email-manager roles, and
-    // only for personnel strictly below your own rank.
+    // Acting on your own account is always allowed. Acting on someone else's
+    // is restricted to the email-manager roles, and only for personnel
+    // strictly below your own rank. Same rule for both action types below.
     if (targetUid !== callerUid) {
       const [callerRole, targetRole] = await Promise.all([
-        getUserRole(accessToken, projectId, callerUid),
-        getUserRole(accessToken, projectId, targetUid),
+        getUserField(accessToken, projectId, callerUid, 'role'),
+        getUserField(accessToken, projectId, targetUid, 'role'),
       ]);
 
       if (!EMAIL_MANAGER_ROLES.includes(callerRole)) {
-        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can change another cadet\'s login credentials.' });
+        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can manage another cadet\'s login credentials.' });
       }
       if ((ROLE_HIERARCHY[targetRole] || 0) >= (ROLE_HIERARCHY[callerRole] || 0)) {
-        return res.status(403).json({ error: 'You can only change login credentials for personnel below your own rank.' });
+        return res.status(403).json({ error: 'You can only manage login credentials for personnel below your own rank.' });
       }
     }
 
-    // The Auth login email and the Firestore copy of it are independent
-    // writes - run them concurrently too.
+    if (type === 'reset-password') {
+      // Never trust a client-supplied email for someone else's account -
+      // resolve the target's real current login email server-side. For
+      // self-service, the ID token's own (already-verified) email claim is
+      // authoritative and needs no extra lookup.
+      const targetEmail = targetUid === callerUid
+        ? callerEmail
+        : await getUserField(accessToken, projectId, targetUid, 'email');
+      if (!targetEmail) throw new Error('Could not resolve that account\'s email address');
+
+      const oobRes = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:sendOobCode`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: targetEmail, returnOobLink: true }),
+      });
+      const oobData = await oobRes.json();
+      if (!oobRes.ok) throw new Error(oobData.error?.message || 'Failed to generate a reset link');
+
+      return res.status(200).json({ resetLink: oobData.oobLink, email: targetEmail });
+    }
+
+    // type === 'update-email': the Auth login email and the Firestore copy
+    // of it are independent writes - run them concurrently.
     const [identityRes, firestoreRes] = await Promise.all([
       fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
         method: 'POST',
