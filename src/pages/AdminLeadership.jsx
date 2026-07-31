@@ -15,6 +15,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const COMPANIES = ["None", "Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
+// Must exactly match the position names Leadership.jsx's getCompanyPosition()
+// looks for - that's how a company entry ends up in its correct box on the
+// public page instead of silently not showing up anywhere.
+const COMPANY_POSITIONS = ["Commander", "Executive Officer", "First Sergeant"];
 
 // Cloud name and unsigned upload preset are not secrets - Cloudinary's
 // unsigned-upload flow is designed to be called directly from client code.
@@ -296,8 +300,17 @@ const AdminLeadership = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Role / Position Title</label>
-                  <input required placeholder="e.g. Battalion Commander, S-1 Adjutant" className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white" value={leaderForm.role} onChange={e => setLeaderForm({ ...leaderForm, role: e.target.value })} />
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">
+                    {leaderForm.company !== 'None' ? 'Company Position' : 'Role / Position Title'}
+                  </label>
+                  {leaderForm.company !== 'None' ? (
+                    <select required className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={leaderForm.role} onChange={e => setLeaderForm({ ...leaderForm, role: e.target.value })}>
+                      <option value="" disabled className="bg-white dark:bg-slate-900">Select position...</option>
+                      {COMPANY_POSITIONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
+                    </select>
+                  ) : (
+                    <input required placeholder="e.g. Battalion Commander, S-1 Adjutant" className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white" value={leaderForm.role} onChange={e => setLeaderForm({ ...leaderForm, role: e.target.value })} />
+                  )}
                 </div>
 
                 <div className="space-y-1">

@@ -319,6 +319,13 @@ const AdminUsers = () => {
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Rank</label>
                   <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.rank} onChange={e => setFormData({...formData, rank: e.target.value})}>
+                    {/* A legacy value that predates this dropdown (e.g. free-typed "CDT MAJ")
+                        won't match any option below - show it as-is instead of the <select>
+                        silently defaulting to whichever option happens to be first, which
+                        would overwrite it with the wrong rank on the next save. */}
+                    {formData.rank && !JROTC_RANKS.includes(formData.rank) && (
+                      <option value={formData.rank} className="bg-white dark:bg-slate-900">{formData.rank} (legacy - please update)</option>
+                    )}
                     {JROTC_RANKS.map(r => <option key={r} value={r} className="bg-white dark:bg-slate-900">{r}</option>)}
                   </select>
                 </div>
