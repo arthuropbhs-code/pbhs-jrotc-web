@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  deleteDoc, 
-  doc 
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  where,
+  onSnapshot,
+  deleteDoc,
+  doc
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
@@ -58,13 +59,35 @@ const AdminOrders = () => {
   }
 
   useEffect(() => {
+    if (!userData?.company) return;
     const collectionName = mode === 'order' ? "orders" : "events";
-    const q = query(collection(db, collectionName), orderBy("timestamp", "desc"));
+    const userLevel = ROLE_HIERARCHY[role] || 0;
+
+    // Staff+ get full battalion visibility (they need the whole audit trail).
+    // Below that, orders are scoped to what this user was actually targeted
+    // by, same list MyDuties.jsx uses - a Company Commander shouldn't see
+    // "Staff"/"Top 4"-only orders or another company's orders. Events stay
+    // unfiltered: they're already fully public on the unauthenticated
+    // /events calendar, so there's no scoping to enforce here.
+    const q = collectionName === 'orders' && userLevel < STAFF_LEVEL
+      ? query(
+          collection(db, "orders"),
+          where("targets", "array-contains-any", [
+            "All Battalion",
+            userData.company,
+            `${userData.company} Company`,
+            userData.position,
+            "All"
+          ].filter(Boolean)),
+          orderBy("timestamp", "desc")
+        )
+      : query(collection(db, collectionName), orderBy("timestamp", "desc"));
+
     const unsub = onSnapshot(q, (snapshot) => {
       setRecentItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
     });
     return () => unsub();
-  }, [mode]);
+  }, [mode, role, userData?.company, userData?.position]);
 
   const toggleTarget = (target) => {
     setSelectedTargets(prev => 
@@ -81,11 +104,21 @@ const AdminOrders = () => {
     const userWeight = ROLE_HIERARCHY[role] || 0;
     const issuerWeight = ROLE_HIERARCHY[item.issuerRole] ?? 0;
 
-    if (userWeight >= issuerWeight) {
-      setDeleteConfirm({ show: true, id: item.id });
-    } else {
+    if (userWeight < issuerWeight) {
       showError("RANK INSUFFICIENT: Cannot delete higher-echelon transmissions.");
+      return;
     }
+
+    // Rank alone isn't enough below staff level - a Company Commander in
+    // one company shouldn't be able to delete another company's orders
+    // just because they outrank that company's issuer.
+    const sameCompany = !item.company || item.company === "Battalion" || item.company === userData?.company;
+    if (userWeight < STAFF_LEVEL && !sameCompany) {
+      showError("ACCESS DENIED: Outside your company's transmissions.");
+      return;
+    }
+
+    setDeleteConfirm({ show: true, id: item.id });
   };
 
   const confirmDelete = async () => {

@@ -45,9 +45,11 @@ const AdminTeams = () => {
     }
   }, [authLoading, user]);
 
-  // Sync Roster (for the Command Structure "select an existing cadet" picker)
+  // Sync Roster (for the Command Structure "select an existing cadet" picker).
+  // Gated on isAuthorized (not just signed-in) so an unauthorized visitor
+  // doesn't pull down every cadet's name/email before the redirect fires.
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && isAuthorized) {
       const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
         const roster = snapshot.docs
           .map(d => ({ id: d.id, ...d.data() }))
@@ -57,7 +59,7 @@ const AdminTeams = () => {
       });
       return () => unsubscribe();
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, isAuthorized]);
 
   // Sync Dossier
   useEffect(() => {
@@ -164,7 +166,7 @@ const AdminTeams = () => {
     );
   }
 
-  if (!isAuthorized && !dataLoading) return <Navigate to="/dashboard" replace />;
+  if (!isAuthorized && !dataLoading) return <Navigate to="/admin/dashboard" replace />;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 font-sans relative selection:bg-yellow-500/30">

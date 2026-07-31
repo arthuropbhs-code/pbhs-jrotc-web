@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, where, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,9 +64,9 @@ const UniformRequests = () => {
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUserProfile(data);
-          
-          setFormData(prev => ({ 
-            ...prev, 
+
+          setFormData(prev => ({
+            ...prev,
             // FIX 2: Issued By defaults to current user if they are S4 Staff
             issuedBy: (isS4Master || isS4Assistant) ? (data.fullName || '') : '',
             company: data.company || 'Zulu'
@@ -75,21 +75,33 @@ const UniformRequests = () => {
       }
     };
     fetchProfile();
+  }, []);
 
-    const q = query(collection(db, "uniform_requests"), orderBy("timestamp", "desc"));
+  // Query is scoped server-side to match what each tier is allowed to see,
+  // instead of fetching every cadet's requests (names, items, notes) and
+  // filtering client-side - a plain cadet or company leader's browser should
+  // never receive requests outside their own scope in the first place.
+  useEffect(() => {
+    if (!userProfile) return;
+
+    let q;
+    if (isS4Master || isStaffObserver) {
+      q = query(collection(db, "uniform_requests"), orderBy("timestamp", "desc"));
+    } else if (isS4Assistant || isCompanyLeadership) {
+      q = query(collection(db, "uniform_requests"), where("company", "==", userProfile.company));
+    } else {
+      q = query(collection(db, "uniform_requests"), where("cadetName", "==", userProfile.fullName));
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allReqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      const filteredByHierarchy = allReqs.filter(req => {
-        if (isS4Master || isStaffObserver) return true;
-        if (isS4Assistant || isCompanyLeadership) return req.company === userProfile?.company;
-        return req.cadetName === userProfile?.fullName;
-      });
-
-      setRequests(filteredByHierarchy);
+      const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (isS4Assistant || isCompanyLeadership || (!isS4Master && !isStaffObserver)) {
+        reqs.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+      }
+      setRequests(reqs);
     });
     return () => unsubscribe();
-  }, [userRole, userProfile?.fullName, userLevel]);
+  }, [userProfile, isS4Master, isStaffObserver, isS4Assistant, isCompanyLeadership]);
 
   // --- DATA CONFIGURATION ---
   const OFFICIAL_RIBBONS = ["Medal for Heroism (Ribbon)", "Superior Cadet Award (Ribbon)", "N-1-1 Distinguished Cadet", "N-1-2 Academic Excellence", "N-1-3 Academic Achievement", "N-1-4 Perfect Attendance", "N-1-5 Student Governement", "N-1-6 LET Service", "N-1-7 Superior Instructor", "N-1-8 CPR First Aid", "N-1-9 Distinguished Cadet", "N-1-10 Honor Cadet", "N-3-1 Dai/Sai Leadership", "N-3-2 Personal Appearance", "N-3-3 Proficiency", "N-3-4 Drill Team", "N-3-5 Orienteering", "N-3-6 Color | Honor Guard", "N-3-7 Rifle Marksmanship", "N-3-8 Adventure Training", "N-3-9 Commendation", "N-3-10 Good Conduct", "N-3-11 JCLC Participation", "N-3-12 Championship Drill", "N-3-13 Raider Team", "N-3-14 Recondo / Rappelling", "N-3-15 Meritorious Actions", "N-2-1 Varsity Athletics", "N-2-2 Physical Fitness", "N-2-3 JROTC Athletics", "N-2-4 Junior Varsity Athletics", "N-2-5 Athletic Service", "N-4-1 Parade", "N-4-2 Recruiting", "N-4-3 School Support", "N-4-4 Community Service", "N-4-5 Confidence Course", "N-4-6 Service Learning", "N-4-7 Excellent Staff Performance", "Company Commander of the Quarter", "Company XO of the Quarter", "100 Flags", "Funeral Detail"];
