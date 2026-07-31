@@ -33,6 +33,20 @@ const AdminUsers = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState(null);
+  // Keyed by target uid, not global - resetting one cadet's password
+  // shouldn't block resetting a different cadet's right after.
+  const [resetCooldowns, setResetCooldowns] = useState({});
+  const [now, setNow] = useState(Date.now());
+
+  const resetCooldownSeconds = editingRecord
+    ? Math.max(0, Math.ceil(((resetCooldowns[editingRecord.id] || 0) - now) / 1000))
+    : 0;
+
+  useEffect(() => {
+    if (resetCooldownSeconds <= 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [resetCooldownSeconds > 0]);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isAuthorized = userLevel >= STAFF_LEVEL;
@@ -160,7 +174,7 @@ const AdminUsers = () => {
   // itself rather than trusting editingRecord.email, so this always lands
   // on the account that's actually signed in.
   const handleResetPassword = async () => {
-    if (!editingRecord) return;
+    if (!editingRecord || resetCooldownSeconds > 0) return;
     setResetPasswordStatus('sending');
     try {
       const idToken = await user.getIdToken();
@@ -173,6 +187,8 @@ const AdminUsers = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
       await sendResetPasswordEmail(data.email, data.resetLink);
       setResetPasswordStatus('success');
+      setNow(Date.now());
+      setResetCooldowns(prev => ({ ...prev, [editingRecord.id]: Date.now() + 60_000 }));
       setTimeout(() => setResetPasswordStatus(null), 3000);
     } catch (err) {
       setResetPasswordStatus(err.message || 'error');
@@ -406,11 +422,11 @@ const AdminUsers = () => {
                     <button
                       type="button"
                       onClick={handleResetPassword}
-                      disabled={resetPasswordStatus === 'sending'}
+                      disabled={resetPasswordStatus === 'sending' || resetCooldownSeconds > 0}
                       className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all ${resetPasswordStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-50'}`}
                     >
                       <KeyRound size={14} />
-                      {resetPasswordStatus === 'sending' ? 'Sending...' : resetPasswordStatus === 'success' ? 'Email Sent' : 'Reset Password'}
+                      {resetPasswordStatus === 'sending' ? 'Sending...' : resetPasswordStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
                     </button>
                   </div>
                   {resetPasswordStatus && resetPasswordStatus !== 'sending' && resetPasswordStatus !== 'success' && (

@@ -17,6 +17,17 @@ const MyProfile = () => {
   const [resetSent, setResetSent] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
+  const [resetCooldownUntil, setResetCooldownUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
+
+  const resetCooldownSeconds = Math.max(0, Math.ceil((resetCooldownUntil - now) / 1000));
+
+  // Only ticks while an actual cooldown is running - not on every render.
+  useEffect(() => {
+    if (resetCooldownSeconds <= 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [resetCooldownSeconds > 0]);
 
   useEffect(() => {
     setPhone(userData?.phone || '');
@@ -68,7 +79,7 @@ const MyProfile = () => {
   // sends it ourselves via EmailJS with a fully custom HTML template,
   // instead of Firebase's own auto-sent email.
   const handlePasswordReset = async () => {
-    if (!user) return;
+    if (!user || resetCooldownSeconds > 0) return;
     try {
       const idToken = await user.getIdToken();
       const res = await fetch('/api/admin-update-account', {
@@ -80,6 +91,8 @@ const MyProfile = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
       await sendResetPasswordEmail(data.email, data.resetLink);
       setResetSent(true);
+      setNow(Date.now());
+      setResetCooldownUntil(Date.now() + 60_000);
       setTimeout(() => setResetSent(false), 5000);
     } catch (err) {
       console.error("Password reset failed:", err);
@@ -188,8 +201,9 @@ const MyProfile = () => {
               <p className="text-sm font-bold">Password</p>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Reset link sent to {user?.email}</p>
             </div>
-            <button onClick={handlePasswordReset} className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all ${resetSent ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
-              {resetSent ? <CheckCircle size={16} /> : <KeyRound size={16} />} {resetSent ? 'Email Sent' : 'Reset Password'}
+            <button onClick={handlePasswordReset} disabled={resetCooldownSeconds > 0} className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 ${resetSent ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
+              {resetSent ? <CheckCircle size={16} /> : <KeyRound size={16} />}
+              {resetSent ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
             </button>
           </div>
         </div>
