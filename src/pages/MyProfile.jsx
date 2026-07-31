@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../components/Navbar';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { sendResetPasswordEmail, sendEmailChangedNewAddress, sendEmailChangedOldAddress } from '../utils/emailjs';
+import { signOut } from 'firebase/auth';
 import { ROLE_LABELS } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2 } from 'lucide-react';
 
 const formatCooldown = (seconds) => {
   if (seconds < 60) return `${seconds}s`;
@@ -18,6 +18,7 @@ const formatCooldown = (seconds) => {
 
 const MyProfile = () => {
   const { user, userData, role } = useAuth();
+  const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -26,6 +27,7 @@ const MyProfile = () => {
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
   const [resetCooldownUntil, setResetCooldownUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [deleteAccountStatus, setDeleteAccountStatus] = useState(null);
 
   const resetCooldownSeconds = Math.max(0, Math.ceil((resetCooldownUntil - now) / 1000));
 
@@ -61,7 +63,8 @@ const MyProfile = () => {
 
   // Changes the actual Firebase Auth email you sign in with, via a
   // server-side endpoint (the client SDK can't change a user's own email
-  // without a very recent re-login, and this avoids that friction).
+  // without a very recent re-login, and this avoids that friction). The
+  // endpoint also sends both notification emails itself.
   const handleUpdateLoginEmail = async (e) => {
     e.preventDefault();
     if (!user || !loginEmail.trim()) return;
@@ -77,25 +80,14 @@ const MyProfile = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update login email');
       setLoginEmailStatus('success');
       setTimeout(() => setLoginEmailStatus(null), 3000);
-
-      // The email change itself already succeeded above - a notification
-      // failing shouldn't make this look like the update itself failed.
-      try {
-        await sendEmailChangedNewAddress(data.newEmail);
-        if (data.oldEmail && data.oldEmail !== data.newEmail) {
-          await sendEmailChangedOldAddress(data.oldEmail, data.newEmail);
-        }
-      } catch (notifyErr) {
-        console.error('Email-change notification failed:', notifyErr);
-      }
     } catch (err) {
       setLoginEmailStatus(err.message || 'error');
     }
   };
 
-  // Generates the reset link server-side (api/admin-update-account.js) and
-  // sends it ourselves via EmailJS with a fully custom HTML template,
-  // instead of Firebase's own auto-sent email.
+  // Generates the reset link AND sends it via a custom HTML template, both
+  // server-side (api/admin-update-account.js) - the raw link never reaches
+  // this browser, since it's a live account-takeover credential otherwise.
   const handlePasswordReset = async () => {
     if (!user || resetStatus === 'sending' || resetCooldownSeconds > 0) return;
     // Set immediately, before any network call - otherwise the button looks
@@ -111,7 +103,6 @@ const MyProfile = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
-      await sendResetPasswordEmail(data.email, data.resetLink);
       setResetStatus('success');
       setNow(Date.now());
       setResetCooldownUntil(Date.now() + 60_000);
@@ -128,6 +119,30 @@ const MyProfile = () => {
         return;
       }
       setResetStatus(err.message || 'error');
+    }
+  };
+
+  // Permanently deletes your own account (Firebase Auth user + Firestore
+  // record) via the same server endpoint used for admin actions - typed
+  // confirmation since this is irreversible, then sign out and leave.
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    const typed = window.prompt('This permanently deletes your account and cannot be undone. Type DELETE to confirm.');
+    if (typed !== 'DELETE') return;
+    setDeleteAccountStatus('working');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'delete-account', targetUid: user.uid })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete account');
+      await signOut(auth);
+      navigate('/');
+    } catch (err) {
+      setDeleteAccountStatus(err.message || 'error');
     }
   };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 export const useAuth = () => {
@@ -31,6 +31,16 @@ export const useAuth = () => {
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
+              // A staff-triggered suspension disables the Firebase Auth
+              // account itself (blocks future sign-ins natively), but an
+              // already-open session's ID token stays valid until it
+              // expires. This forces an immediate sign-out the moment the
+              // Firestore flag flips, instead of waiting up to an hour.
+              if (data.suspended) {
+                sessionStorage.setItem('accountSuspended', '1');
+                signOut(auth);
+                return;
+              }
               setUserData(data);
               setRole(data.role || 'cadet');
             } else {

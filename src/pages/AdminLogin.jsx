@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -11,6 +11,15 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // useAuth force-signs-out a suspended account and leaves this flag behind
+  // so the login page can explain why, instead of silently landing here.
+  useEffect(() => {
+    if (sessionStorage.getItem('accountSuspended')) {
+      sessionStorage.removeItem('accountSuspended');
+      setError('This account has been suspended. Contact battalion staff for details.');
+    }
+  }, []);
 
   const handleProfileMerge = async (authUser) => {
     try {
@@ -62,6 +71,8 @@ const AdminLogin = () => {
         setError("Invalid email or password.");
       } else if (err.code === 'auth/too-many-requests') {
         setError("Account temporarily locked. Try again later.");
+      } else if (err.code === 'auth/user-disabled') {
+        setError("This account has been suspended. Contact battalion staff for details.");
       } else {
         setError("Login failed. Please check your credentials.");
       }

@@ -4,12 +4,11 @@ import {
   collection, doc, updateDoc, onSnapshot, query,
   addDoc, serverTimestamp, deleteDoc
 } from 'firebase/firestore';
-import { sendResetPasswordEmail, sendEmailChangedNewAddress, sendEmailChangedOldAddress } from '../utils/emailjs';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
   UserCog, Search, ArrowLeft, CheckCircle2,
-  Loader2, UserPlus, UserMinus, User, X, Edit3, KeyRound
+  Loader2, UserPlus, UserMinus, User, X, Edit3, KeyRound, Ban, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
@@ -40,6 +39,8 @@ const AdminUsers = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState(null);
+  const [suspendStatus, setSuspendStatus] = useState(null);
+  const [deleteAccountStatus, setDeleteAccountStatus] = useState(null);
   // Keyed by target uid, not global - resetting one cadet's password
   // shouldn't block resetting a different cadet's right after.
   const [resetCooldowns, setResetCooldowns] = useState({});
@@ -153,7 +154,8 @@ const AdminUsers = () => {
 
   // Changes the cadet's actual Firebase Auth login email via a server-side
   // Admin SDK call - the client SDK can only update the signed-in user's own
-  // email, not another account's, so this can't be done from the browser alone.
+  // email, not another account's, so this can't be done from the browser
+  // alone. The endpoint also sends both notification emails itself.
   const handleUpdateLoginEmail = async (e) => {
     e.preventDefault();
     if (!editingRecord || !loginEmail.trim()) return;
@@ -169,28 +171,18 @@ const AdminUsers = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update login email');
       setLoginEmailStatus('success');
       setTimeout(() => setLoginEmailStatus(null), 3000);
-
-      // The email change itself already succeeded above - a notification
-      // failing shouldn't make this look like the update itself failed.
-      try {
-        await sendEmailChangedNewAddress(data.newEmail);
-        if (data.oldEmail && data.oldEmail !== data.newEmail) {
-          await sendEmailChangedOldAddress(data.oldEmail, data.newEmail);
-        }
-      } catch (notifyErr) {
-        console.error('Email-change notification failed:', notifyErr);
-      }
     } catch (err) {
       setLoginEmailStatus(err.message || 'error');
     }
   };
 
-  // Generates the reset link server-side (api/admin-update-account.js,
-  // gated the same as Update Login Email) and sends it ourselves via
-  // EmailJS with a fully custom HTML template, instead of Firebase's own
-  // auto-sent email. The endpoint resolves the target's real current email
-  // itself rather than trusting editingRecord.email, so this always lands
-  // on the account that's actually signed in.
+  // Generates the reset link AND sends it via a custom HTML template, both
+  // server-side (api/admin-update-account.js, gated the same as Update
+  // Login Email) - the raw link never reaches this browser, since it's a
+  // live account-takeover credential otherwise. The endpoint resolves the
+  // target's real current email itself rather than trusting
+  // editingRecord.email, so this always lands on the account that's
+  // actually signed in.
   const handleResetPassword = async () => {
     if (!editingRecord || resetCooldownSeconds > 0) return;
     setResetPasswordStatus('sending');
@@ -203,7 +195,6 @@ const AdminUsers = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
-      await sendResetPasswordEmail(data.email, data.resetLink);
       setResetPasswordStatus('success');
       setNow(Date.now());
       setResetCooldowns(prev => ({ ...prev, [editingRecord.id]: Date.now() + 60_000 }));
@@ -220,6 +211,55 @@ const AdminUsers = () => {
         return;
       }
       setResetPasswordStatus(err.message || 'error');
+    }
+  };
+
+  // Disables/re-enables the account's actual Firebase Auth login (blocks
+  // sign-in entirely, not just a soft in-app flag) and mirrors the state to
+  // Firestore for the roster badge below.
+  const handleToggleSuspend = async () => {
+    if (!editingRecord) return;
+    const suspending = !editingRecord.suspended;
+    if (!window.confirm(`${suspending ? 'Suspend' : 'Reactivate'} ${editingRecord.fullName || 'this account'}?`)) return;
+    setSuspendStatus('working');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'suspend-account', targetUid: editingRecord.id, suspend: suspending })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update suspension status');
+      setEditingRecord(prev => prev && ({ ...prev, suspended: suspending }));
+      setSuspendStatus('success');
+      setTimeout(() => setSuspendStatus(null), 3000);
+    } catch (err) {
+      setSuspendStatus(err.message || 'error');
+    }
+  };
+
+  // Permanently deletes the account (Firebase Auth user + Firestore
+  // record) - irreversible, hence the typed confirmation instead of a
+  // plain window.confirm.
+  const handleDeleteAccount = async () => {
+    if (!editingRecord) return;
+    const typed = window.prompt(`This permanently deletes ${editingRecord.fullName || 'this account'}. Type DELETE to confirm.`);
+    if (typed !== 'DELETE') return;
+    setDeleteAccountStatus('working');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'delete-account', targetUid: editingRecord.id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete account');
+      setEditingRecord(null);
+      showStatus('Account Deleted');
+    } catch (err) {
+      setDeleteAccountStatus(err.message || 'error');
     }
   };
 
@@ -281,6 +321,11 @@ const AdminUsers = () => {
                                   <CheckCircle2 size={14} /> Verified
                                 </div>
                             )}
+                            {p.suspended && (
+                                <div className="flex items-center gap-1 text-orange-500 text-[9px] font-black uppercase">
+                                  <Ban size={14} /> Suspended
+                                </div>
+                            )}
                         </div>
                         <div className="flex flex-wrap gap-2 mt-1">
                             <span className="text-[9px] font-black text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded uppercase">{p.rank}</span>
@@ -295,7 +340,7 @@ const AdminUsers = () => {
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                    <button onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); setSuspendStatus(null); setDeleteAccountStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
                     {(p.isManual || isBattalionStaff) && (
@@ -460,6 +505,47 @@ const AdminUsers = () => {
                   {resetPasswordStatus && resetPasswordStatus !== 'sending' && resetPasswordStatus !== 'success' && (
                     <p className="text-[10px] text-red-500 font-bold mt-2">{resetPasswordStatus}</p>
                   )}
+
+                  {/* DANGER ZONE */}
+                  <div className="mt-8 pt-8 border-t border-red-500/20 space-y-4">
+                    <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest">Danger Zone</h3>
+
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">
+                        {editingRecord.suspended ? 'Account is suspended - blocked from signing in.' : 'Blocks this account from signing in until reactivated.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleToggleSuspend}
+                        disabled={suspendStatus === 'working'}
+                        className="px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 disabled:opacity-50"
+                      >
+                        <Ban size={14} />
+                        {suspendStatus === 'working' ? 'Working...' : editingRecord.suspended ? 'Reactivate Account' : 'Suspend Account'}
+                      </button>
+                    </div>
+                    {suspendStatus && suspendStatus !== 'working' && suspendStatus !== 'success' && (
+                      <p className="text-[10px] text-red-500 font-bold">{suspendStatus}</p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">
+                        Permanently deletes this account. Cannot be undone.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        disabled={deleteAccountStatus === 'working'}
+                        className="px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        <Trash2 size={14} />
+                        {deleteAccountStatus === 'working' ? 'Deleting...' : 'Delete Account'}
+                      </button>
+                    </div>
+                    {deleteAccountStatus && deleteAccountStatus !== 'working' && (
+                      <p className="text-[10px] text-red-500 font-bold">{deleteAccountStatus}</p>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.div>

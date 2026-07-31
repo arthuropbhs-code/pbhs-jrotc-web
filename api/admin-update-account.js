@@ -109,6 +109,85 @@ async function getUserField(accessToken, projectId, uid, field) {
   return data.fields?.[field]?.stringValue || null;
 }
 
+// Mirrors src/utils/emailjs.js's constants/templates, but sent server-side
+// instead of from the browser. A password-reset link is a live account-
+// takeover credential - returning it in the API response so the client
+// could hand it to EmailJS meant it briefly existed in the requester's
+// browser (devtools/network tab, extensions, browser history) even for the
+// admin-resets-someone-else flow. Sending it from here means it never
+// leaves the server. EmailJS's Public Key is designed for use from any
+// origin (that's the point of "public"), so calling its REST endpoint
+// server-side works identically to the browser SDK.
+const EMAILJS_SERVICE_ID = 'service_80dmyxg';
+const RESET_PASSWORD_TEMPLATE_ID = 'template_716dlh3';
+const ACCOUNT_NOTIFICATION_TEMPLATE_ID = 'template_3owdwgb';
+const EMAILJS_PUBLIC_KEY = '5HbZ07R5aInTJAzNw';
+
+async function emailjsSend(templateId, templateParams) {
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: templateId,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: templateParams,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`EmailJS send failed: ${text}`);
+  }
+}
+
+const sendResetPasswordEmail = (toEmail, resetLink) =>
+  emailjsSend(RESET_PASSWORD_TEMPLATE_ID, { to_email: toEmail, reset_link: resetLink });
+
+const CTA_BUTTON = `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+    <tr>
+      <td style="border-radius:14px; background-color:#eab308;">
+        <a href="https://pbhsjrotc.vercel.app/admin" target="_blank"
+           style="display:inline-block; padding:16px 32px; font-size:13px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#0f172a; text-decoration:none; border-radius:14px;">
+          Go to Command Portal
+        </a>
+      </td>
+    </tr>
+  </table>`;
+
+const SECURITY_BANNER = `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+    <tr>
+      <td style="background-color:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:12px 16px;">
+        <p style="margin:0; font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#dc2626;">
+          Security Notice
+        </p>
+      </td>
+    </tr>
+  </table>`;
+
+const NOTIFY_FOOTNOTE = `If you didn't request this change and don't recognize it, contact your battalion's S1 immediately — someone else may have access to your account.`;
+
+const sendEmailChangedNewAddress = (newEmail) =>
+  emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+    to_email: newEmail,
+    heading: 'Login Email Updated',
+    message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">This confirms that the Command Portal account you now sign in with uses <strong style="color:#0f172a;">${newEmail}</strong> as its login email.</p>`,
+    banner: '',
+    cta: CTA_BUTTON,
+    footnote: NOTIFY_FOOTNOTE,
+  });
+
+const sendEmailChangedOldAddress = (oldEmail, newEmail) =>
+  emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+    to_email: oldEmail,
+    heading: 'Login Email Changed',
+    message: `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">The Command Portal account that used to sign in with this inbox (<strong style="color:#0f172a;">${oldEmail}</strong>) has had its login email changed to <strong style="color:#0f172a;">${newEmail}</strong>. This inbox will no longer receive account emails.</p>`,
+    banner: SECURITY_BANNER,
+    cta: '',
+    footnote: 'If you made this change yourself (for example, handing the account off to a successor), no action is needed. ' + NOTIFY_FOOTNOTE,
+  });
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
@@ -120,10 +199,13 @@ export default async function handler(req, res) {
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
 
-    const { type = 'update-email', targetUid, newEmail } = req.body || {};
+    const { type = 'update-email', targetUid, newEmail, suspend } = req.body || {};
     if (!targetUid) return res.status(400).json({ error: 'targetUid is required' });
     if (type === 'update-email' && !newEmail) {
       return res.status(400).json({ error: 'newEmail is required' });
+    }
+    if (type === 'suspend-account' && typeof suspend !== 'boolean') {
+      return res.status(400).json({ error: 'suspend (true/false) is required' });
     }
 
     const account = getServiceAccount();
@@ -151,9 +233,10 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
     }
 
-    // Acting on your own account is always allowed. Acting on someone else's
-    // is restricted to the email-manager roles, and only for personnel
-    // strictly below your own rank. Same rule for both action types below.
+    // Acting on your own account is always allowed (self-service password
+    // reset, email change, or account deletion). Acting on someone else's -
+    // for any action type here - is restricted to the email-manager roles,
+    // and only for personnel strictly below your own rank.
     if (targetUid !== callerUid) {
       const [callerRole, targetRole] = await Promise.all([
         getUserField(accessToken, projectId, callerUid, 'role'),
@@ -161,10 +244,10 @@ export default async function handler(req, res) {
       ]);
 
       if (!EMAIL_MANAGER_ROLES.includes(callerRole)) {
-        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can manage another cadet\'s login credentials.' });
+        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can manage another cadet\'s account.' });
       }
       if ((ROLE_HIERARCHY[targetRole] || 0) >= (ROLE_HIERARCHY[callerRole] || 0)) {
-        return res.status(403).json({ error: 'You can only manage login credentials for personnel below your own rank.' });
+        return res.status(403).json({ error: 'You can only manage accounts for personnel below your own rank.' });
       }
     }
 
@@ -186,7 +269,68 @@ export default async function handler(req, res) {
       const oobData = await oobRes.json();
       if (!oobRes.ok) throw new Error(oobData.error?.message || 'Failed to generate a reset link');
 
-      return res.status(200).json({ resetLink: oobData.oobLink, email: targetEmail });
+      // Send it from here - the raw link never reaches the client at all.
+      await sendResetPasswordEmail(targetEmail, oobData.oobLink);
+
+      return res.status(200).json({ success: true, email: targetEmail });
+    }
+
+    if (type === 'suspend-account') {
+      // disableUser is enforced natively by Firebase Auth - a disabled
+      // account can't sign in at all, regardless of anything client-side.
+      // The Firestore `suspended` field is just a mirror for display/badges
+      // and so an already-open session gets force-signed-out immediately
+      // (see useAuth.js) rather than staying valid until its token expires.
+      const [identityRes, firestoreRes] = await Promise.all([
+        fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: targetUid, disableUser: suspend }),
+        }),
+        fetch(
+          `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}?updateMask.fieldPaths=suspended`,
+          {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: { suspended: { booleanValue: suspend } } }),
+          }
+        ),
+      ]);
+
+      if (!identityRes.ok) {
+        const data = await identityRes.json();
+        throw new Error(data.error?.message || `Failed to ${suspend ? 'suspend' : 'reactivate'} account`);
+      }
+      if (!firestoreRes.ok) {
+        const data = await firestoreRes.json();
+        throw new Error(data.error?.message || 'Account suspension changed, but syncing the roster record failed');
+      }
+
+      return res.status(200).json({ success: true, suspended: suspend });
+    }
+
+    if (type === 'delete-account') {
+      // Auth user and Firestore record are independent deletes - run them
+      // concurrently. Firestore's REST delete is idempotent-ish (404 on an
+      // already-missing doc), so only the Auth deletion's failure is fatal.
+      const [identityRes, firestoreRes] = await Promise.all([
+        fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: targetUid }),
+        }),
+        fetch(
+          `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}`,
+          { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }
+        ),
+      ]);
+
+      if (!identityRes.ok) {
+        const data = await identityRes.json();
+        throw new Error(data.error?.message || 'Failed to delete the account');
+      }
+
+      return res.status(200).json({ success: true });
     }
 
     // Resolve the target's CURRENT email before we overwrite it, so the
@@ -221,6 +365,17 @@ export default async function handler(req, res) {
     if (!firestoreRes.ok) {
       const data = await firestoreRes.json();
       throw new Error(data.error?.message || 'Login email updated, but syncing the roster record failed');
+    }
+
+    // The update itself already succeeded above - a notification failing
+    // shouldn't turn into a 500 for an action that actually worked.
+    try {
+      await sendEmailChangedNewAddress(newEmail);
+      if (oldEmail && oldEmail !== newEmail) {
+        await sendEmailChangedOldAddress(oldEmail, newEmail);
+      }
+    } catch (notifyErr) {
+      console.error('Email-change notification failed:', notifyErr);
     }
 
     return res.status(200).json({ success: true, oldEmail, newEmail });
