@@ -1,7 +1,3 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
 // Mirrors the top-command role list in src/constants.js (ADMIN_LEVEL tier) and
 // firestore.rules' isAdmin() - keep these three in sync by hand whenever the
 // role table changes, same as the rest of the app already does.
@@ -10,39 +6,54 @@ const TOP_COMMAND_ROLES = [
   'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
 ];
 
-let firebaseApp = null;
+let cached = null;
 
-// Deferred + guarded: a bad FIREBASE_SERVICE_ACCOUNT value (most commonly the
-// private_key's newlines getting mangled when pasted into Vercel's env var
-// UI) throws here. Doing this at module load with no try/catch would crash
-// the whole invocation before our handler's own error handling ever runs.
-function ensureApp() {
-  if (firebaseApp) return firebaseApp;
+// Everything firebase-admin-related is loaded and initialized lazily, inside
+// the handler, via dynamic import() rather than static top-level imports.
+// Static imports of the firebase-admin/app, /auth, /firestore subpaths
+// crashed the whole function at build/cold-start (their ESM wrappers pull in
+// a large dependency chain - google-auth-library, jsonwebtoken, etc. - that
+// Vercel's static bundler failed to trace). Dynamic import() of the same
+// packages works reliably here, confirmed by direct testing against the
+// live endpoint, and also means a bad FIREBASE_SERVICE_ACCOUNT value or any
+// other init failure is something our own try/catch can turn into a real
+// JSON error instead of the platform's plain-text crash page.
+async function getFirebase() {
+  if (cached) return cached;
+
+  const [{ initializeApp, getApps, cert }, { getAuth }, { getFirestore }] = await Promise.all([
+    import('firebase-admin/app'),
+    import('firebase-admin/auth'),
+    import('firebase-admin/firestore'),
+  ]);
+
+  let app;
   if (getApps().length) {
-    firebaseApp = getApps()[0];
-    return firebaseApp;
+    app = getApps()[0];
+  } else {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!raw) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in this environment.');
+    }
+
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(raw);
+    } catch (err) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON - re-paste the full downloaded key file as-is.');
+    }
+
+    // If the private_key's real newlines got flattened into literal "\n"
+    // text during copy/paste, un-flatten them so the PEM parses.
+    if (serviceAccount.private_key && serviceAccount.private_key.includes('\\n')) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+
+    app = initializeApp({ credential: cert(serviceAccount) });
   }
 
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in this environment.');
-  }
-
-  let serviceAccount;
-  try {
-    serviceAccount = JSON.parse(raw);
-  } catch (err) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON - re-paste the full downloaded key file as-is.');
-  }
-
-  // If the private_key's real newlines got flattened into literal "\n" text
-  // during copy/paste, un-flatten them so the PEM parses.
-  if (serviceAccount.private_key && serviceAccount.private_key.includes('\\n')) {
-    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-  }
-
-  firebaseApp = initializeApp({ credential: cert(serviceAccount) });
-  return firebaseApp;
+  cached = { auth: getAuth(app), db: getFirestore(app) };
+  return cached;
 }
 
 export default async function handler(req, res) {
@@ -52,9 +63,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const app = ensureApp();
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const { auth, db } = await getFirebase();
 
     const authHeader = req.headers.authorization || '';
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
