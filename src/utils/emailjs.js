@@ -2,12 +2,10 @@ import emailjs from '@emailjs/browser';
 
 // EmailJS's Public Key is designed for client-side use (same trust model as
 // Cloudinary's unsigned upload preset elsewhere in this app) - it's fine to
-// ship in the bundle. Not set up yet: sign up at emailjs.com (free tier,
-// 200 emails/month), connect an email service, create a template with a
-// {{reset_link}} variable, then fill these three in.
-const EMAILJS_SERVICE_ID = 'REPLACE_ME';
-const EMAILJS_TEMPLATE_ID = 'REPLACE_ME';
-const EMAILJS_PUBLIC_KEY = 'REPLACE_ME';
+// ship in the bundle.
+const EMAILJS_SERVICE_ID = 'service_80dmyxg';
+const EMAILJS_TEMPLATE_ID = 'template_716dlh3';
+const EMAILJS_PUBLIC_KEY = '5HbZ07R5aInTJAzNw';
 
 // Sends the password-reset link ourselves via a fully custom HTML template,
 // instead of Firebase's own auto-sent (and much more limited) email -
