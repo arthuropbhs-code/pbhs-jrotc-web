@@ -14,7 +14,7 @@ const MyProfile = () => {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetStatus, setResetStatus] = useState(null); // null | 'sending' | 'success' | error string
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
   const [resetCooldownUntil, setResetCooldownUntil] = useState(0);
@@ -79,7 +79,11 @@ const MyProfile = () => {
   // sends it ourselves via EmailJS with a fully custom HTML template,
   // instead of Firebase's own auto-sent email.
   const handlePasswordReset = async () => {
-    if (!user || resetCooldownSeconds > 0) return;
+    if (!user || resetStatus === 'sending' || resetCooldownSeconds > 0) return;
+    // Set immediately, before any network call - otherwise the button looks
+    // unresponsive during the request and invites exactly the repeated
+    // clicking that caused a burst of duplicate emails last time.
+    setResetStatus('sending');
     try {
       const idToken = await user.getIdToken();
       const res = await fetch('/api/admin-update-account', {
@@ -90,12 +94,12 @@ const MyProfile = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate reset link');
       await sendResetPasswordEmail(data.email, data.resetLink);
-      setResetSent(true);
+      setResetStatus('success');
       setNow(Date.now());
       setResetCooldownUntil(Date.now() + 60_000);
-      setTimeout(() => setResetSent(false), 5000);
+      setTimeout(() => setResetStatus(null), 5000);
     } catch (err) {
-      console.error("Password reset failed:", err);
+      setResetStatus(err.message || 'error');
     }
   };
 
@@ -201,11 +205,14 @@ const MyProfile = () => {
               <p className="text-sm font-bold">Password</p>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Reset link sent to {user?.email}</p>
             </div>
-            <button onClick={handlePasswordReset} disabled={resetCooldownSeconds > 0} className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 ${resetSent ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
-              {resetSent ? <CheckCircle size={16} /> : <KeyRound size={16} />}
-              {resetSent ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
+            <button onClick={handlePasswordReset} disabled={resetStatus === 'sending' || resetCooldownSeconds > 0} className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 ${resetStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
+              {resetStatus === 'success' ? <CheckCircle size={16} /> : <KeyRound size={16} />}
+              {resetStatus === 'sending' ? 'Sending...' : resetStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
             </button>
           </div>
+          {resetStatus && resetStatus !== 'sending' && resetStatus !== 'success' && (
+            <p className="text-[10px] text-red-500 font-bold -mt-4">{resetStatus}</p>
+          )}
         </div>
       </div>
       <Footer />
