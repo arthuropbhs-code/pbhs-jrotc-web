@@ -1,3 +1,7 @@
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+
 // Mirrors the top-command role list in src/constants.js (ADMIN_LEVEL tier) and
 // firestore.rules' isAdmin() - keep these three in sync by hand whenever the
 // role table changes, same as the rest of the app already does.
@@ -6,22 +10,18 @@ const TOP_COMMAND_ROLES = [
   'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
 ];
 
-let admin = null;
+let firebaseApp = null;
 
-// Everything that can throw - importing firebase-admin, parsing
-// FIREBASE_SERVICE_ACCOUNT, building credentials - happens in here, deferred
-// until the first request instead of at module load, so any failure comes
-// back as a real JSON error instead of a platform-level crash page.
-async function getAdmin() {
-  if (admin) return admin;
-
-  let mod;
-  try {
-    mod = await import('firebase-admin');
-  } catch (err) {
-    throw new Error(`firebase-admin failed to load: ${err.message}`);
+// Deferred + guarded: a bad FIREBASE_SERVICE_ACCOUNT value (most commonly the
+// private_key's newlines getting mangled when pasted into Vercel's env var
+// UI) throws here. Doing this at module load with no try/catch would crash
+// the whole invocation before our handler's own error handling ever runs.
+function ensureApp() {
+  if (firebaseApp) return firebaseApp;
+  if (getApps().length) {
+    firebaseApp = getApps()[0];
+    return firebaseApp;
   }
-  mod = mod.default || mod;
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) {
@@ -41,12 +41,8 @@ async function getAdmin() {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   }
 
-  if (!mod.apps.length) {
-    mod.initializeApp({ credential: mod.credential.cert(serviceAccount) });
-  }
-
-  admin = mod;
-  return admin;
+  firebaseApp = initializeApp({ credential: cert(serviceAccount) });
+  return firebaseApp;
 }
 
 export default async function handler(req, res) {
@@ -56,7 +52,9 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const app = await getAdmin();
+    const app = ensureApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const authHeader = req.headers.authorization || '';
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -64,13 +62,12 @@ export default async function handler(req, res) {
 
     let callerUid;
     try {
-      const decoded = await app.auth().verifyIdToken(idToken);
+      const decoded = await auth.verifyIdToken(idToken);
       callerUid = decoded.uid;
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
     }
 
-    const db = app.firestore();
     const callerDoc = await db.collection('users').doc(callerUid).get();
     const callerRole = callerDoc.exists ? callerDoc.data().role : null;
 
@@ -83,7 +80,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'targetUid and newEmail are required' });
     }
 
-    await app.auth().updateUser(targetUid, { email: newEmail });
+    await auth.updateUser(targetUid, { email: newEmail });
     await db.collection('users').doc(targetUid).update({ email: newEmail });
     return res.status(200).json({ success: true });
   } catch (err) {
