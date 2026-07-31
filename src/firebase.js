@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage"; 
+import { getStorage } from "firebase/storage";
 
 // Using import.meta.env to keep keys secure
 const firebaseConfig = {
@@ -25,6 +25,9 @@ try {
   if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    // Session-only persistence: closing the browser/tab logs the user out,
+    // instead of Firebase's default of staying signed in indefinitely.
+    setPersistence(auth, browserSessionPersistence);
     db = getFirestore(app);
     storage = getStorage(app);
   } else {

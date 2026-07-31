@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
+import { useIdleLogout } from './hooks/useIdleLogout';
 import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
 
 // --- COMPONENTS ---
@@ -61,9 +62,10 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
 };
 
 const AppContent = () => {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
-  
+  useIdleLogout(!!user);
+
   // Logic to hide Navbar and Footer on Admin pages
   const isAdminPage = location.pathname.startsWith('/admin') || location.pathname === '/uniform-requests';
 

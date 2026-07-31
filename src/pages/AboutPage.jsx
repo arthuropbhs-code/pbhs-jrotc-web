@@ -122,11 +122,11 @@ const AboutPage = () => {
               {content.ctaText}
             </p>
           </div>
-          <Link 
-            to="/admin/signup" 
+          <Link
+            to="/cadet-info"
             className="bg-slate-950 text-white px-8 py-5 rounded-2xl font-black uppercase text-sm flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
           >
-            Create Cadet Profile <ChevronRight size={18} />
+            Learn How to Join <ChevronRight size={18} />
           </Link>
         </section>
       </div>

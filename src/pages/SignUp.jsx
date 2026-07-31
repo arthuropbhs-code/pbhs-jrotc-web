@@ -32,6 +32,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 // may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
 const FULL_NAME_PATTERN = /^[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*,\s*[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*$/;
 
+// Firebase's own minimum is just 6 characters with no complexity requirement.
+const isStrongPassword = (pw) => pw.length >= 8 && /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
+
 const SignUp = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -88,6 +91,11 @@ const SignUp = () => {
     const enteredHash = await sha256Hex(formData.secretCode.trim());
     if (enteredHash !== BATTALION_SECRET_HASH) {
       setError("INVALID SECRET CODE: ACCESS DENIED.");
+      return;
+    }
+
+    if (!isStrongPassword(formData.password)) {
+      setError("PASSWORD MUST BE AT LEAST 8 CHARACTERS AND INCLUDE A LETTER AND A NUMBER.");
       return;
     }
 
@@ -221,7 +229,8 @@ const SignUp = () => {
 
             <div className="relative">
               <Lock className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="password" placeholder="PASSWORD" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              <input type="password" placeholder="PASSWORD" required minLength={8} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              <p className="text-slate-600 text-[9px] font-bold uppercase tracking-widest mt-1.5 ml-1">8+ Characters, 1 Letter, 1 Number</p>
             </div>
 
             <div className="relative">
