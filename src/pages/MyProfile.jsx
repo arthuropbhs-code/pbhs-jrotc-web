@@ -9,6 +9,13 @@ import { ROLE_LABELS } from '../constants';
 import Footer from '../components/Footer';
 import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle } from 'lucide-react';
 
+const formatCooldown = (seconds) => {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
 const MyProfile = () => {
   const { user, userData, role } = useAuth();
   const [phone, setPhone] = useState('');
@@ -99,6 +106,16 @@ const MyProfile = () => {
       setResetCooldownUntil(Date.now() + 60_000);
       setTimeout(() => setResetStatus(null), 5000);
     } catch (err) {
+      // Firebase's own server-side rate limit on generating reset links -
+      // separate from (and outlasting) our 60s cooldown above. There's no
+      // way to know its exact remaining window, so show a longer active
+      // countdown instead of a raw error code sitting there indefinitely.
+      if ((err.message || '').includes('EXCEED_LIMIT')) {
+        setResetStatus(null);
+        setNow(Date.now());
+        setResetCooldownUntil(Date.now() + 5 * 60_000);
+        return;
+      }
       setResetStatus(err.message || 'error');
     }
   };
@@ -207,7 +224,7 @@ const MyProfile = () => {
             </div>
             <button onClick={handlePasswordReset} disabled={resetStatus === 'sending' || resetCooldownSeconds > 0} className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 ${resetStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10'}`}>
               {resetStatus === 'success' ? <CheckCircle size={16} /> : <KeyRound size={16} />}
-              {resetStatus === 'sending' ? 'Sending...' : resetStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
+              {resetStatus === 'sending' ? 'Sending...' : resetStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${formatCooldown(resetCooldownSeconds)}` : 'Reset Password'}
             </button>
           </div>
           {resetStatus && resetStatus !== 'sending' && resetStatus !== 'success' && (

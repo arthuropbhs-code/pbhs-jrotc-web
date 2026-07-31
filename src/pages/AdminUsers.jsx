@@ -19,6 +19,13 @@ import Footer from '../components/Footer';
 // may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
 const FULL_NAME_PATTERN = /^[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*,\s*[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*$/;
 
+const formatCooldown = (seconds) => {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
 const AdminUsers = () => {
   const { user, role, loading: authLoading } = useAuth();
   
@@ -191,6 +198,16 @@ const AdminUsers = () => {
       setResetCooldowns(prev => ({ ...prev, [editingRecord.id]: Date.now() + 60_000 }));
       setTimeout(() => setResetPasswordStatus(null), 3000);
     } catch (err) {
+      // Firebase's own server-side rate limit on generating reset links -
+      // separate from (and outlasting) our 60s cooldown above. There's no
+      // way to know its exact remaining window, so show a longer active
+      // countdown instead of a raw error code sitting there indefinitely.
+      if ((err.message || '').includes('EXCEED_LIMIT')) {
+        setResetPasswordStatus(null);
+        setNow(Date.now());
+        setResetCooldowns(prev => ({ ...prev, [editingRecord.id]: Date.now() + 5 * 60_000 }));
+        return;
+      }
       setResetPasswordStatus(err.message || 'error');
     }
   };
@@ -426,7 +443,7 @@ const AdminUsers = () => {
                       className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all ${resetPasswordStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-50'}`}
                     >
                       <KeyRound size={14} />
-                      {resetPasswordStatus === 'sending' ? 'Sending...' : resetPasswordStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${resetCooldownSeconds}s` : 'Reset Password'}
+                      {resetPasswordStatus === 'sending' ? 'Sending...' : resetPasswordStatus === 'success' ? 'Email Sent' : resetCooldownSeconds > 0 ? `Wait ${formatCooldown(resetCooldownSeconds)}` : 'Reset Password'}
                     </button>
                   </div>
                   {resetPasswordStatus && resetPasswordStatus !== 'sending' && resetPasswordStatus !== 'success' && (
