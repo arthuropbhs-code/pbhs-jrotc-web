@@ -105,53 +105,61 @@ export default async function handler(req, res) {
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
 
-    const account = getServiceAccount();
-    const projectId = account.project_id;
-
-    let callerUid;
-    try {
-      const { payload } = await jwtVerify(idToken, JWKS, {
-        issuer: `https://securetoken.google.com/${projectId}`,
-        audience: projectId,
-      });
-      callerUid = payload.sub;
-    } catch (err) {
-      return res.status(401).json({ error: 'Invalid or expired auth token' });
-    }
-
-    const accessToken = await getAccessToken();
-    const callerRole = await getUserRole(accessToken, projectId, callerUid);
-
-    if (!TOP_COMMAND_ROLES.includes(callerRole)) {
-      return res.status(403).json({ error: 'Only battalion command can change login credentials.' });
-    }
-
     const { targetUid, newEmail } = req.body || {};
     if (!targetUid || !newEmail) {
       return res.status(400).json({ error: 'targetUid and newEmail are required' });
     }
 
-    const identityRes = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`,
-      {
+    const account = getServiceAccount();
+    const projectId = account.project_id;
+
+    // Verifying the caller's token and obtaining our own access token are
+    // independent - run them concurrently to cut a full round trip off the
+    // critical path (this endpoint makes several external HTTPS calls, and
+    // Vercel's function timeout is short enough that latency here matters).
+    let callerUid;
+    let accessToken;
+    try {
+      const [verifyResult, token] = await Promise.all([
+        jwtVerify(idToken, JWKS, {
+          issuer: `https://securetoken.google.com/${projectId}`,
+          audience: projectId,
+        }),
+        getAccessToken(),
+      ]);
+      callerUid = verifyResult.payload.sub;
+      accessToken = token;
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired auth token' });
+    }
+
+    const callerRole = await getUserRole(accessToken, projectId, callerUid);
+    if (!TOP_COMMAND_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only battalion command can change login credentials.' });
+    }
+
+    // The Auth login email and the Firestore copy of it are independent
+    // writes - run them concurrently too.
+    const [identityRes, firestoreRes] = await Promise.all([
+      fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ localId: targetUid, email: newEmail, emailVerified: false }),
-      }
-    );
-    const identityData = await identityRes.json();
-    if (!identityRes.ok) {
-      throw new Error(identityData.error?.message || 'Failed to update login email');
-    }
+      }),
+      fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}?updateMask.fieldPaths=email`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: { email: { stringValue: newEmail } } }),
+        }
+      ),
+    ]);
 
-    const firestoreRes = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}?updateMask.fieldPaths=email`,
-      {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: { email: { stringValue: newEmail } } }),
-      }
-    );
+    if (!identityRes.ok) {
+      const data = await identityRes.json();
+      throw new Error(data.error?.message || 'Failed to update login email');
+    }
     if (!firestoreRes.ok) {
       const data = await firestoreRes.json();
       throw new Error(data.error?.message || 'Login email updated, but syncing the roster record failed');
