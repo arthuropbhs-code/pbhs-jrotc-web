@@ -109,6 +109,71 @@ async function getUserField(accessToken, projectId, uid, field) {
   return data.fields?.[field]?.stringValue || null;
 }
 
+// Minimal plain-object <-> Firestore REST "fields" converters - only the
+// value types this file actually writes (string/boolean/Date).
+function toFirestoreValue(value) {
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  return { stringValue: String(value) };
+}
+
+function toFirestoreFields(obj) {
+  const fields = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined || value === null) continue;
+    fields[key] = toFirestoreValue(value);
+  }
+  return fields;
+}
+
+function fromFirestoreFields(fields = {}) {
+  const out = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if ('stringValue' in value) out[key] = value.stringValue;
+    else if ('booleanValue' in value) out[key] = value.booleanValue;
+    else if ('timestampValue' in value) out[key] = value.timestampValue;
+  }
+  return out;
+}
+
+// A staff member can pre-create a cadet's roster entry ahead of time
+// (isManual: true) so the cadet only has to link a login to it later,
+// skipping the pending-approval step since they were already vetted. Only
+// the server can be trusted to confirm that match - never the client - so
+// this runs with the service account's own privileged read access.
+async function findShadowRecord(accessToken, projectId, email) {
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'users' }],
+          where: {
+            compositeFilter: {
+              op: 'AND',
+              filters: [
+                { fieldFilter: { field: { fieldPath: 'email' }, op: 'EQUAL', value: { stringValue: email } } },
+                { fieldFilter: { field: { fieldPath: 'isManual' }, op: 'EQUAL', value: { booleanValue: true } } },
+              ],
+            },
+          },
+          limit: 1,
+        },
+      }),
+    }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json();
+  const hit = Array.isArray(rows) ? rows.find((r) => r.document) : null;
+  if (!hit) return null;
+  return {
+    id: hit.document.name.split('/').pop(),
+    ...fromFirestoreFields(hit.document.fields),
+  };
+}
+
 // Mirrors src/utils/emailjs.js's constants/templates, but sent server-side
 // instead of from the browser. A password-reset link is a live account-
 // takeover credential - returning it in the API response so the client
@@ -251,21 +316,84 @@ export default async function handler(req, res) {
       }
     }
 
-    if (type === 'signup-confirmation') {
+    if (type === 'complete-signup') {
       // Always self (SignUp.jsx calls this right after creating its own
-      // account) - the authorization block above already covers it, no
-      // extra check needed. Uses the verified JWT email claim, not a
-      // client-supplied one.
-      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-        to_email: callerEmail,
-        heading: 'Request Received',
-        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account request for <strong style="color:#0f172a;">${callerEmail}</strong> has been submitted. Battalion staff will review it and assign your rank and position - you'll get another email once that's done.</p>`,
-        banner: '',
-        cta: '',
-        footnote: `If you didn't request this account, contact your battalion's S1.`,
-      });
+      // auth account) - the self-vs-other block above already covers it.
+      // A fresh signup can't be trusted to self-report a shadow-record
+      // match, or to set its own role/approved status - both are re-
+      // verified here from the server's own privileged read, never from
+      // anything the client sent.
+      const { profile = {} } = req.body || {};
+      const shadow = await findShadowRecord(accessToken, projectId, callerEmail);
 
-      return res.status(200).json({ success: true });
+      const finalProfile = {
+        uid: targetUid,
+        fullName: shadow?.fullName || (profile.fullName || '').toString(),
+        email: callerEmail,
+        phone: profile.phone || '',
+        rank: shadow?.rank || profile.rank || '',
+        position: shadow?.position || profile.position || '',
+        company: shadow?.company || profile.company || 'Battalion',
+        platoon: shadow?.platoon || profile.platoon || '',
+        squad: shadow?.squad || profile.squad || '',
+        letLevel: shadow?.letLevel || 'LET 1',
+        gender: shadow?.gender || 'Male',
+        role: shadow?.role || 'cadet',
+        isManual: false,
+        status: 'Active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        accountLinked: !!shadow,
+        // If staff already pre-created this roster entry (with a real
+        // rank/role) and this signup just links a login to it, no separate
+        // approval step is needed - they were already vetted then. A blind
+        // self-registration with no matching record starts pending.
+        approved: !!shadow,
+      };
+
+      const writes = [{
+        update: {
+          name: `projects/${projectId}/databases/(default)/documents/users/${targetUid}`,
+          fields: toFirestoreFields(finalProfile),
+        },
+      }];
+      if (shadow?.id) {
+        writes.push({ delete: `projects/${projectId}/databases/(default)/documents/users/${shadow.id}` });
+      }
+
+      const commitRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ writes }),
+        }
+      );
+      if (!commitRes.ok) {
+        const data = await commitRes.json();
+        throw new Error(data.error?.message || 'Failed to finish creating your account');
+      }
+
+      // Best-effort - a failed confirmation email shouldn't turn an
+      // otherwise-successful signup into an error for the user.
+      try {
+        await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+          to_email: callerEmail,
+          heading: shadow ? 'Welcome to the Battalion' : 'Request Received',
+          message: shadow
+            ? `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account has been linked to your existing personnel record and you're ready to go. Sign in to see your duties, uniform status, and battalion announcements.</p>`
+            : `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account request for <strong style="color:#0f172a;">${callerEmail}</strong> has been submitted. Battalion staff will review it and assign your rank and position - you'll get another email once that's done.</p>`,
+          banner: '',
+          cta: shadow ? CTA_BUTTON : '',
+          footnote: shadow
+            ? `Questions about your rank or position? Contact your battalion's S1.`
+            : `If you didn't request this account, contact your battalion's S1.`,
+        });
+      } catch (notifyErr) {
+        console.error('Signup confirmation email failed:', notifyErr);
+      }
+
+      return res.status(200).json({ success: true, linked: !!shadow });
     }
 
     if (type === 'welcome-notification') {

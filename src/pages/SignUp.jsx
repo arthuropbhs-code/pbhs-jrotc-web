@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { 
-  doc, 
-  setDoc, 
-  getDocs, 
-  collection, 
-  query, 
-  where, 
-  deleteDoc, 
-  serverTimestamp 
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import {
+  getDocs,
+  collection,
+  query,
+  where
 } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
@@ -108,85 +104,82 @@ const SignUp = () => {
     const targetEmail = formData.email.trim().toLowerCase();
 
     try {
+      // The account has to exist (and be signed in) before Firestore rules
+      // will allow even reading the users collection, so this now happens
+      // before the shadow-record lookup - not after it, like it used to.
+      const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, formData.password);
+      const user = userCredential.user;
+
       const manualQuery = query(
         collection(db, "users"),
         where("email", "==", targetEmail),
         where("isManual", "==", true)
       );
-      
+
       const manualSnap = await getDocs(manualQuery);
 
       if (!manualSnap.empty) {
         setLinkData({ id: manualSnap.docs[0].id, ...manualSnap.docs[0].data() });
         setLoading(false);
       } else {
-        await finalizeAccountCreation(null);
+        await finalizeAccountCreation(user);
       }
     } catch (err) {
-      setError(err.message.toUpperCase());
+      setError(err.code === 'auth/email-already-in-use' ? "EMAIL ALREADY REGISTERED." : err.message.toUpperCase());
       setLoading(false);
     }
   };
 
-  const finalizeAccountCreation = async (shadowRecord = null) => {
+  // The auth account already exists by the time this runs (see above) - all
+  // that's left is the privileged Firestore write, which now goes through
+  // the server since a fresh signup isn't trusted to self-report a shadow-
+  // record match or set its own role/approved status directly.
+  const finalizeAccountCreation = async (user) => {
     setLoading(true);
-    const targetEmail = formData.email.trim().toLowerCase();
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, formData.password);
-      const user = userCredential.user;
-
-      const finalProfile = {
-        uid: user.uid,
-        fullName: shadowRecord?.fullName || formData.name.toUpperCase(),
-        email: targetEmail,
-        phone: formData.phone,
-        rank: shadowRecord?.rank || formData.rank,
-        position: shadowRecord?.position || formData.position,
-        company: shadowRecord?.company || formData.company,
-        platoon: shadowRecord?.platoon || formData.platoon, // Merged Platoon
-        squad: shadowRecord?.squad || formData.squad,       // Merged Squad
-        letLevel: shadowRecord?.letLevel || "LET 1",
-        gender: shadowRecord?.gender || "Male",
-        role: shadowRecord?.role || 'cadet',
-        isManual: false,
-        status: 'Active',
-        updatedAt: serverTimestamp(),
-        createdAt: shadowRecord?.createdAt || serverTimestamp(),
-        accountLinked: !!shadowRecord,
-        // If staff already pre-created this roster entry (with a real rank/
-        // role) and this signup is just linking a login to it, no separate
-        // approval step is needed - they were already vetted then. A blind
-        // self-registration with no matching record starts pending.
-        approved: !!shadowRecord
-      };
-
-      await setDoc(doc(db, "users", user.uid), finalProfile);
-
-      if (shadowRecord?.id) {
-        await deleteDoc(doc(db, "users", shadowRecord.id));
-      }
-
-      // Best-effort - a failed confirmation email shouldn't block the
-      // account from being created or the user from proceeding.
-      try {
-        const idToken = await user.getIdToken();
-        await fetch('/api/admin-update-account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ type: 'signup-confirmation', targetUid: user.uid })
-        });
-      } catch (notifyErr) {
-        console.error('Signup confirmation email failed:', notifyErr);
-      }
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          type: 'complete-signup',
+          targetUid: user.uid,
+          profile: {
+            fullName: formData.name.toUpperCase(),
+            phone: formData.phone,
+            rank: formData.rank,
+            position: formData.position,
+            company: formData.company,
+            platoon: formData.platoon,
+            squad: formData.squad
+          }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to finish creating your account');
 
       navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.code === 'auth/email-already-in-use' ? "EMAIL ALREADY REGISTERED." : err.message.toUpperCase());
+      setError((err.message || 'Failed to finish creating your account').toUpperCase());
     } finally {
       setLoading(false);
       setLinkData(null);
     }
+  };
+
+  // "No, this is a mistake": the auth account created in handleSignUpAttempt
+  // is otherwise left orphaned (no Firestore profile) with its email now
+  // stuck in "already in use" for any retry. Deleting your own just-created
+  // account is always allowed by Firebase Auth itself, no Firestore rule
+  // involved, so this cleanly undoes it.
+  const rejectLinkMatch = async () => {
+    try {
+      if (auth.currentUser) await deleteUser(auth.currentUser);
+    } catch (err) {
+      console.error('Failed to clean up the unmatched signup attempt:', err);
+    }
+    setLinkData(null);
   };
 
   return (
@@ -320,14 +313,14 @@ const SignUp = () => {
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => finalizeAccountCreation(linkData)} 
+                <button
+                  onClick={() => finalizeAccountCreation(auth.currentUser)}
                   disabled={loading}
                   className="w-full bg-yellow-500 text-slate-950 py-4 rounded-2xl font-black uppercase flex items-center justify-center gap-2 hover:bg-yellow-400 transition-all"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : <>Yes, This is me <ChevronRight size={18} /></>}
                 </button>
-                <button onClick={() => setLinkData(null)} className="text-slate-500 hover:text-white font-black uppercase text-[10px] py-2">
+                <button onClick={rejectLinkMatch} disabled={loading} className="text-slate-500 hover:text-white font-black uppercase text-[10px] py-2 disabled:opacity-50">
                   No, This is a mistake
                 </button>
               </div>
