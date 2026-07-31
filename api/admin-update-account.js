@@ -1,11 +1,5 @@
 const admin = require('firebase-admin');
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-  });
-}
-
 // Mirrors the top-command role list in src/constants.js (ADMIN_LEVEL tier) and
 // firestore.rules' isAdmin() - keep these three in sync by hand whenever the
 // role table changes, same as the rest of the app already does.
@@ -14,10 +8,47 @@ const TOP_COMMAND_ROLES = [
   'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
 ];
 
+// Lazy + defensive: a bad FIREBASE_SERVICE_ACCOUNT value (most commonly the
+// private_key's newlines getting mangled when pasted into Vercel's env var
+// UI) throws here. Doing this at module load time with no try/catch crashes
+// the whole function invocation and Vercel returns its own plain-text error
+// page instead of JSON - which is unparseable by the frontend and looks like
+// nothing happened. Initializing lazily inside the handler lets us catch
+// that and report the real problem.
+function ensureInitialized() {
+  if (admin.apps.length) return;
+
+  let raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in this environment.');
+  }
+
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(raw);
+  } catch (err) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON - re-paste the full downloaded key file as-is.');
+  }
+
+  // If the private_key's real newlines got flattened into literal "\n" text
+  // during copy/paste, un-flatten them so the PEM parses.
+  if (serviceAccount.private_key && serviceAccount.private_key.includes('\\n')) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    ensureInitialized();
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 
   const authHeader = req.headers.authorization || '';
