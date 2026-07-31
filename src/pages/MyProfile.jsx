@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../components/Navbar';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { sendResetPasswordEmail } from '../utils/emailjs';
+import { sendResetPasswordEmail, sendEmailChangedNewAddress, sendEmailChangedOldAddress } from '../utils/emailjs';
 import { ROLE_LABELS } from '../constants';
 import Footer from '../components/Footer';
 import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle } from 'lucide-react';
@@ -77,6 +77,17 @@ const MyProfile = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update login email');
       setLoginEmailStatus('success');
       setTimeout(() => setLoginEmailStatus(null), 3000);
+
+      // The email change itself already succeeded above - a notification
+      // failing shouldn't make this look like the update itself failed.
+      try {
+        await sendEmailChangedNewAddress(data.newEmail);
+        if (data.oldEmail && data.oldEmail !== data.newEmail) {
+          await sendEmailChangedOldAddress(data.oldEmail, data.newEmail);
+        }
+      } catch (notifyErr) {
+        console.error('Email-change notification failed:', notifyErr);
+      }
     } catch (err) {
       setLoginEmailStatus(err.message || 'error');
     }

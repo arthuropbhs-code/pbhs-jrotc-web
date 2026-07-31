@@ -4,7 +4,7 @@ import {
   collection, doc, updateDoc, onSnapshot, query,
   addDoc, serverTimestamp, deleteDoc
 } from 'firebase/firestore';
-import { sendResetPasswordEmail } from '../utils/emailjs';
+import { sendResetPasswordEmail, sendEmailChangedNewAddress, sendEmailChangedOldAddress } from '../utils/emailjs';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
@@ -169,6 +169,17 @@ const AdminUsers = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to update login email');
       setLoginEmailStatus('success');
       setTimeout(() => setLoginEmailStatus(null), 3000);
+
+      // The email change itself already succeeded above - a notification
+      // failing shouldn't make this look like the update itself failed.
+      try {
+        await sendEmailChangedNewAddress(data.newEmail);
+        if (data.oldEmail && data.oldEmail !== data.newEmail) {
+          await sendEmailChangedOldAddress(data.oldEmail, data.newEmail);
+        }
+      } catch (notifyErr) {
+        console.error('Email-change notification failed:', notifyErr);
+      }
     } catch (err) {
       setLoginEmailStatus(err.message || 'error');
     }

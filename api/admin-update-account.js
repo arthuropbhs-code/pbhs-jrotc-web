@@ -189,6 +189,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ resetLink: oobData.oobLink, email: targetEmail });
     }
 
+    // Resolve the target's CURRENT email before we overwrite it, so the
+    // frontend can notify that inbox too. For self-service the verified JWT
+    // claim already has it; for someone else, read it fresh from Firestore.
+    const oldEmail = targetUid === callerUid
+      ? callerEmail
+      : await getUserField(accessToken, projectId, targetUid, 'email');
+
     // type === 'update-email': the Auth login email and the Firestore copy
     // of it are independent writes - run them concurrently.
     const [identityRes, firestoreRes] = await Promise.all([
@@ -216,7 +223,7 @@ export default async function handler(req, res) {
       throw new Error(data.error?.message || 'Login email updated, but syncing the roster record failed');
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, oldEmail, newEmail });
   } catch (err) {
     // Last-resort net: whatever broke, report it as JSON instead of letting
     // the platform's own non-JSON crash page reach the frontend.
