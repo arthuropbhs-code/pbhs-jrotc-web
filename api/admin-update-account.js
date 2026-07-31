@@ -1,5 +1,3 @@
-const admin = require('firebase-admin');
-
 // Mirrors the top-command role list in src/constants.js (ADMIN_LEVEL tier) and
 // firestore.rules' isAdmin() - keep these three in sync by hand whenever the
 // role table changes, same as the rest of the app already does.
@@ -8,17 +6,26 @@ const TOP_COMMAND_ROLES = [
   'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
 ];
 
-// Lazy + defensive: a bad FIREBASE_SERVICE_ACCOUNT value (most commonly the
-// private_key's newlines getting mangled when pasted into Vercel's env var
-// UI) throws here. Doing this at module load time with no try/catch crashes
-// the whole function invocation and Vercel returns its own plain-text error
-// page instead of JSON - which is unparseable by the frontend and looks like
-// nothing happened. Initializing lazily inside the handler lets us catch
-// that and report the real problem.
-function ensureInitialized() {
-  if (admin.apps.length) return;
+let admin = null;
 
-  let raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+// Everything that can throw - loading the firebase-admin package itself,
+// parsing FIREBASE_SERVICE_ACCOUNT, building credentials - happens in here,
+// deferred until the first request instead of at module load. A throw at
+// module load (e.g. require() failing) happens before Node ever reaches our
+// handler, so Vercel returns its own plain-text crash page instead of JSON -
+// which is exactly what kept happening. Deferring it means ANY failure here
+// is something we can catch and turn into a real JSON error message.
+function getAdmin() {
+  if (admin) return admin;
+
+  let mod;
+  try {
+    mod = require('firebase-admin');
+  } catch (err) {
+    throw new Error(`firebase-admin failed to load: ${err.message}`);
+  }
+
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in this environment.');
   }
@@ -36,51 +43,55 @@ function ensureInitialized() {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   }
 
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  if (!mod.apps.length) {
+    mod.initializeApp({ credential: mod.credential.cert(serviceAccount) });
+  }
+
+  admin = mod;
+  return admin;
 }
 
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    ensureInitialized();
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
 
-  const authHeader = req.headers.authorization || '';
-  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
+    const app = getAdmin();
 
-  let callerUid;
-  try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    callerUid = decoded.uid;
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired auth token' });
-  }
+    const authHeader = req.headers.authorization || '';
+    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
 
-  const db = admin.firestore();
-  const callerDoc = await db.collection('users').doc(callerUid).get();
-  const callerRole = callerDoc.exists ? callerDoc.data().role : null;
+    let callerUid;
+    try {
+      const decoded = await app.auth().verifyIdToken(idToken);
+      callerUid = decoded.uid;
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired auth token' });
+    }
 
-  if (!TOP_COMMAND_ROLES.includes(callerRole)) {
-    return res.status(403).json({ error: 'Only battalion command can change login credentials.' });
-  }
+    const db = app.firestore();
+    const callerDoc = await db.collection('users').doc(callerUid).get();
+    const callerRole = callerDoc.exists ? callerDoc.data().role : null;
 
-  const { targetUid, newEmail } = req.body || {};
-  if (!targetUid || !newEmail) {
-    return res.status(400).json({ error: 'targetUid and newEmail are required' });
-  }
+    if (!TOP_COMMAND_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only battalion command can change login credentials.' });
+    }
 
-  try {
-    await admin.auth().updateUser(targetUid, { email: newEmail });
+    const { targetUid, newEmail } = req.body || {};
+    if (!targetUid || !newEmail) {
+      return res.status(400).json({ error: 'targetUid and newEmail are required' });
+    }
+
+    await app.auth().updateUser(targetUid, { email: newEmail });
     await db.collection('users').doc(targetUid).update({ email: newEmail });
     return res.status(200).json({ success: true });
   } catch (err) {
-    return res.status(400).json({ error: err.message || 'Failed to update login email' });
+    // Last-resort net: whatever broke, report it as JSON instead of letting
+    // the platform's own non-JSON crash page reach the frontend.
+    console.error('admin-update-account failed:', err);
+    return res.status(500).json({ error: err.message || 'Unexpected server error' });
   }
 };
