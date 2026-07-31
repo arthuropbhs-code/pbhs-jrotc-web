@@ -60,7 +60,7 @@ const SignUp = () => {
   // trivial devtools/view-source read) but is still a client-side check,
   // not a real security boundary - a determined attacker could still brute
   // force it offline since there's no rate limiting or server-side gate.
-  const BATTALION_SECRET_HASH = "3cb114732fd8eb6d2bd5600f808604727ed86f4ba6fc0e6344fadb9b6cebfea5";
+  const BATTALION_SECRET_HASH = "587059e56cc6592a6054a0606758a821cc9eb7657635eb13f4b7c88a17e7ad7a";
 
   const sha256Hex = async (text) => {
     const data = new TextEncoder().encode(text);
