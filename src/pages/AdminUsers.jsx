@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import {
   collection, doc, updateDoc, onSnapshot, query,
   addDoc, serverTimestamp, deleteDoc
 } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
   UserCog, Search, ArrowLeft, CheckCircle2,
-  Loader2, UserPlus, UserMinus, User, X, Edit3
+  Loader2, UserPlus, UserMinus, User, X, Edit3, KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
@@ -31,6 +32,7 @@ const AdminUsers = () => {
   const [linkingRecord, setLinkingRecord] = useState(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
+  const [resetPasswordStatus, setResetPasswordStatus] = useState(null);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isAuthorized = userLevel >= STAFF_LEVEL;
@@ -151,6 +153,21 @@ const AdminUsers = () => {
     }
   };
 
+  // sendPasswordResetEmail works for any registered email with no special
+  // permission needed - it's the same "Forgot Password?" flow, just
+  // triggered on the cadet's behalf instead of by them.
+  const handleResetPassword = async () => {
+    if (!editingRecord?.email) return;
+    setResetPasswordStatus('sending');
+    try {
+      await sendPasswordResetEmail(auth, editingRecord.email);
+      setResetPasswordStatus('success');
+      setTimeout(() => setResetPasswordStatus(null), 3000);
+    } catch (err) {
+      setResetPasswordStatus(err.message || 'error');
+    }
+  };
+
   if (authLoading) return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-yellow-600">
       <Loader2 className="animate-spin" />
@@ -223,7 +240,7 @@ const AdminUsers = () => {
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                    <button onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
                     {(p.isManual || isBattalionStaff) && (
@@ -362,6 +379,24 @@ const AdminUsers = () => {
                   </form>
                   {loginEmailStatus && loginEmailStatus !== 'saving' && loginEmailStatus !== 'success' && (
                     <p className="text-[10px] text-red-500 font-bold mt-2">{loginEmailStatus}</p>
+                  )}
+
+                  <div className="flex items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex-wrap">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">
+                      Sends a password reset link to {editingRecord.email}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={resetPasswordStatus === 'sending'}
+                      className={`px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all ${resetPasswordStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-50'}`}
+                    >
+                      <KeyRound size={14} />
+                      {resetPasswordStatus === 'sending' ? 'Sending...' : resetPasswordStatus === 'success' ? 'Email Sent' : 'Reset Password'}
+                    </button>
+                  </div>
+                  {resetPasswordStatus && resetPasswordStatus !== 'sending' && resetPasswordStatus !== 'success' && (
+                    <p className="text-[10px] text-red-500 font-bold mt-2">{resetPasswordStatus}</p>
                   )}
                 </div>
               )}
