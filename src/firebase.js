@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Using import.meta.env to keep keys secure
 const firebaseConfig = {
@@ -30,6 +31,14 @@ try {
     setPersistence(auth, browserSessionPersistence);
     db = getFirestore(app);
     storage = getStorage(app);
+
+    // isSupported() guards against environments without analytics support
+    // (e.g. browsers blocking storage) instead of letting getAnalytics() throw.
+    if (firebaseConfig.measurementId) {
+      isSupported().then((supported) => {
+        if (supported) getAnalytics(app);
+      });
+    }
   } else {
     console.warn("Firebase configuration keys are missing. Skipping initialization.");
   }
