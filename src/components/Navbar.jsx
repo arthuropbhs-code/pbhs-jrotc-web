@@ -108,8 +108,13 @@ const Navbar = () => {
                   </Link>
                 )}
                 {!isActive('/cadet-info/winning-colors') && (
-                  <Link to="/cadet-info/winning-colors" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
+                  <Link to="/cadet-info/winning-colors" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     Winning Colors
+                  </Link>
+                )}
+                {!isActive('/documents') && (
+                  <Link to="/documents" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
+                    Documents & Regs
                   </Link>
                 )}
               </div>
@@ -199,6 +204,7 @@ const Navbar = () => {
                     <MobileNavLink to="/cadet-info" indent>General Info</MobileNavLink>
                     <MobileNavLink to="/promotion-board" indent>Promotion Board</MobileNavLink>
                     <MobileNavLink to="/cadet-info/winning-colors" indent>Winning Colors</MobileNavLink>
+                    <MobileNavLink to="/documents" indent>Documents & Regs</MobileNavLink>
                   </div>
                 )}
               </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Mail, MapPin, ExternalLink, Instagram } from 'lucide-react';
+import { Shield, Mail, MapPin, ExternalLink, Instagram, Youtube } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -10,7 +10,7 @@ const Footer = () => {
       { name: "Cadet Creed", path: "/cadet-info" },
       { name: "Rank Structure", path: "/cadet-info" },
       { name: "Promotion Study Guide", path: "/promotion-board" },
-      { name: "Uniform Regulations", path: "/cadet-info" },
+      { name: "Documents & Regulations", path: "/documents" },
     ],
     battalion: [
       { name: "Leadership", path: "/leadership" },
@@ -49,6 +49,14 @@ const Footer = () => {
                 className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-yellow-500 transition-colors"
               >
                 <Instagram size={18} />
+              </a>
+              <a
+                href="https://www.youtube.com/@pbhsjrotc"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-yellow-500 transition-colors"
+              >
+                <Youtube size={18} />
               </a>
             </div>
           </div>

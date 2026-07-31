@@ -204,6 +204,19 @@ const AdminDashboard = () => {
                  </Link>
               )}
 
+              {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && (
+                 <Link
+                   to="/admin/documents"
+                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                     isActive('/admin/documents')
+                       ? 'bg-yellow-500 text-slate-950'
+                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                   }`}
+                 >
+                   <FileText size={18} /> Manage Documents
+                 </Link>
+              )}
+
               {isStaffOrS4 && (
                  <Link
                    to="/admin/camps"

@@ -28,6 +28,8 @@ import AdminTeams from './pages/AdminTeams';
 import AdminUsers from './pages/AdminUsers';
 import AdminLeadership from './pages/AdminLeadership';
 import AdminContent from './pages/AdminContent';
+import Documents from './pages/Documents';
+import AdminDocuments from './pages/AdminDocuments';
 import AdminCamps from './pages/AdminCamps';
 import AdminStats from './pages/AdminStats';
 import MyProfile from './pages/MyProfile';
@@ -96,6 +98,7 @@ const AppContent = () => {
           <Route path="/admin/signup" element={<SignUp />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/events" element={<CalendarPage />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
 
           {/* --- PROTECTED ADMIN ROUTES --- */}
@@ -155,6 +158,15 @@ const AppContent = () => {
             element={
               <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
                 <AdminContent />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/documents"
+            element={
+              <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <AdminDocuments />
               </ProtectedRoute>
             }
           />
