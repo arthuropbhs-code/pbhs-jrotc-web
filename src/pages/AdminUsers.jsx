@@ -36,6 +36,16 @@ const AdminUsers = () => {
   const isAuthorized = userLevel >= STAFF_LEVEL;
   const isBattalionStaff = userLevel >= ADMIN_LEVEL;
 
+  // Mirrors api/admin-update-account.js's EMAIL_MANAGER_ROLES - this is just
+  // a UI convenience gate, the endpoint itself is the real enforcement.
+  const EMAIL_MANAGER_ROLES = [
+    'senior_army_instructor', 'army_instructor',
+    'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major',
+    's1_adjutant', 's6_technology'
+  ];
+  const canManageLoginFor = (targetRole) =>
+    EMAIL_MANAGER_ROLES.includes(role) && (ROLE_HIERARCHY[targetRole] || 0) < userLevel;
+
   const ROLE_OPTIONS = Object.entries(ROLE_LABELS);
 
   // Dropdown Constants
@@ -320,8 +330,14 @@ const AdminUsers = () => {
               </form>
 
               {/* Real Firebase Auth login email - separate from the contact-email field above.
-                  Only meaningful for an already-linked account, and only battalion command can trigger it. */}
-              {editingRecord && !editingRecord.isManual && isBattalionStaff && (
+                  Only meaningful for an already-linked account. Changing your OWN login lives
+                  in My Profile instead; this is only for changing someone else's. */}
+              {editingRecord && editingRecord.id === user?.uid && (
+                <p className="mt-8 pt-8 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest text-center">
+                  Manage your own login email from My Profile.
+                </p>
+              )}
+              {editingRecord && editingRecord.id !== user?.uid && !editingRecord.isManual && canManageLoginFor(editingRecord.role) && (
                 <div className="mt-8 pt-8 border-t border-slate-100 dark:border-white/5">
                   <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Login Credentials</h3>
                   <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold mb-4 leading-relaxed">

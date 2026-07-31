@@ -15,10 +15,16 @@ const MyProfile = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginEmailStatus, setLoginEmailStatus] = useState(null);
 
   useEffect(() => {
     setPhone(userData?.phone || '');
   }, [userData?.phone]);
+
+  useEffect(() => {
+    setLoginEmail(user?.email || '');
+  }, [user?.email]);
 
   const handleSavePhone = async (e) => {
     e.preventDefault();
@@ -32,6 +38,29 @@ const MyProfile = () => {
       console.error("Profile update failed:", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Changes the actual Firebase Auth email you sign in with, via a
+  // server-side endpoint (the client SDK can't change a user's own email
+  // without a very recent re-login, and this avoids that friction).
+  const handleUpdateLoginEmail = async (e) => {
+    e.preventDefault();
+    if (!user || !loginEmail.trim()) return;
+    setLoginEmailStatus('saving');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ targetUid: user.uid, newEmail: loginEmail.trim().toLowerCase() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update login email');
+      setLoginEmailStatus('success');
+      setTimeout(() => setLoginEmailStatus(null), 3000);
+    } catch (err) {
+      setLoginEmailStatus(err.message || 'error');
     }
   };
 
@@ -118,6 +147,29 @@ const MyProfile = () => {
                 {saved ? <CheckCircle size={16} /> : <Save size={16} />} {saved ? 'Saved' : 'Save'}
               </button>
             </div>
+          </form>
+
+          <form onSubmit={handleUpdateLoginEmail} className="space-y-3 pt-6 border-t border-slate-100 dark:border-white/5">
+            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Login Email</label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={16} />
+                <input
+                  type="email"
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm font-bold focus:border-yellow-500 outline-none transition-all"
+                />
+              </div>
+              <button type="submit" disabled={loginEmailStatus === 'saving'} className={`px-6 rounded-xl font-black uppercase text-xs flex items-center gap-2 whitespace-nowrap transition-all ${loginEmailStatus === 'success' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50'}`}>
+                {loginEmailStatus === 'saving' ? 'Saving...' : loginEmailStatus === 'success' ? <><CheckCircle size={16} /> Updated</> : 'Update'}
+              </button>
+            </div>
+            {loginEmailStatus && loginEmailStatus !== 'saving' && loginEmailStatus !== 'success' && (
+              <p className="text-[10px] text-red-500 font-bold">{loginEmailStatus}</p>
+            )}
           </form>
 
           <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between gap-4 flex-wrap">

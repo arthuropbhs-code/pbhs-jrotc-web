@@ -1,11 +1,26 @@
 import { jwtVerify, createRemoteJWKSet, SignJWT, importPKCS8 } from 'jose';
 
-// Mirrors the top-command role list in src/constants.js (ADMIN_LEVEL tier) and
-// firestore.rules' isAdmin() - keep these three in sync by hand whenever the
-// role table changes, same as the rest of the app already does.
-const TOP_COMMAND_ROLES = [
+// Mirrors src/constants.js ROLE_HIERARCHY - keep these two in sync by hand
+// whenever the role table changes, same as firestore.rules already does.
+const ROLE_HIERARCHY = {
+  senior_army_instructor: 100, army_instructor: 95,
+  battalion_commander: 90, battalion_xo: 85, battalion_csm: 85, sergeant_major: 80,
+  s1_adjutant: 70, s2_intelligence: 70, s3_operations: 70, s4_logistics: 70,
+  s5_public_affairs: 70, s6_technology: 70, s7_special_projects: 70,
+  company_commander: 55, company_xo: 50, company_1sg: 45,
+  company_s1_assistant: 35, company_s2_assistant: 35, company_s3_assistant: 35,
+  company_s4_assistant: 35, company_s5_assistant: 35, company_s6_assistant: 35, company_s7_assistant: 35,
+  platoon_leader: 25, platoon_sergeant: 20,
+  squad_leader: 15, squad_leader_assistant: 12,
+  squad_member: 5, cadet: 1
+};
+
+// Only these roles may change someone ELSE's login email - self-service
+// (changing your own) is handled separately below and needs no role check.
+const EMAIL_MANAGER_ROLES = [
   'senior_army_instructor', 'army_instructor',
-  'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
+  'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major',
+  's1_adjutant', 's6_technology'
 ];
 
 // Firebase ID tokens are signed with Google's securetoken key set - this is
@@ -133,9 +148,21 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
     }
 
-    const callerRole = await getUserRole(accessToken, projectId, callerUid);
-    if (!TOP_COMMAND_ROLES.includes(callerRole)) {
-      return res.status(403).json({ error: 'Only battalion command can change login credentials.' });
+    // Changing your own login email is always allowed - it's your account.
+    // Changing someone else's is restricted to the email-manager roles, and
+    // only for personnel strictly below your own rank.
+    if (targetUid !== callerUid) {
+      const [callerRole, targetRole] = await Promise.all([
+        getUserRole(accessToken, projectId, callerUid),
+        getUserRole(accessToken, projectId, targetUid),
+      ]);
+
+      if (!EMAIL_MANAGER_ROLES.includes(callerRole)) {
+        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can change another cadet\'s login credentials.' });
+      }
+      if ((ROLE_HIERARCHY[targetRole] || 0) >= (ROLE_HIERARCHY[callerRole] || 0)) {
+        return res.status(403).json({ error: 'You can only change login credentials for personnel below your own rank.' });
+      }
     }
 
     // The Auth login email and the Firestore copy of it are independent
