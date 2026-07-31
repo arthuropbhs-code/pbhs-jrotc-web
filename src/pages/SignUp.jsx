@@ -66,8 +66,12 @@ const SignUp = () => {
   };
 
 
-  const ranks = ["CDT PVT No Insignia", "CDT PVT", "CDT PFC", "CDT CPL", "CDT SGT", "CDT SSG", "CDT SFC", "CDT MSG", "CDT SG", "CDT SGM", "CDT CSM", "CDT 2LT", "CDT 1LT", "CDT CPT", "CDT MAJ", "CDT LTC", "CDT COL"];
-  const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO" , "Company Commander", "S1 Assistant", "S2 Assistant", "S3 Assistant", "S4 Assistant", "S5 Assistant", "S6 Assistant", "S7 Assistant", "Battalion S1", "Battalion S2", "Battalion S3", "Battalion S4", "Battalion S5", "Battalion S6"];
+  // Must match AdminUsers.jsx's JROTC_RANKS/JROTC_POSITIONS exactly - a
+  // mismatch here was silently producing rank strings ("CDT MAJ") that the
+  // admin roster's dropdown didn't recognize, which is why fixing an
+  // existing account's rank there could silently save the wrong value.
+  const ranks = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
+  const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO", "Company Commander", "Battalion Staff (S-1)", "Battalion Staff (S-2)", "Battalion Staff (S-3)", "Battalion Staff (S-4)", "Battalion Staff (S-5)", "Battalion Staff (S-6)", "Battalion XO", "Battalion CSM", "Battalion Commander", "Team Lead"];
   const companies = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta", "Battalion"];
   const platoons = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const squads = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
@@ -136,18 +140,36 @@ const SignUp = () => {
         squad: shadowRecord?.squad || formData.squad,       // Merged Squad
         letLevel: shadowRecord?.letLevel || "LET 1",
         gender: shadowRecord?.gender || "Male",
-        role: shadowRecord?.role || 'cadet', 
+        role: shadowRecord?.role || 'cadet',
         isManual: false,
         status: 'Active',
         updatedAt: serverTimestamp(),
         createdAt: shadowRecord?.createdAt || serverTimestamp(),
-        accountLinked: !!shadowRecord
+        accountLinked: !!shadowRecord,
+        // If staff already pre-created this roster entry (with a real rank/
+        // role) and this signup is just linking a login to it, no separate
+        // approval step is needed - they were already vetted then. A blind
+        // self-registration with no matching record starts pending.
+        approved: !!shadowRecord
       };
 
       await setDoc(doc(db, "users", user.uid), finalProfile);
 
       if (shadowRecord?.id) {
         await deleteDoc(doc(db, "users", shadowRecord.id));
+      }
+
+      // Best-effort - a failed confirmation email shouldn't block the
+      // account from being created or the user from proceeding.
+      try {
+        const idToken = await user.getIdToken();
+        await fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ type: 'signup-confirmation', targetUid: user.uid })
+        });
+      } catch (notifyErr) {
+        console.error('Signup confirmation email failed:', notifyErr);
       }
 
       navigate('/admin/dashboard');

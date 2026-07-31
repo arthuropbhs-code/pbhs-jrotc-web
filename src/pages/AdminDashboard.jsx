@@ -24,6 +24,7 @@ import {
   Lock,
   Star,
   Home,
+  Clock,
   FileText,
   Tent,
   Camera
@@ -66,6 +67,30 @@ const AdminDashboard = () => {
   const isStaffOrS4 = userLevel >= STAFF_LEVEL;
 
   const isActive = (path) => location.pathname === path;
+
+  // Client-side only - a real security boundary for this also needs a
+  // matching Firestore rule (restricting what a pending account can read/
+  // write), which isn't published yet. This just keeps a newly-registered
+  // cadet from landing on a dashboard that looks fully functional before
+  // staff has actually reviewed and ranked them.
+  if (!loading && userData?.approved === false) {
+    return (
+      <div className="min-h-screen bg-blue-50 dark:bg-slate-950 flex items-center justify-center p-6 text-center transition-colors duration-300">
+        <div className="max-w-md">
+          <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-6 text-yellow-500">
+            <Clock size={32} />
+          </div>
+          <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white mb-3">Pending Approval</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">
+            Your Command Portal account request has been submitted. Battalion staff needs to review it and assign your rank and position before you can access the dashboard.
+          </p>
+          <button onClick={handleLogout} className="text-red-500 font-black uppercase text-xs tracking-widest hover:text-red-400 transition-colors">
+            Log Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // MAIN WRAPPER: Light Blue vs Slate Dark

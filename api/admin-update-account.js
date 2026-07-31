@@ -251,6 +251,42 @@ export default async function handler(req, res) {
       }
     }
 
+    if (type === 'signup-confirmation') {
+      // Always self (SignUp.jsx calls this right after creating its own
+      // account) - the authorization block above already covers it, no
+      // extra check needed. Uses the verified JWT email claim, not a
+      // client-supplied one.
+      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+        to_email: callerEmail,
+        heading: 'Request Received',
+        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account request for <strong style="color:#0f172a;">${callerEmail}</strong> has been submitted. Battalion staff will review it and assign your rank and position - you'll get another email once that's done.</p>`,
+        banner: '',
+        cta: '',
+        footnote: `If you didn't request this account, contact your battalion's S1.`,
+      });
+
+      return res.status(200).json({ success: true });
+    }
+
+    if (type === 'welcome-notification') {
+      // Sent by staff at the moment they approve a pending signup and
+      // assign a real rank/position - gated by the same self-vs-other rule
+      // above (staff acting on someone else's account).
+      const targetEmail = await getUserField(accessToken, projectId, targetUid, 'email');
+      if (!targetEmail) throw new Error('Could not resolve that account\'s email address');
+
+      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+        to_email: targetEmail,
+        heading: 'Welcome to the Battalion',
+        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account has been approved and you're ready to go. Sign in to see your duties, uniform status, and battalion announcements.</p>`,
+        banner: '',
+        cta: CTA_BUTTON,
+        footnote: `Questions about your rank or position? Contact your battalion's S1.`,
+      });
+
+      return res.status(200).json({ success: true });
+    }
+
     if (type === 'reset-password') {
       // Never trust a client-supplied email for someone else's account -
       // resolve the target's real current login email server-side. For

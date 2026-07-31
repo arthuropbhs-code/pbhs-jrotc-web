@@ -99,7 +99,13 @@ const AdminUsers = () => {
       const q = query(collection(db, "users"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allDocs.sort((a, b) => (a.fullName || a.name || '').localeCompare(b.fullName || b.name || ''));
+        // Pending-approval accounts float to the top so they're never
+        // missed in a long roster; alphabetical within each group.
+        allDocs.sort((a, b) => {
+          const pendingDiff = (a.approved === false ? 0 : 1) - (b.approved === false ? 0 : 1);
+          if (pendingDiff !== 0) return pendingDiff;
+          return (a.fullName || a.name || '').localeCompare(b.fullName || b.name || '');
+        });
 
         const roster = isBattalionStaff
           ? allDocs
@@ -124,17 +130,38 @@ const AdminUsers = () => {
       return;
     }
 
+    // A staff member saving an edit is treated as reviewing/approving the
+    // account - a self-registered signup starts `approved: false` (see
+    // SignUp.jsx) and flips to true the first time staff touches the
+    // record here, which is also when the welcome email goes out.
+    const wasPendingApproval = !!editingRecord && editingRecord.approved === false;
+
     try {
       if (editingRecord) {
         await updateDoc(doc(db, "users", editingRecord.id), {
           ...formData,
+          approved: true,
           updatedAt: serverTimestamp()
         });
         setEditingRecord(null);
         showStatus("Record Updated");
+
+        if (wasPendingApproval) {
+          try {
+            const idToken = await user.getIdToken();
+            await fetch('/api/admin-update-account', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+              body: JSON.stringify({ type: 'welcome-notification', targetUid: editingRecord.id })
+            });
+          } catch (notifyErr) {
+            console.error('Welcome email failed:', notifyErr);
+          }
+        }
       } else {
         await addDoc(collection(db, "users"), {
           ...formData,
+          approved: true,
           createdAt: serverTimestamp(),
           createdBy: user.uid
         });
@@ -294,6 +321,15 @@ const AdminUsers = () => {
           </div>
         </div>
 
+        {personnel.some(p => p.approved === false) && (
+          <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex items-center gap-3">
+            <UserPlus size={18} className="text-yellow-600 dark:text-yellow-500 shrink-0" />
+            <p className="text-xs font-bold text-yellow-700 dark:text-yellow-500">
+              {personnel.filter(p => p.approved === false).length} account{personnel.filter(p => p.approved === false).length === 1 ? '' : 's'} pending approval - review and edit their record below to assign a rank and approve them.
+            </p>
+          </div>
+        )}
+
         {/* Search */}
         <div className="relative mb-8">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -324,6 +360,11 @@ const AdminUsers = () => {
                             {p.suspended && (
                                 <div className="flex items-center gap-1 text-orange-500 text-[9px] font-black uppercase">
                                   <Ban size={14} /> Suspended
+                                </div>
+                            )}
+                            {p.approved === false && (
+                                <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-500 text-[9px] font-black uppercase animate-pulse">
+                                  <UserPlus size={14} /> Pending Approval
                                 </div>
                             )}
                         </div>
