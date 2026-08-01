@@ -127,14 +127,38 @@ const UniformRequests = () => {
   };
 
   // --- ACTIONS ---
-  const handleToggleStatus = async (id, currentStatus) => {
+  const handleToggleStatus = async (req) => {
     if (!isS4Master) {
       showNotify("Access Denied: Only S-4 or Command can issue items.", "error");
       return;
     }
-    const newStatus = currentStatus === 'Pending' ? 'Completed' : 'Pending';
-    await updateDoc(doc(db, "uniform_requests", id), { status: newStatus });
+    const newStatus = req.status === 'Pending' ? 'Completed' : 'Pending';
+    await updateDoc(doc(db, "uniform_requests", req.id), { status: newStatus });
     showNotify(`Request marked as ${newStatus}`);
+
+    // Only fires going Pending -> Completed, and only when the request came
+    // from an S4 Assistant (requestedByEmail is only set on that path) -
+    // best-effort so a failed email doesn't undo the status change that
+    // already succeeded above.
+    if (newStatus === 'Completed' && req.requestedByEmail) {
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        await fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            type: 'notify-uniform-issued',
+            targetUid: auth.currentUser.uid,
+            toEmail: req.requestedByEmail,
+            cadetName: req.cadetName,
+            item: req.item,
+            detail: req.detail
+          })
+        });
+      } catch (err) {
+        console.error('Uniform-issued notification failed:', err);
+      }
+    }
   };
 
   const handleDelete = async (id) => {
@@ -160,7 +184,11 @@ const UniformRequests = () => {
         ...formData,
         issuedBy: finalIssuedBy,
         status: 'Pending',
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        // Only set for S4 Assistant submissions - that's who gets notified
+        // when S4 marks the request issued. An S4 Master's own direct
+        // transaction doesn't need to notify itself.
+        requestedByEmail: isS4Assistant ? (userProfile?.email || null) : null
       });
       setShowModal(false);
       setFormData(prev => ({ 
@@ -288,7 +316,7 @@ const UniformRequests = () => {
 
             {isS4Master ? (
               <button 
-                onClick={() => handleToggleStatus(req.id, req.status)}
+                onClick={() => handleToggleStatus(req)}
                 className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all ${
                   req.status === 'Pending' ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400' : 'bg-green-500/10 text-green-500'
                 }`}

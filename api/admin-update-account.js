@@ -396,6 +396,35 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, linked: !!shadow });
     }
 
+    if (type === 'notify-uniform-issued') {
+      // Not an account-management action, so it doesn't rely on the
+      // self-vs-other gate above (targetUid is just the caller's own uid
+      // here to satisfy the required-field check). Verifies the caller is
+      // actually S-4 tier itself - mirrors UniformRequests.jsx's isS4Master
+      // exactly, since the client-side check alone isn't a real boundary.
+      const callerRole = await getUserField(accessToken, projectId, callerUid, 'role');
+      const isS4Master = callerRole === 's4_logistics' || (ROLE_HIERARCHY[callerRole] || 0) >= 80;
+      if (!isS4Master) {
+        return res.status(403).json({ error: 'Only S-4 or Command can send this notification.' });
+      }
+
+      const { toEmail, cadetName, item, detail } = req.body || {};
+      if (!toEmail || !cadetName || !item) {
+        return res.status(400).json({ error: 'toEmail, cadetName, and item are required' });
+      }
+
+      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+        to_email: toEmail,
+        heading: 'Uniform Request Fulfilled',
+        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your request to issue <strong style="color:#0f172a;">${item}${detail ? ` (${detail})` : ''}</strong> to <strong style="color:#0f172a;">${cadetName}</strong> has been marked as issued by S-4.</p>`,
+        banner: '',
+        cta: CTA_BUTTON,
+        footnote: `Questions about this issuance? Contact your battalion's S-4.`,
+      });
+
+      return res.status(200).json({ success: true });
+    }
+
     if (type === 'welcome-notification') {
       // Sent by staff at the moment they approve a pending signup and
       // assign a real rank/position - gated by the same self-vs-other rule
