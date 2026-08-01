@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useIdleLogout } from './hooks/useIdleLogout';
@@ -69,6 +69,14 @@ const AppContent = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
   useIdleLogout(!!user);
+
+  // React Router doesn't reset scroll position on navigation like a full
+  // page load would - without this, clicking a link (e.g. in the footer,
+  // far down the page) lands on the new page still scrolled to wherever
+  // you were, instead of at the top.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Logic to hide Navbar and Footer on Admin pages
   const isAdminPage = location.pathname.startsWith('/admin') || location.pathname === '/uniform-requests';
