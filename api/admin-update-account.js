@@ -1,4 +1,5 @@
 import { jwtVerify, createRemoteJWKSet, SignJWT, importPKCS8 } from 'jose';
+import { checkRateLimit } from '../lib/rateLimit.js';
 
 // Mirrors src/constants.js ROLE_HIERARCHY - keep these two in sync by hand
 // whenever the role table changes, same as firestore.rules already does.
@@ -296,6 +297,24 @@ export default async function handler(req, res) {
       accessToken = token;
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
+    }
+
+    // General abuse guard, keyed by the verified caller's own uid (not IP -
+    // this endpoint is authenticated, so the account is the stable identity).
+    const generalLimit = await checkRateLimit(`ratelimit:account:${callerUid}`, 30, 60);
+    if (!generalLimit.allowed) {
+      return res.status(429).json({ error: 'Too many requests. Slow down and try again shortly.' });
+    }
+
+    // reset-password gets its own tighter limit - the 60s cooldown on the
+    // client (My Profile / Manage Personnel) only prevents accidental
+    // double-clicks, it's not a real boundary since anyone can call this
+    // endpoint directly and skip the client entirely.
+    if (type === 'reset-password') {
+      const resetLimit = await checkRateLimit(`ratelimit:reset-password:${callerUid}`, 3, 300);
+      if (!resetLimit.allowed) {
+        return res.status(429).json({ error: 'Too many reset requests. Try again in a few minutes.' });
+      }
     }
 
     // Acting on your own account is always allowed (self-service password

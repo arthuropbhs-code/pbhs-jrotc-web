@@ -1,3 +1,5 @@
+import { checkRateLimit, getClientIp } from '../lib/rateLimit.js';
+
 // Unauthenticated by design - this runs before an account exists, so there's
 // no ID token to verify yet. The CAPTCHA check itself is what stands in for
 // authorization here: a bot can't produce a valid token without solving the
@@ -8,6 +10,14 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') {
       res.setHeader('Allow', 'POST');
       return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // By IP, not by account - there's no account yet at this point in the
+    // signup flow.
+    const ip = getClientIp(req);
+    const { allowed } = await checkRateLimit(`ratelimit:captcha:${ip}`, 10, 60);
+    if (!allowed) {
+      return res.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
     }
 
     const { token } = req.body || {};
