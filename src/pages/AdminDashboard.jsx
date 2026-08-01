@@ -153,17 +153,19 @@ const AdminDashboard = () => {
                 <PlusSquare size={18} /> Issue Orders/Events
               </Link>
 
-              <Link 
-                to="/admin/teams" 
-                className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                  isActive('/admin/teams') 
-                    ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                }`}
-              >
-                {isTopFour || (userLevel >= COMMAND_LEVEL && userLevel <= 55) ? <Users size={18} /> : <Lock size={16} />}
-                <span>Manage Teams</span>
-              </Link>
+              {isStaffOrS4 && (
+                <Link
+                  to="/admin/teams"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/teams')
+                      ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  {isTopFour ? <Users size={18} /> : <Lock size={16} />}
+                  <span>Manage Teams</span>
+                </Link>
+              )}
 
               {isStaffOrS4 && (
                  <Link
