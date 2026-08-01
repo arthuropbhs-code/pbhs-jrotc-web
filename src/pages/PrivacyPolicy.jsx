@@ -61,6 +61,7 @@ const PrivacyPolicy = () => {
 
         <Section n="3" title="Who Can See Your Information">
           <p>Access is scoped by rank and role. In general: battalion command and staff can see the full roster; company leadership can see their own company; and cadets can see their own information and what's directly relevant to their duties (like tasks assigned to their position). Some information - like the public leadership page or photo gallery - is intentionally visible to anyone visiting the site.</p>
+          <p>These role-based limits don't restrict battalion instructors and staff from accessing, using, or sharing information when necessary for a cadet's safety or welfare, or to meet legal or mandatory-reporting obligations to school officials or other authorities. See our Terms of Service for more.</p>
         </Section>
 
         <Section n="4" title="Third-Party Services We Use">
