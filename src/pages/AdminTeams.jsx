@@ -33,6 +33,15 @@ const AdminTeams = () => {
   const isPowerUser = userLevel >= ADMIN_LEVEL;
   const userEmail = user?.email?.toLowerCase().trim();
 
+  // Computed before the effects below since one of them depends on
+  // isAuthorized - referencing a const in a dependency array before its
+  // declaration line throws a "Cannot access before initialization" error
+  // on every render, not just sometimes.
+  const accessibleTeams = teams.filter(t =>
+    isPowerUser || (t.commanderEmails && t.commanderEmails.includes(userEmail))
+  );
+  const isAuthorized = isPowerUser || accessibleTeams.length > 0;
+
   // Sync Teams Data
   useEffect(() => {
     if (!authLoading && user) {
@@ -68,11 +77,6 @@ const AdminTeams = () => {
     }
   }, [userData]);
 
-  const accessibleTeams = teams.filter(t => 
-    isPowerUser || (t.commanderEmails && t.commanderEmails.includes(userEmail))
-  );
-
-  const isAuthorized = isPowerUser || accessibleTeams.length > 0;
   const currentTeam = teams.find(t => t.id === editingId);
   const userInTeam = currentTeam?.leadership?.find(l => l.email?.toLowerCase().trim() === userEmail);
   const teamSpecificRole = userInTeam?.teamRole || 'Team Member';
