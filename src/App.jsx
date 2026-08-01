@@ -36,6 +36,8 @@ import MyProfile from './pages/MyProfile';
 import AboutPage from './pages/AboutPage';
 import CalendarPage from './pages/CalendarPage';
 import WinningColors from './pages/WinningColors'; // <--- ADDED IMPORT FOR THE ASSESSMENT PAGE
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   const { user, role, loading } = useAuth();
@@ -99,6 +101,8 @@ const AppContent = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/events" element={<CalendarPage />} />
           <Route path="/documents" element={<Documents />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
 
           {/* --- PROTECTED ADMIN ROUTES --- */}

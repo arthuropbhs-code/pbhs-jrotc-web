@@ -121,6 +121,8 @@ const Footer = () => {
             © {currentYear} PBHS JROTC Tornado Battalion.
           </p>
           <div className="flex items-center gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+            <Link to="/privacy" className="hover:text-yellow-500 transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-yellow-500 transition-colors">Terms of Service</Link>
             <Link to="/admin" className="hover:text-yellow-500 transition-colors">Admin Portal</Link>
             <a 
               href="https://www.usarmyjrotc.com/" 
