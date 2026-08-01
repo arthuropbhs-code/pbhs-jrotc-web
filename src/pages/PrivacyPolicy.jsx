@@ -72,26 +72,33 @@ const PrivacyPolicy = () => {
           <p>&bull; <strong className="text-slate-900 dark:text-white">Google reCAPTCHA</strong> - verifying signups aren't automated/bots.</p>
         </Section>
 
-        <Section n="5" title="Your Choices & Account Deletion">
+        <Section n="5" title="Cookies & Analytics">
+          <p>This site uses a small number of cookies/local storage entries required to keep you signed in for your session. It also uses Google Analytics to understand how the site is used (pages visited, general device/browser information), which sets its own cookies to do that.</p>
+          <p>You can control or delete cookies through your browser's settings, and you can opt out of Google Analytics specifically using Google's <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:underline">Analytics Opt-out Browser Add-on</a>. Blocking cookies entirely may prevent you from staying signed in.</p>
+        </Section>
+
+        <Section n="6" title="Your Choices & Account Deletion">
           <p>You can review and update most of your own information from My Profile at any time. You can also permanently delete your own account from that same page - this permanently removes your login credentials and personal profile record.</p>
           <p>Battalion records that reference your name but aren't part of your account - like past orders, uniform issuance history, or camp attendance rosters - are retained as part of the battalion's operational records and aren't automatically removed when you delete your account, since they document activity involving other cadets as well, not just you.</p>
           <p>Battalion command and staff can also suspend or delete accounts, consistent with our Terms of Service.</p>
         </Section>
 
-        <Section n="6" title="Minors & Parental Access">
+        <Section n="7" title="Minors & Parental Access">
           <p>This site is used by JROTC cadets, who are generally minors. Consent for a cadet's photo, name, and personal information to be used in program materials - including this site's public leadership page and photo gallery - is obtained separately during program enrollment (DD-322), not through this website.</p>
+          <p>This site is not intended for children under 13, and we do not knowingly collect personal information from anyone under 13 without verifiable parental consent. If we learn that an account was created by a child under 13 without that consent, we will remove it.</p>
           <p>If you are a parent or guardian and want to review, correct, or request deletion of your child's information on this site, contact us using the information below and we'll take care of it directly.</p>
         </Section>
 
-        <Section n="7" title="Data Security">
+        <Section n="8" title="Data Security">
           <p>We use industry-standard practices where reasonably possible - passwords are never stored in plain text, sensitive account actions require verification, and access to internal data is restricted by role. That said, no online system can be guaranteed 100% secure.</p>
+          <p>If a data breach affecting your personal information occurs, we will notify affected cadets - or a parent/guardian, for cadets under 18 - as soon as reasonably possible, describing what happened and what steps are being taken.</p>
         </Section>
 
-        <Section n="8" title="Changes to This Policy">
+        <Section n="9" title="Changes to This Policy">
           <p>We may update this policy as the site changes. Material changes will be reflected by updating the effective date above.</p>
         </Section>
 
-        <Section n="9" title="Contact Us">
+        <Section n="10" title="Contact Us">
           <p>Questions about this policy, or requests to review/correct/delete information, can be sent to <a href="mailto:info@pbhsjrotc.com" className="text-yellow-500 hover:underline">info@pbhsjrotc.com</a>.</p>
         </Section>
 
