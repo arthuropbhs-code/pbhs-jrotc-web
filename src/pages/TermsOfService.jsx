@@ -45,6 +45,7 @@ const TermsOfService = () => {
 
         <Section n="1" title="Who Can Use This Site">
           <p>This site is intended for cadets, instructors, and staff of the PBHS JROTC Tornado Battalion. Registration requires a battalion-issued access code and is subject to review and approval by battalion staff before full access is granted.</p>
+          <p>If you are under 18, your use of this site is also subject to your parent or guardian's consent, obtained separately as part of your JROTC enrollment paperwork (DD-322).</p>
         </Section>
 
         <Section n="2" title="Your Account">
@@ -63,10 +64,12 @@ const TermsOfService = () => {
 
         <Section n="4" title="Content You Submit">
           <p>You're responsible for any photos, documents, or information you submit. Battalion staff may edit or remove content that violates these terms, and may correct roster information for accuracy.</p>
+          <p>By submitting content, you grant the battalion permission to display it on this site for battalion purposes - for example, on the public leadership page, photo gallery, or documents library.</p>
         </Section>
 
         <Section n="5" title="Suspension & Termination">
           <p>Battalion command and staff may suspend or delete an account at their discretion - for example, for a terms violation, graduation, or leaving the program. You can also delete your own account at any time from My Profile.</p>
+          <p>Deleting your account removes your login and personal profile. Battalion records that include your name or contributions - like past orders, uniform issuance history, or camp rosters - may remain as part of the battalion's operational history, consistent with our Privacy Policy.</p>
         </Section>
 
         <Section n="6" title="No Warranty">
@@ -77,11 +80,15 @@ const TermsOfService = () => {
           <p>To the fullest extent permitted by law, the individuals who built and maintain this site aren't liable for any indirect, incidental, or consequential damages arising from your use of it.</p>
         </Section>
 
-        <Section n="8" title="Changes to These Terms">
+        <Section n="8" title="Governing Law">
+          <p>These terms are governed by the laws of the State of Florida, without regard to conflict-of-law principles.</p>
+        </Section>
+
+        <Section n="9" title="Changes to These Terms">
           <p>These terms may be updated as the site evolves. Continuing to use the site after a change means you accept the updated terms. Material changes will be reflected by updating the effective date above.</p>
         </Section>
 
-        <Section n="9" title="Contact Us">
+        <Section n="10" title="Contact Us">
           <p>Questions about these terms can be sent to <a href="mailto:info@pbhsjrotc.com" className="text-yellow-500 hover:underline">info@pbhsjrotc.com</a>.</p>
         </Section>
 
