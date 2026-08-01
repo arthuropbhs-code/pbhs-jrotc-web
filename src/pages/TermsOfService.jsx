@@ -46,6 +46,7 @@ const TermsOfService = () => {
         <Section n="1" title="Who Can Use This Site">
           <p>This site is intended for cadets, instructors, and staff of the PBHS JROTC Tornado Battalion. Registration requires a battalion-issued access code and is subject to review and approval by battalion staff before full access is granted.</p>
           <p>If you are under 18, your use of this site is also subject to your parent or guardian's consent, obtained separately as part of your JROTC enrollment paperwork (DD-322).</p>
+          <p>Access may be reviewed periodically - for example, at the start of each school year - to confirm you're still an active cadet or staff member. Accounts that aren't reconfirmed, or that belong to cadets who have graduated or left the program, may be deactivated.</p>
         </Section>
 
         <Section n="2" title="Your Account">
@@ -67,28 +68,45 @@ const TermsOfService = () => {
           <p>By submitting content, you grant the battalion permission to display it on this site for battalion purposes - for example, on the public leadership page, photo gallery, or documents library.</p>
         </Section>
 
-        <Section n="5" title="Suspension & Termination">
-          <p>Battalion command and staff may suspend or delete an account at their discretion - for example, for a terms violation, graduation, or leaving the program. You can also delete your own account at any time from My Profile.</p>
+        <Section n="5" title="Site Availability & Administration">
+          <p>We may add, change, suspend, or discontinue any part of this site - or the site as a whole - at any time, without notice or liability.</p>
+          <p>This site is run by battalion volunteers, and who's running it will change over time as cadets and instructors graduate or move on. We may transfer administration of the site, and the data on it, to a successor administrator within the battalion so the site can keep operating.</p>
+        </Section>
+
+        <Section n="6" title="Suspension & Termination">
+          <p>Battalion command and staff may suspend, restrict, or delete an account, or remove content, at their discretion - for example, for a terms violation, graduation, leaving the program, or any other reason connected to running the battalion's program. You can also delete your own account at any time from My Profile.</p>
           <p>Deleting your account removes your login and personal profile. Battalion records that include your name or contributions - like past orders, uniform issuance history, or camp rosters - may remain as part of the battalion's operational history, consistent with our Privacy Policy.</p>
         </Section>
 
-        <Section n="6" title="No Warranty">
-          <p>This site is provided by an independent, volunteer-built project on an "as is" and "as available" basis. We don't guarantee it will be error-free, uninterrupted, or perfectly accurate, and we're not liable for decisions made based on information found here (like task deadlines or uniform status) - always confirm anything time-sensitive with your chain of command directly.</p>
+        <Section n="7" title="Safety & Mandatory Reporting">
+          <p>The role-based access limits described in our Privacy Policy don't restrict battalion instructors and staff from accessing, using, or sharing information when necessary for a cadet's safety or welfare, or to meet legal or mandatory-reporting obligations to school officials or other authorities.</p>
         </Section>
 
-        <Section n="7" title="Limitation of Liability">
+        <Section n="8" title="No Warranty">
+          <p>This site is provided by an independent, volunteer-built project on an "as is" and "as available" basis. We don't guarantee it will be error-free, uninterrupted, or perfectly accurate, and we're not liable for decisions made based on information found here (like task deadlines or uniform status) - always confirm anything time-sensitive with your chain of command directly.</p>
+          <p>We're also not responsible for outages or issues caused by the third-party services this site depends on (like Firebase, Vercel, Cloudinary, or EmailJS) or other events outside our control.</p>
+        </Section>
+
+        <Section n="9" title="Limitation of Liability">
           <p>To the fullest extent permitted by law, the individuals who built and maintain this site aren't liable for any indirect, incidental, or consequential damages arising from your use of it.</p>
         </Section>
 
-        <Section n="8" title="Governing Law">
+        <Section n="10" title="Governing Law">
           <p>These terms are governed by the laws of the State of Florida, without regard to conflict-of-law principles.</p>
         </Section>
 
-        <Section n="9" title="Changes to These Terms">
+        <Section n="11" title="General Provisions">
+          <p>We may use aggregate or de-identified usage information to maintain or improve this site.</p>
+          <p>If any part of these terms is found unenforceable, the rest remains in effect.</p>
+          <p>These terms, together with our Privacy Policy, are the entire agreement between you and the site regarding your use of it, and replace any prior understandings.</p>
+          <p>If we don't enforce a provision of these terms on one occasion, that doesn't waive our right to enforce it later.</p>
+        </Section>
+
+        <Section n="12" title="Changes to These Terms">
           <p>These terms may be updated as the site evolves. Continuing to use the site after a change means you accept the updated terms. Material changes will be reflected by updating the effective date above.</p>
         </Section>
 
-        <Section n="10" title="Contact Us">
+        <Section n="13" title="Contact Us">
           <p>Questions about these terms can be sent to <a href="mailto:info@pbhsjrotc.com" className="text-yellow-500 hover:underline">info@pbhsjrotc.com</a>.</p>
         </Section>
 
