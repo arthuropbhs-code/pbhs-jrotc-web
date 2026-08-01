@@ -34,10 +34,22 @@ try {
 
     // isSupported() guards against environments without analytics support
     // (e.g. browsers blocking storage) instead of letting getAnalytics() throw.
+    // Wrapped defensively end-to-end - a rejected config fetch or a bad
+    // measurementId/appId shouldn't be able to break anything else on the
+    // page just because analytics couldn't start.
     if (firebaseConfig.measurementId) {
-      isSupported().then((supported) => {
-        if (supported) getAnalytics(app);
-      });
+      isSupported()
+        .then((supported) => {
+          if (!supported) return;
+          try {
+            getAnalytics(app);
+          } catch (error) {
+            console.warn("Firebase Analytics failed to initialize:", error);
+          }
+        })
+        .catch((error) => {
+          console.warn("Firebase Analytics support check failed:", error);
+        });
     }
   } else {
     console.warn("Firebase configuration keys are missing. Skipping initialization.");
