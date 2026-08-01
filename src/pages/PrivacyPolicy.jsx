@@ -73,12 +73,14 @@ const PrivacyPolicy = () => {
         </Section>
 
         <Section n="5" title="Your Choices & Account Deletion">
-          <p>You can review and update most of your own information from My Profile at any time. You can also permanently delete your own account from that same page - this removes your login and profile record.</p>
+          <p>You can review and update most of your own information from My Profile at any time. You can also permanently delete your own account from that same page - this permanently removes your login credentials and personal profile record.</p>
+          <p>Battalion records that reference your name but aren't part of your account - like past orders, uniform issuance history, or camp attendance rosters - are retained as part of the battalion's operational records and aren't automatically removed when you delete your account, since they document activity involving other cadets as well, not just you.</p>
           <p>Battalion command and staff can also suspend or delete accounts, consistent with our Terms of Service.</p>
         </Section>
 
         <Section n="6" title="Minors & Parental Access">
-          <p>This site is used by JROTC cadets, who are generally minors. If you are a parent or guardian and want to review, correct, or request deletion of your child's information, contact us using the information below and we'll take care of it directly.</p>
+          <p>This site is used by JROTC cadets, who are generally minors. Consent for a cadet's photo, name, and personal information to be used in program materials - including this site's public leadership page and photo gallery - is obtained separately during program enrollment (DD-322), not through this website.</p>
+          <p>If you are a parent or guardian and want to review, correct, or request deletion of your child's information on this site, contact us using the information below and we'll take care of it directly.</p>
         </Section>
 
         <Section n="7" title="Data Security">
