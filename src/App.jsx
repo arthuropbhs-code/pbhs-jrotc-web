@@ -1,43 +1,56 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useIdleLogout } from './hooks/useIdleLogout';
 import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
 
 // --- COMPONENTS ---
-import Navbar from './components/Navbar'; 
-import Footer from './components/Footer'; 
+// Navbar/Footer stay eager: they render on almost every route, so splitting
+// them out would just add a network round-trip with no bundle-size upside.
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
 // --- PAGES ---
-import SignUp from './pages/SignUp';
+// Lazy-loaded so each route gets its own chunk instead of all ~30 pages
+// (Firestore admin dashboards, uniform logistics, stats, etc.) shipping in
+// one ~1MB bundle to every visitor regardless of which page they actually
+// open. Home stays eager since it's the page nearly everyone lands on first
+// and there's no benefit to a loading flash on the very first paint.
 import Home from './pages/Home';
-import Photos from './pages/Photos';
-import AdminLogin from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
-import TaskManagement from './pages/TaskManagement';
-import CadetInfo from './pages/CadetInfo';
-import Teams from './pages/Teams';
-import Announcements from './pages/Announcements';
-import PromotionBoard from './pages/PromotionBoard';
-import Leadership from './pages/Leadership';
-import AdminOrders from './pages/AdminOrders'; 
-import AdminAnnouncements from './pages/AdminAnnouncements';
-import UniformRequests from './pages/UniformRequests';
-import CommanderInfo from './pages/CommanderInfo';
-import AdminTeams from './pages/AdminTeams';
-import AdminUsers from './pages/AdminUsers';
-import AdminLeadership from './pages/AdminLeadership';
-import AdminContent from './pages/AdminContent';
-import Documents from './pages/Documents';
-import AdminDocuments from './pages/AdminDocuments';
-import AdminCamps from './pages/AdminCamps';
-import AdminStats from './pages/AdminStats';
-import MyProfile from './pages/MyProfile';
-import AboutPage from './pages/AboutPage';
-import CalendarPage from './pages/CalendarPage';
-import WinningColors from './pages/WinningColors'; // <--- ADDED IMPORT FOR THE ASSESSMENT PAGE
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
+const SignUp = lazy(() => import('./pages/SignUp'));
+const Photos = lazy(() => import('./pages/Photos'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const TaskManagement = lazy(() => import('./pages/TaskManagement'));
+const CadetInfo = lazy(() => import('./pages/CadetInfo'));
+const Teams = lazy(() => import('./pages/Teams'));
+const Announcements = lazy(() => import('./pages/Announcements'));
+const PromotionBoard = lazy(() => import('./pages/PromotionBoard'));
+const Leadership = lazy(() => import('./pages/Leadership'));
+const AdminOrders = lazy(() => import('./pages/AdminOrders'));
+const AdminAnnouncements = lazy(() => import('./pages/AdminAnnouncements'));
+const UniformRequests = lazy(() => import('./pages/UniformRequests'));
+const CommanderInfo = lazy(() => import('./pages/CommanderInfo'));
+const AdminTeams = lazy(() => import('./pages/AdminTeams'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminLeadership = lazy(() => import('./pages/AdminLeadership'));
+const AdminContent = lazy(() => import('./pages/AdminContent'));
+const Documents = lazy(() => import('./pages/Documents'));
+const AdminDocuments = lazy(() => import('./pages/AdminDocuments'));
+const AdminCamps = lazy(() => import('./pages/AdminCamps'));
+const AdminStats = lazy(() => import('./pages/AdminStats'));
+const MyProfile = lazy(() => import('./pages/MyProfile'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const WinningColors = lazy(() => import('./pages/WinningColors'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+
+const RouteFallback = () => (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-yellow-500"></div>
+  </div>
+);
 
 const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   const { user, role, loading } = useAuth();
@@ -94,6 +107,7 @@ const AppContent = () => {
       
       {/* MAIN CONTENT AREA - flex-grow ensures footer stays at bottom */}
       <main className="flex-grow">
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           {/* --- PUBLIC ROUTES --- */}
           <Route path="/" element={<Home />} />
@@ -207,6 +221,7 @@ const AppContent = () => {
           {/* CATCH ALL */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+        </Suspense>
       </main>
 
       {/* SHOW FOOTER ONLY ON PUBLIC PAGES */}
