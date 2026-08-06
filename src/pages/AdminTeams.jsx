@@ -263,7 +263,7 @@ const AdminTeams = () => {
                 {formData.leadership.map((leader, index) => (
                   <div key={index} className="bg-slate-50 dark:bg-slate-950/60 p-6 rounded-3xl border border-slate-200 dark:border-white/5 relative group transition-all">
                     {isPowerUser && (
-                      <button type="button" onClick={() => setFormData({...formData, leadership: formData.leadership.filter((_, i) => i !== index)})} className="absolute top-4 right-4 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                      <button type="button" title="Remove officer" onClick={() => setFormData({...formData, leadership: formData.leadership.filter((_, i) => i !== index)})} className="absolute top-4 right-4 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
                     )}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <select
@@ -305,7 +305,7 @@ const AdminTeams = () => {
               </h3>
               <div className="grid gap-4">
                 {accessibleTeams.map(team => (
-                  <div key={team.id} onClick={() => handleEdit(team)} className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl flex justify-between items-center group hover:border-yellow-500 transition-all cursor-pointer shadow-sm dark:shadow-none">
+                  <div key={team.id} onClick={() => handleEdit(team)} title="Click to edit this team" className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl flex justify-between items-center group hover:border-yellow-500 transition-all cursor-pointer shadow-sm dark:shadow-none">
                     <div>
                       <h4 className="font-black uppercase italic text-xl group-hover:text-yellow-600 dark:group-hover:text-yellow-500 transition-colors leading-none mb-2">{team.name}</h4>
                       <span className="text-[9px] font-black px-2 py-1 rounded-md uppercase bg-slate-100 dark:bg-white/5 text-slate-400">{team.status}</span>
@@ -313,7 +313,7 @@ const AdminTeams = () => {
                     <div className="flex gap-2">
                       <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-yellow-600 dark:group-hover:text-white transition-all"><Edit3 size={16}/></div>
                       {isPowerUser && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ open: true, id: team.id, name: team.name }); }} className="w-10 h-10 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
+                        <button title="Delete team" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ open: true, id: team.id, name: team.name }); }} className="w-10 h-10 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
                       )}
                     </div>
                   </div>

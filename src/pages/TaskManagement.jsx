@@ -131,7 +131,7 @@ const TaskManagement = () => {
                     </p>
                   </div>
                   {canDelete && (
-                    <button onClick={() => handleDeleteTask(t.id)} className="text-slate-600 hover:text-red-500 transition-colors flex-shrink-0">
+                    <button title="Delete task" onClick={() => handleDeleteTask(t.id)} className="text-slate-600 hover:text-red-500 transition-colors flex-shrink-0">
                       <Trash2 size={16} />
                     </button>
                   )}

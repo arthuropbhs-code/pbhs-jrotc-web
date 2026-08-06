@@ -188,10 +188,10 @@ const AdminDocuments = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" title="Download" className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                   <Download size={18} />
                 </a>
-                <button onClick={() => setDeleteConfirm(d)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                <button title="Remove document" onClick={() => setDeleteConfirm(d)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                   <Trash2 size={18} />
                 </button>
               </div>
@@ -212,7 +212,7 @@ const AdminDocuments = () => {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-black uppercase italic">Upload Document</h3>
-                <button type="button" onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white"><X size={20} /></button>
+                <button type="button" title="Close" onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white"><X size={20} /></button>
               </div>
 
               <div>

@@ -310,8 +310,9 @@ const AdminOrders = () => {
                 </div>
                 
                 {((ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[item.issuerRole] || 0)) && (
-                  <button 
-                    onClick={() => requestDelete(item)} 
+                  <button
+                    title="Delete this transmission"
+                    onClick={() => requestDelete(item)}
                     className="p-3.5 text-slate-300 dark:text-slate-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all"
                   >
                     <Trash2 size={18} />

@@ -150,10 +150,10 @@ const AdminCamps = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => openEdit(camp)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                <button title="Edit camp" onClick={() => openEdit(camp)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                   <Edit3 size={18} />
                 </button>
-                <button onClick={() => setDeleteConfirm({ open: true, id: camp.id, name: camp.name })} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                <button title="Delete camp" onClick={() => setDeleteConfirm({ open: true, id: camp.id, name: camp.name })} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                   <Trash2 size={18} />
                 </button>
               </div>
@@ -175,7 +175,7 @@ const AdminCamps = () => {
                 <h2 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
                   {editingCamp ? 'Edit Camp' : 'Log New Camp'}
                 </h2>
-                <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
+                <button title="Close" onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
               </div>
 
               <form onSubmit={handleSave} className="space-y-5">
@@ -217,7 +217,7 @@ const AdminCamps = () => {
                           <option key={p.id} value={p.id}>{p.fullName}{p.rank ? ` (${p.rank})` : ''}</option>
                         ))}
                       </select>
-                      <button type="button" onClick={() => removeAttendeeRow(i)} className="p-3 text-slate-400 hover:text-red-500 flex-shrink-0">
+                      <button type="button" title="Remove attendee" onClick={() => removeAttendeeRow(i)} className="p-3 text-slate-400 hover:text-red-500 flex-shrink-0">
                         <Trash2 size={16} />
                       </button>
                     </div>

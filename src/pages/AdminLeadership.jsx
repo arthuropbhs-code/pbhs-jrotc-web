@@ -228,10 +228,10 @@ const AdminLeadership = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => openEditLeader(item)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                    <button title="Edit leader" onClick={() => openEditLeader(item)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
-                    <button onClick={() => handleDeleteLeader(item.id)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                    <button title="Delete leader" onClick={() => handleDeleteLeader(item.id)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -263,10 +263,10 @@ const AdminLeadership = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => openEditInstructor(item)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                    <button title="Edit instructor" onClick={() => openEditInstructor(item)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
-                    <button onClick={() => handleDeleteInstructor(item.id)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                    <button title="Delete instructor" onClick={() => handleDeleteInstructor(item.id)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -290,7 +290,7 @@ const AdminLeadership = () => {
                 <h2 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
                   {editingLeader ? 'Edit Leadership Record' : 'New Leadership Record'}
                 </h2>
-                <button onClick={() => setShowLeaderModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
+                <button title="Close" onClick={() => setShowLeaderModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
               </div>
 
               <form onSubmit={handleSaveLeader} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -368,7 +368,7 @@ const AdminLeadership = () => {
                 <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
                   {editingInstructor ? 'Edit Instructor' : 'New Instructor'}
                 </h2>
-                <button onClick={() => setShowInstructorModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
+                <button title="Close" onClick={() => setShowInstructorModal(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white"><X /></button>
               </div>
 
               <form onSubmit={handleSaveInstructor} className="space-y-6">

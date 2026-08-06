@@ -42,10 +42,12 @@ const Footer = () => {
               "To motivate young people to be better citizens."
             </p>
             <div className="flex gap-4">
-              <a 
-                href="https://www.instagram.com/pbhs.battalion" 
-                target="_blank" 
+              <a
+                href="https://www.instagram.com/pbhs.battalion"
+                target="_blank"
                 rel="noopener noreferrer"
+                title="Instagram"
+                aria-label="PBHS JROTC on Instagram"
                 className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-yellow-500 transition-colors"
               >
                 <Instagram size={18} />
@@ -54,6 +56,8 @@ const Footer = () => {
                 href="https://www.youtube.com/@pbhsjrotc"
                 target="_blank"
                 rel="noopener noreferrer"
+                title="YouTube"
+                aria-label="PBHS JROTC on YouTube"
                 className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-yellow-500 transition-colors"
               >
                 <Youtube size={18} />

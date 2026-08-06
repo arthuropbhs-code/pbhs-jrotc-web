@@ -301,7 +301,7 @@ const UniformRequests = () => {
                 <p className="text-[10px] text-slate-500 font-bold uppercase">Issued By: {req.issuedBy || "S-4 Staff"}</p>
               </div>
               {isS4Master && (
-                <button onClick={() => setDeleteConfirm(req.id)} className="text-slate-700 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                <button title="Delete request" onClick={() => setDeleteConfirm(req.id)} className="text-slate-700 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
               )}
             </div>
             
@@ -340,7 +340,7 @@ const UniformRequests = () => {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-black uppercase italic tracking-tighter">Issue Supply</h2>
-                <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white"><X /></button>
+                <button title="Close" onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white"><X /></button>
               </div>
 
               <form onSubmit={handleSubmitRequest} className="space-y-4">

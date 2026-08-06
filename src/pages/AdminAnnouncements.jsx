@@ -186,7 +186,7 @@ const AdminAnnouncements = () => {
                        <span className="text-[8px] text-slate-400 dark:text-slate-500 font-black px-1 rounded bg-slate-200 dark:bg-white/10">LVL {item.issuerLevel}</span>
                     </div>
                   </div>
-                  <button onClick={() => handleDelete(item.id, item.issuerLevel)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-2 transition-colors">
+                  <button title="Delete announcement" onClick={() => handleDelete(item.id, item.issuerLevel)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-2 transition-colors">
                     <Trash2 size={18} />
                   </button>
                 </div>

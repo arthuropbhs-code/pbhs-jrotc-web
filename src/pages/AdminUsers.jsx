@@ -381,11 +381,11 @@ const AdminUsers = () => {
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); setSuspendStatus(null); setDeleteAccountStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
+                    <button title="Edit personnel record" onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); setSuspendStatus(null); setDeleteAccountStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
                     {(p.isManual || isBattalionStaff) && (
-                        <button onClick={async () => { if(window.confirm("Delete record?")) await deleteDoc(doc(db, "users", p.id)) }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                        <button title="Delete this record" onClick={async () => { if(window.confirm("Delete record?")) await deleteDoc(doc(db, "users", p.id)) }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                             <UserMinus size={18} />
                         </button>
                     )}
