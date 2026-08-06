@@ -126,17 +126,27 @@ const Home = () => {
             Pompano Beach High School JROTC
           </motion.span>
           
-          <motion.h1 
-            key={slides[currentIndex].title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-9xl font-black text-white mb-6 tracking-tighter leading-none"
-          >
-            {slides[currentIndex].title} <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-yellow-200 to-yellow-600">
-              {slides[currentIndex].subtitle}
-            </span>
-          </motion.h1>
+          {/* Reserves height for the title block so switching slides doesn't
+              shift the buttons/dots below it - title+subtitle line count
+              varies per slide (e.g. "BATTALION" vs "READY FOR THE
+              CHALLENGE"), which was causing real layout shift (flagged by
+              PageSpeed Insights as CLS 0.138 on desktop). Heights below are
+              measured worst-cases across all 8 slides at each breakpoint,
+              not guessed - the md tier is tallest because text-9xl barely
+              fits the 768-1023px range before lg-width gives it more room. */}
+          <div className="min-h-[280px] md:min-h-[550px] lg:min-h-[420px] flex items-center justify-center">
+            <motion.h1
+              key={slides[currentIndex].title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-6xl md:text-9xl font-black text-white mb-6 tracking-tighter leading-none"
+            >
+              {slides[currentIndex].title} <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-yellow-200 to-yellow-600">
+                {slides[currentIndex].subtitle}
+              </span>
+            </motion.h1>
+          </div>
           <div className="flex flex-wrap justify-center gap-4 mt-10">
             {/* Visible text stays short ("Learn More"); the sr-only span extends
                 the link's actual text content so both screen readers and SEO
