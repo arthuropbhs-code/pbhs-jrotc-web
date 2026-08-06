@@ -9,8 +9,14 @@ import {
   Moon, ArrowLeft, Ban
 } from 'lucide-react';
 import { TeamsPageSkeleton } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Teams = () => {
+  usePageMeta({
+    title: 'Battalion Teams',
+    description: 'Extracurricular battalion teams - Drill, Raiders, Color Guard, and more. See schedules and joining requirements.',
+    path: '/teams',
+  });
   const navigate = useNavigate();
   const [activeTeam, setActiveTeam] = useState(null);
   const [teamsData, setTeamsData] = useState({});

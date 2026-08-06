@@ -3,8 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Users } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Leadership = () => {
+  usePageMeta({
+    title: 'Leadership',
+    description: 'Meet the PBHS JROTC Tornado Battalion command staff, company leadership, and instructors.',
+    path: '/leadership',
+  });
   const [activeTab, setActiveTab] = useState('staff');
   const [cmsEntries, setCmsEntries] = useState([]);
 

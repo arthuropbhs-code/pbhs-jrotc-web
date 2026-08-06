@@ -4,8 +4,10 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const AdminLogin = () => {
+  usePageMeta({ title: 'Command Login' });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

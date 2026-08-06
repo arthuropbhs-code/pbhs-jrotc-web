@@ -4,8 +4,14 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const CalendarPage = () => {
+  usePageMeta({
+    title: 'Events Calendar',
+    description: 'Upcoming PBHS JROTC Tornado Battalion events, meetings, and competitions.',
+    path: '/events',
+  });
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
 

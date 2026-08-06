@@ -1,8 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera, ExternalLink, Image as ImageIcon, FolderOpen } from 'lucide-react';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Photos = () => {
+  usePageMeta({
+    title: 'Photo Gallery',
+    description: 'Battalion event photo albums - parades, competitions, and community events.',
+    path: '/photos',
+  });
   // CONFIGURATION: 
   // 1. Drop your images into /public/covers/
   // 2. Put the exact filename in the 'coverImage' field below.

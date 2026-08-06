@@ -5,8 +5,14 @@ import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_PROMOTION_BOARD } from '../data/defaultPageContent';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const PromotionBoard = () => {
+  usePageMeta({
+    title: 'Promotion Study Guide',
+    description: 'Promotion board study guide and requirements by rank for PBHS JROTC Tornado Battalion.',
+    path: '/promotion-board',
+  });
   const [selectedRank, setSelectedRank] = useState('Squad Member');
   const [activeAsst, setActiveAsst] = useState('S-1');
   const [content, setContent] = useState(DEFAULT_PROMOTION_BOARD);

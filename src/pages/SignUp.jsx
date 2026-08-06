@@ -23,6 +23,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 // Requires the military roster convention: "LASTNAME, FIRSTNAME" (each side
 // may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
@@ -37,6 +38,7 @@ const isStrongPassword = (pw) => pw.length >= 8 && /[A-Za-z]/.test(pw) && /[0-9]
 const RECAPTCHA_SITE_KEY = '6LdrsG8tAAAAACBhWISbSEBFGp012DSPT87auHy9';
 
 const SignUp = () => {
+  usePageMeta({ title: 'Create Cadet Account' });
   const [formData, setFormData] = useState({
     name: '',
     email: '',

@@ -3,6 +3,7 @@ import { Shield, Star, Users, Award, Target, Scale, GraduationCap } from 'lucide
 import { db } from '../firebase';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_CADET_INFO } from '../data/defaultPageContent';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 // --- DYNAMIC RANK SYMBOL ENGINE (CLEAN & SPACED) ---
 const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
@@ -87,6 +88,11 @@ const RankItem = ({ name, description, symbolProps }) => (
 );
 
 const CadetInfo = () => {
+  usePageMeta({
+    title: 'Cadet Info',
+    description: 'Cadet creed, rank structure, and general information for PBHS JROTC Tornado Battalion cadets.',
+    path: '/cadet-info',
+  });
   // Local states for dynamic data layers
   const [commandStaff, setCommandStaff] = useState({ bc: 'Loading...', xo: 'Loading...', csm: 'Loading...' });
   const [instructors, setInstructors] = useState({ sai: 'LTC Johnson', ai: '1SG Chevrestt' });

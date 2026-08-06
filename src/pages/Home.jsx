@@ -5,8 +5,15 @@ import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Home = () => {
+  // No title override here: the root page keeps the plain "PBHS JROTC"
+  // brand title (matches index.html's static tag) rather than "Home | ...".
+  usePageMeta({
+    description: 'Official site of the Pompano Beach High School Army JROTC Tornado Battalion - leadership, discipline, and citizenship.',
+    path: '/',
+  });
   const [topThree, setTopThree] = useState([]);
   const [topThreeLoading, setTopThreeLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);

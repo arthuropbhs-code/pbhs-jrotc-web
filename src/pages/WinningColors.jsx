@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { Shield, Award, HelpCircle, RefreshCw, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const WinningColors = () => {
+  usePageMeta({
+    title: 'Winning Colors Assessment',
+    description: 'Winning Colors personal behavioral assessment for PBHS JROTC Tornado Battalion cadets.',
+    path: '/cadet-info/winning-colors',
+  });
   // 5 rows of assessment questions matching your file layout
   const assessmentRows = [
     {
@@ -126,12 +132,12 @@ const WinningColors = () => {
           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
             <Award size={120} className="text-slate-900 dark:text-white" />
           </div>
-          <h3 className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
+          <h2 className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-[0.4em] mb-2 flex items-center gap-2">
             <Shield size={14} /> Personal Growth & Behaviors
-          </h3>
-          <h4 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+          </h2>
+          <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
             Winning Colors® Assessment
-          </h4>
+          </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium max-w-2xl leading-relaxed">
             Exercise #1: Discover your present communication behavioral strengths. Rank the traits horizontally across each row from <strong className="text-yellow-600 dark:text-yellow-500">1 (Most Important)</strong> to <strong className="text-slate-400">4 (Least Important)</strong>.
           </p>

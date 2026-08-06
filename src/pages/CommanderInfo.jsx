@@ -7,12 +7,18 @@ import {
   Loader2, CalendarDays, UserCircle, Users, Clock 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const CommanderInfo = () => {
   const { id } = useParams();
   const [team, setTeam] = useState(null);
   const [leadershipDossiers, setLeadershipDossiers] = useState([]);
   const [loading, setLoading] = useState(true);
+  usePageMeta({
+    title: team?.name ? `${team.name} Team` : 'Team Operational File',
+    description: team?.description || 'Battalion team roster and commander contact information.',
+    path: `/commander/${id}`,
+  });
 
   // YOUR LOGIC: Sorting Priority
   const getRankPriority = (role) => {
@@ -199,7 +205,7 @@ const CommanderInfo = () => {
                 <header className="mb-10 flex flex-col md:flex-row justify-between items-start border-b border-slate-100 dark:border-white/5 pb-8 relative z-10 gap-4">
                   <div>
                     <h3 className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-[0.4em] mb-2">Team Operational File</h3>
-                    <h4 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{team?.name}</h4>
+                    <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{team?.name}</h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium max-w-xl leading-relaxed">{team?.description}</p>
                   </div>
                   <Award className="text-slate-200 dark:text-slate-800 shrink-0" size={64} />

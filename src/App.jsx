@@ -17,6 +17,7 @@ import Footer from './components/Footer';
 // open. Home stays eager since it's the page nearly everyone lands on first
 // and there's no benefit to a loading flash on the very first paint.
 import Home from './pages/Home';
+const NotFound = lazy(() => import('./pages/NotFound'));
 const SignUp = lazy(() => import('./pages/SignUp'));
 const Photos = lazy(() => import('./pages/Photos'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -218,8 +219,13 @@ const AppContent = () => {
           {/* No minLevel here: every signed-in user manages their own profile */}
           <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
-          {/* CATCH ALL */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* CATCH ALL - was a silent redirect to Home; now a real 404 page.
+              Note: since this is a client-side SPA with a Vercel rewrite
+              serving index.html for every unmatched path, the HTTP response
+              itself is still a 200, not a true 404 status code - that's an
+              inherent limitation of this hosting architecture without a
+              server-side/edge function, not something this route can fix. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
       </main>

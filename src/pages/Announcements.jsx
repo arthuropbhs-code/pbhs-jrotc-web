@@ -5,6 +5,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { ROLE_HIERARCHY } from '../constants';
 import { AnnouncementCardSkeleton } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 // Mirrors AdminAnnouncements.jsx's getAvailableTargets() so a viewer only
 // sees announcements actually addressed to them (plus anything sent to "All").
@@ -20,6 +21,11 @@ const getAllowedTargets = (userData, userPower) => {
 };
 
 const Announcements = () => {
+  usePageMeta({
+    title: 'Announcements',
+    description: 'Battalion-wide announcements and upcoming events for PBHS JROTC Tornado Battalion.',
+    path: '/announcements',
+  });
   const { userData, role } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);

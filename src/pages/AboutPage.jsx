@@ -14,12 +14,18 @@ import {
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_ABOUT } from '../data/defaultPageContent';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 // History/pillar icons are structural (fixed per position), not editable content.
 const HISTORY_ICONS = [History, MapPin, School];
 const PILLAR_ICONS = [Shield, Target, Users, Award];
 
 const AboutPage = () => {
+  usePageMeta({
+    title: 'About',
+    description: 'Learn about Pompano Beach High School JROTC - the Tornado Battalion\'s history, mission, and program.',
+    path: '/about',
+  });
   const [content, setContent] = useState(DEFAULT_ABOUT);
 
   useEffect(() => {

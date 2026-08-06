@@ -4,6 +4,7 @@ import { ArrowLeft, FileText, Download, File } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { DocumentRowSkeleton } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const formatBytes = (bytes) => {
   if (!bytes) return '';
@@ -12,6 +13,11 @@ const formatBytes = (bytes) => {
 };
 
 const Documents = () => {
+  usePageMeta({
+    title: 'Documents & Regulations',
+    description: 'Published reference documents and regulations for PBHS JROTC Tornado Battalion.',
+    path: '/documents',
+  });
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 

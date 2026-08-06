@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const EFFECTIVE_DATE = "August 1, 2026";
 
@@ -16,6 +17,11 @@ const Section = ({ n, title, children }) => (
 );
 
 const PrivacyPolicy = () => {
+  usePageMeta({
+    title: 'Privacy Policy',
+    description: 'Privacy policy for the PBHS JROTC Tornado Battalion website.',
+    path: '/privacy',
+  });
   return (
     <div className="min-h-screen transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans">
 
