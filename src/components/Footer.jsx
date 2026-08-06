@@ -33,7 +33,7 @@ const Footer = () => {
                 <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">
                   PBHS <span className="text-yellow-500">JROTC</span>
                 </h2>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
                   Tornado Battalion
                 </p>
               </div>
@@ -67,7 +67,7 @@ const Footer = () => {
 
           {/* COLUMN 2: QUICK RESOURCES */}
           <div>
-            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Resources</h4>
+            <h3 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Resources</h3>
             <ul className="space-y-4">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
@@ -82,7 +82,7 @@ const Footer = () => {
 
           {/* COLUMN 3: BATTALION */}
           <div>
-            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Battalion</h4>
+            <h3 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Battalion</h3>
             <ul className="space-y-4">
               {footerLinks.battalion.map((link) => (
                 <li key={link.name}>
@@ -97,7 +97,7 @@ const Footer = () => {
 
           {/* COLUMN 4: CONTACT / LOCATION */}
           <div className="space-y-6">
-            <h4 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Contact</h4>
+            <h3 className="text-yellow-500 font-black uppercase text-xs mb-6 tracking-widest">Contact</h3>
             <div className="space-y-4 text-sm text-slate-400">
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-yellow-500 shrink-0" />
@@ -114,17 +114,17 @@ const Footer = () => {
 
         {/* DISCLAIMER BOX */}
         <div className="mb-8 p-4 bg-white/5 border border-white/10 rounded-xl">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider leading-relaxed text-center">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider leading-relaxed text-center">
             <span className="text-yellow-500 font-black">Disclaimer:</span> This current website is not affiliated with PBHS JROTC Tornado Battalion BCPS, Army JROTC, or Pompano Beach High. This is an independent project.
           </p>
         </div>
 
         {/* BOTTOM BAR */}
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             © {currentYear} PBHS JROTC Tornado Battalion.
           </p>
-          <div className="flex items-center gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+          <div className="flex items-center gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             <Link to="/privacy" className="hover:text-yellow-500 transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-yellow-500 transition-colors">Terms of Service</Link>
             <Link to="/admin" className="hover:text-yellow-500 transition-colors">Admin Portal</Link>

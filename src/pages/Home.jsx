@@ -138,7 +138,7 @@ const Home = () => {
             </span>
           </motion.h1>
           <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <Link to="/About" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
+            <Link to="/About" aria-label="Learn more about PBHS JROTC" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
               Learn More
             </Link>
             <Link to="/teams" className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md">
@@ -146,17 +146,19 @@ const Home = () => {
             </Link>
           </div>
         </div>
-        <button onClick={prevSlide} className="absolute left-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
+        <button onClick={prevSlide} aria-label="Previous slide" className="absolute left-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
           <ChevronLeft size={48} />
         </button>
-        <button onClick={nextSlide} className="absolute right-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
+        <button onClick={nextSlide} aria-label="Next slide" className="absolute right-6 z-20 p-2 text-white/30 hover:text-yellow-500 transition-colors hidden md:block">
           <ChevronRight size={48} />
         </button>
         <div className="absolute bottom-10 flex gap-2 z-20">
-          {slides.map((_, i) => (
-            <button 
-              key={i} 
+          {slides.map((slide, i) => (
+            <button
+              key={i}
               onClick={() => setCurrentIndex(i)}
+              aria-label={`Go to slide ${i + 1}: ${slide.title}`}
+              aria-current={i === currentIndex ? "true" : undefined}
               className={`h-1.5 transition-all duration-500 rounded-full ${i === currentIndex ? "w-12 bg-yellow-500" : "w-4 bg-white/20"}`}
             />
           ))}
@@ -190,7 +192,7 @@ const Home = () => {
       {/* --- ARMY VALUES --- */}
       <section className="py-24 bg-white text-slate-950">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-400 uppercase mb-16">The Seven Army Values</h2>
+          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-16">The Seven Army Values</h2>
           <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
             {['Loyalty', 'Duty', 'Respect', 'Service', 'Honor', 'Integrity', 'Courage'].map((val, i) => (
               <div key={i} className="group border border-slate-100 p-6 flex flex-col items-center hover:bg-slate-950 hover:text-white transition-all duration-500 rounded-2xl cursor-default">

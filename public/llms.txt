@@ -1,0 +1,19 @@
+# PBHS JROTC - Tornado Battalion
+
+> Official web presence for the Pompano Beach High School Army JROTC "Tornado Battalion" - cadet information, leadership roster, battalion teams, announcements, and documents. Most content is public; account creation and admin tools are for enrolled cadets and staff only.
+
+## Public pages
+
+- [Home](https://pbhsjrotc.vercel.app/): Battalion overview and highlights
+- [About](https://pbhsjrotc.vercel.app/about): Program background and history
+- [Cadet Info](https://pbhsjrotc.vercel.app/cadet-info): Cadet creed, rank structure, and general information
+- [Leadership](https://pbhsjrotc.vercel.app/leadership): Battalion command staff roster
+- [Teams](https://pbhsjrotc.vercel.app/teams): Battalion extracurricular teams (Drill, Raiders, Color Guard, etc.)
+- [Announcements](https://pbhsjrotc.vercel.app/announcements): Battalion-wide announcements and events
+- [Documents & Regulations](https://pbhsjrotc.vercel.app/documents): Published reference documents
+- [Photo Gallery](https://pbhsjrotc.vercel.app/photos): Links to event photo albums
+
+## Notes
+
+- Pages under /admin require an authenticated cadet or staff account and are not meant for public indexing (see /robots.txt).
+- This site is independently built and is not an official Broward County Public Schools or U.S. Army JROTC domain.

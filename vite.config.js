@@ -13,6 +13,11 @@ export default defineConfig({
         // past the 500kB warning threshold.
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
+          // Analytics is intentionally left OUT of vendor-firebase: it's
+          // loaded via dynamic import() in firebase.js so it gets its own
+          // chunk, fetched lazily after first render instead of bundled
+          // into the eager chunk every single page pays for.
+          if (id.includes('firebase/analytics') || id.includes('@firebase/analytics')) return;
           if (id.includes('firebase') || id.includes('@firebase')) return 'vendor-firebase';
           if (id.includes('framer-motion')) return 'vendor-motion';
           if (id.includes('react-router') || id.includes('/react/') || id.includes('/react-dom/')) return 'vendor-react';
