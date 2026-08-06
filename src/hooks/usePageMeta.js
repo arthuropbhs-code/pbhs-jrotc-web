@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 const SITE_NAME = 'PBHS JROTC';
-const BASE_URL = 'https://pbhsjrotc.vercel.app';
+const BASE_URL = 'https://pbhsjrotc.com';
 
 const setMetaTag = (selector, attr, value) => {
   let el = document.querySelector(selector);

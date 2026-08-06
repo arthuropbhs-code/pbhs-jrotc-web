@@ -4,14 +4,14 @@
 
 ## Public pages
 
-- [Home](https://pbhsjrotc.vercel.app/): Battalion overview and highlights
-- [About](https://pbhsjrotc.vercel.app/about): Program background and history
-- [Cadet Info](https://pbhsjrotc.vercel.app/cadet-info): Cadet creed, rank structure, and general information
-- [Leadership](https://pbhsjrotc.vercel.app/leadership): Battalion command staff roster
-- [Teams](https://pbhsjrotc.vercel.app/teams): Battalion extracurricular teams (Drill, Raiders, Color Guard, etc.)
-- [Announcements](https://pbhsjrotc.vercel.app/announcements): Battalion-wide announcements and events
-- [Documents & Regulations](https://pbhsjrotc.vercel.app/documents): Published reference documents
-- [Photo Gallery](https://pbhsjrotc.vercel.app/photos): Links to event photo albums
+- [Home](https://pbhsjrotc.com/): Battalion overview and highlights
+- [About](https://pbhsjrotc.com/about): Program background and history
+- [Cadet Info](https://pbhsjrotc.com/cadet-info): Cadet creed, rank structure, and general information
+- [Leadership](https://pbhsjrotc.com/leadership): Battalion command staff roster
+- [Teams](https://pbhsjrotc.com/teams): Battalion extracurricular teams (Drill, Raiders, Color Guard, etc.)
+- [Announcements](https://pbhsjrotc.com/announcements): Battalion-wide announcements and events
+- [Documents & Regulations](https://pbhsjrotc.com/documents): Published reference documents
+- [Photo Gallery](https://pbhsjrotc.com/photos): Links to event photo albums
 
 ## Notes
 

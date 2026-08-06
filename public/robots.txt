@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://pbhsjrotc.vercel.app/sitemap.xml
+Sitemap: https://pbhsjrotc.com/sitemap.xml
