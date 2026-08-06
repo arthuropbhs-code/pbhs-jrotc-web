@@ -140,10 +140,18 @@ const Home = () => {
               not guessed - the md tier is tallest because text-9xl barely
               fits the 768-1023px range before lg-width gives it more room. */}
           <div className="min-h-[280px] md:min-h-[550px] lg:min-h-[420px] flex items-center justify-center">
+            {/* Pure opacity fade, no y-transform: PageSpeed Insights flagged
+                this exact element as the CLS culprit (0.147 on desktop) -
+                the Layout Instability API counts any unexpected visible
+                movement between frames, including transform-driven ones,
+                since this re-animates on every auto-advance (every 8s,
+                no user input) rather than just once on mount. The reserved-
+                height wrapper above already stops the container from
+                resizing; this stops the text itself from sliding. */}
             <motion.h1
               key={slides[currentIndex].title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="text-6xl md:text-9xl font-black text-white mb-6 tracking-tighter leading-none"
             >
               {slides[currentIndex].title} <br />
