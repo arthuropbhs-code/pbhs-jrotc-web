@@ -6,8 +6,9 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { 
   Crosshair, Shield, Flag, Trophy, Target, 
   ChevronRight, Clock, MapPin, Lock, Globe, 
-  Moon, ArrowLeft, Ban, Loader2
+  Moon, ArrowLeft, Ban
 } from 'lucide-react';
+import { TeamsPageSkeleton } from '../components/Skeleton';
 
 const Teams = () => {
   const navigate = useNavigate();
@@ -64,15 +65,6 @@ const handleContactCommander = () => {
   }
 };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <Loader2 className="animate-spin text-yellow-500 mb-4" size={40} />
-        <p className="text-xs font-black uppercase tracking-[0.3em]">Syncing Operations...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6 text-left font-sans">
       <div className="max-w-6xl mx-auto">
@@ -88,8 +80,11 @@ const handleContactCommander = () => {
           </h1>
         </header>
 
+        {loading ? (
+          <TeamsPageSkeleton />
+        ) : (
         <div className="grid lg:grid-cols-4 gap-8">
-          
+
           {/* Sidebar Navigation */}
           <div className="space-y-2">
             {Object.keys(teamsData).map((team) => (
@@ -97,8 +92,8 @@ const handleContactCommander = () => {
                 key={team}
                 onClick={() => setActiveTeam(team)}
                 className={`w-full p-4 rounded-xl border text-left transition-all flex items-center justify-between group ${
-                  activeTeam === team 
-                  ? 'bg-yellow-500 border-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
+                  activeTeam === team
+                  ? 'bg-yellow-500 border-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
                   : 'bg-slate-900/50 border-white/5 text-slate-400 hover:border-slate-700'
                 }`}
               >
@@ -194,6 +189,7 @@ const handleContactCommander = () => {
             </AnimatePresence>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

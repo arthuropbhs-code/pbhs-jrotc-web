@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Download, File } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { DocumentRowSkeleton } from '../components/Skeleton';
 
 const formatBytes = (bytes) => {
   if (!bytes) return '';
@@ -50,7 +51,11 @@ const Documents = () => {
 
       <div className="max-w-4xl mx-auto px-6 py-20">
         {loading && (
-          <p className="text-center text-slate-400 text-sm font-bold uppercase tracking-widest">Loading...</p>
+          <div className="space-y-4">
+            <DocumentRowSkeleton />
+            <DocumentRowSkeleton />
+            <DocumentRowSkeleton />
+          </div>
         )}
 
         {!loading && documents.length === 0 && (

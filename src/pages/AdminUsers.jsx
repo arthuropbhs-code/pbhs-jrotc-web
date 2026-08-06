@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
+import { RosterRowSkeleton } from '../components/Skeleton';
 
 // Requires the military roster convention: "LASTNAME, FIRSTNAME" (each side
 // may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
@@ -29,6 +30,7 @@ const AdminUsers = () => {
   const { user, role, loading: authLoading } = useAuth();
   
   const [personnel, setPersonnel] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(true);
   const [unlinkedAccounts, setUnlinkedAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [status, setStatus] = useState(null);
@@ -117,7 +119,8 @@ const AdminUsers = () => {
 
         setPersonnel(roster);
         setUnlinkedAccounts(unlinked);
-      });
+        setRosterLoading(false);
+      }, () => setRosterLoading(false));
       return () => unsubscribe();
     }
   }, [authLoading, isAuthorized, user?.company, isBattalionStaff]);
@@ -343,7 +346,15 @@ const AdminUsers = () => {
 
         {/* Roster List */}
         <div className="grid gap-4">
-          {personnel.filter(p => (p.fullName || '').toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+          {rosterLoading ? (
+            <>
+              <RosterRowSkeleton />
+              <RosterRowSkeleton />
+              <RosterRowSkeleton />
+              <RosterRowSkeleton />
+              <RosterRowSkeleton />
+            </>
+          ) : personnel.filter(p => (p.fullName || '').toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
              <div key={p.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-6 rounded-[2rem] flex flex-wrap items-center justify-between gap-6 hover:shadow-md transition-all">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-white/5 text-slate-400 dark:text-slate-500">

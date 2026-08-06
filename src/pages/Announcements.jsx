@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { ROLE_HIERARCHY } from '../constants';
+import { AnnouncementCardSkeleton } from '../components/Skeleton';
 
 // Mirrors AdminAnnouncements.jsx's getAvailableTargets() so a viewer only
 // sees announcements actually addressed to them (plus anything sent to "All").
@@ -69,9 +70,10 @@ const Announcements = () => {
 
         {/* LOADING STATE */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-yellow-500"></div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-500">Retrieving Orders...</p>
+          <div className="space-y-8">
+            <AnnouncementCardSkeleton />
+            <AnnouncementCardSkeleton />
+            <AnnouncementCardSkeleton />
           </div>
         ) : announcements.length === 0 ? (
           /* EMPTY STATE */
