@@ -78,6 +78,28 @@ export const TeamsPageSkeleton = () => (
   </div>
 );
 
+// Home.jsx "Live Bulletins" card - matches the real card's
+// bg-slate-950 border p-6 rounded-2xl shape
+export const BulletinCardSkeleton = () => (
+  <div className="bg-slate-950 border border-white/5 p-6 rounded-2xl">
+    <SkeletonBlock className="h-3 w-24 mb-3" />
+    <SkeletonBlock className="h-4 w-full mb-2" />
+    <SkeletonBlock className="h-4 w-5/6 mb-4" />
+    <SkeletonBlock className="h-3 w-20" />
+  </div>
+);
+
+// Home.jsx "Meet the Top 3" portrait card - matches the real card's
+// aspect-[3/4] image + name/rank/quote layout
+export const TopThreeCardSkeleton = () => (
+  <div>
+    <SkeletonBlock className="aspect-[3/4] w-full rounded-2xl mb-6" />
+    <SkeletonBlock className="h-5 w-2/3 mb-2" />
+    <SkeletonBlock className="h-3 w-1/2 mb-4" />
+    <SkeletonBlock className="h-3 w-full" />
+  </div>
+);
+
 // AdminUsers.jsx roster card row
 export const RosterRowSkeleton = () => (
   <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-5 flex items-center gap-4">

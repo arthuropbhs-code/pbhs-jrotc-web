@@ -4,11 +4,14 @@ import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Mega
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
 
 const Home = () => {
   const [topThree, setTopThree] = useState([]);
+  const [topThreeLoading, setTopThreeLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [news, setNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
 
   // --- SLIDESHOW DATA ---
   const slides = [
@@ -71,6 +74,7 @@ const Home = () => {
       });
 
       setTopThree(filteredTopThree);
+      setTopThreeLoading(false);
     });
 
     return () => unsubscribe();
@@ -87,6 +91,7 @@ const Home = () => {
     const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(3));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setNewsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -180,8 +185,14 @@ const Home = () => {
         </div>
       </section>
 
-      {/* --- LIVE BULLETINS --- */}
-      {news.length > 0 && (
+      {/* --- LIVE BULLETINS ---
+          Rendered while loading (as skeletons) as well as once populated,
+          not just when news.length > 0 - mounting this whole section only
+          after the Firestore fetch resolves was a real layout-shift source
+          (PageSpeed flagged CLS 0.147 on desktop): everything below it
+          jumped down the instant announcements loaded in. Reserving the
+          section's space from first paint eliminates that. */}
+      {(newsLoading || news.length > 0) && (
         <section className="py-12 bg-slate-900/50 border-y border-white/5">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center gap-3 mb-8">
@@ -189,16 +200,24 @@ const Home = () => {
               <h2 className="text-xs font-black uppercase tracking-[0.3em] text-white">Battalion Bulletins</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {news.map((item) => (
-                <div key={item.id} className="bg-slate-950 border border-white/5 p-6 rounded-2xl">
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-3 font-bold uppercase tracking-widest">
-                    <Clock size={12} />
-                    {item.timestamp?.toDate().toLocaleDateString() || "Active Order"}
+              {newsLoading ? (
+                <>
+                  <BulletinCardSkeleton />
+                  <BulletinCardSkeleton />
+                  <BulletinCardSkeleton />
+                </>
+              ) : (
+                news.map((item) => (
+                  <div key={item.id} className="bg-slate-950 border border-white/5 p-6 rounded-2xl">
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-3 font-bold uppercase tracking-widest">
+                      <Clock size={12} />
+                      {item.timestamp?.toDate().toLocaleDateString() || "Active Order"}
+                    </div>
+                    <p className="text-slate-300 text-sm leading-relaxed mb-4">{item.content}</p>
+                    <div className="text-yellow-500/40 text-[9px] font-black uppercase tracking-widest">Signed: {item.author}</div>
                   </div>
-                  <p className="text-slate-300 text-sm leading-relaxed mb-4">{item.content}</p>
-                  <div className="text-yellow-500/40 text-[9px] font-black uppercase tracking-widest">Signed: {item.author}</div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -226,8 +245,19 @@ const Home = () => {
             <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
             <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
           </div>
+          {/* Same reasoning as Battalion Bulletins above: skeleton cards
+              while topThree is still loading reserve this grid's real
+              height from first paint, instead of the grid collapsing to
+              0px and then jumping to full card height once Firestore's
+              leadership data arrives. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {topThree.map((leader, i) => (
+            {topThreeLoading ? (
+              <>
+                <TopThreeCardSkeleton />
+                <TopThreeCardSkeleton />
+                <TopThreeCardSkeleton />
+              </>
+            ) : topThree.map((leader, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
