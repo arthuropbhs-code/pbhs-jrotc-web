@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, getDocs, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Megaphone, Trash2, Send, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
@@ -46,15 +46,13 @@ const AdminAnnouncements = () => {
     return options;
   };
 
-  const fetchAnnouncements = async () => {
-    try {
-      const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"));
-      const snap = await getDocs(q);
+  useEffect(() => {
+    const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snap) => {
       setExistingAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) { console.error(err); }
-  };
-
-  useEffect(() => { fetchAnnouncements(); }, []);
+    }, (err) => console.error(err));
+    return () => unsubscribe();
+  }, []);
 
   const handleBroadcast = async (e) => {
     e.preventDefault();
@@ -81,7 +79,6 @@ const AdminAnnouncements = () => {
       });
       setText('');
       setSent(true);
-      fetchAnnouncements();
       setTimeout(() => setSent(false), 3000);
     } catch (err) { console.error("Broadcast Error:", err); }
   };
@@ -93,7 +90,6 @@ const AdminAnnouncements = () => {
     }
     if (window.confirm("Delete this announcement?")) {
       await deleteDoc(doc(db, "announcements", id));
-      fetchAnnouncements();
     }
   };
 
