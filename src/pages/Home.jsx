@@ -138,8 +138,13 @@ const Home = () => {
             </span>
           </motion.h1>
           <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <Link to="/About" aria-label="Learn more about PBHS JROTC" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
-              Learn More
+            {/* Visible text stays short ("Learn More"); the sr-only span extends
+                the link's actual text content so both screen readers and SEO
+                crawlers see real context instead of a generic phrase. An
+                aria-label alone would fix accessibility but Lighthouse's SEO
+                link-text check reads DOM textContent, not the accessible name. */}
+            <Link to="/About" className="bg-yellow-500 text-slate-950 px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
+              Learn More <span className="sr-only">about PBHS JROTC</span>
             </Link>
             <Link to="/teams" className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md">
               Battalion Teams
