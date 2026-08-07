@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase'; // Ensure your firebase config is exported from here
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { 
-  Crosshair, Shield, Flag, Trophy, Target, 
-  ChevronRight, Clock, MapPin, Lock, Globe, 
-  Moon, ArrowLeft, Ban
+import {
+  Crosshair, Shield, Flag, Trophy, Target,
+  ChevronRight, Clock, MapPin, Lock, Globe,
+  Moon, Ban
 } from 'lucide-react';
 import { TeamsPageSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -75,10 +75,6 @@ const handleContactCommander = () => {
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6 text-left font-sans">
       <div className="max-w-6xl mx-auto">
         
-        <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-yellow-500 mb-8 transition-colors text-sm font-bold uppercase tracking-widest">
-          <ArrowLeft size={16} /> Back to Command
-        </Link>
-
         <header className="mb-12">
           <h2 className="text-xs font-black text-yellow-500 tracking-[0.4em] uppercase mb-4">Extracurricular Activites</h2>
           <h1 className="text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter font-military">
@@ -192,9 +188,9 @@ const handleContactCommander = () => {
                       >
                         {currentTeam.status === "Closed Practice" ? <Lock size={14}/> : (currentTeam.status === "Out of Season" || currentTeam.status === "Not in Season") ? <Ban size={14}/> : null}
                         
-                        {currentTeam.status === "Closed Practice" ? "Roster Full" : 
-                         (currentTeam.status === "Out of Season" || currentTeam.status === "Not in Season") ? "No Active Commander" : 
-                         "Contact Team Commander"}
+                        {currentTeam.status === "Closed Practice" ? "Roster Full" :
+                         (currentTeam.status === "Out of Season" || currentTeam.status === "Not in Season") ? "No Active Commander" :
+                         "View Team Leadership"}
                       </button>
                     </div>
                   </div>

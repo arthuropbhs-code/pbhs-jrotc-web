@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { 
-  ArrowLeft, Mail, Shield, Award, Star, BookOpen, 
-  Loader2, CalendarDays, UserCircle, Users, Clock 
+import {
+  ArrowLeft, Shield, Award, Star, BookOpen,
+  Loader2, CalendarDays, UserCircle, Users, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -101,7 +101,7 @@ const CommanderInfo = () => {
     /* Increased spacing pt-48 to clear nav */
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-48 font-sans transition-colors duration-300">
       <div className="max-w-6xl mx-auto">
-        <Link to="/teams" className="inline-flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 mb-8 transition-all text-xs font-black uppercase tracking-widest group">
+        <Link to="/teams" className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-yellow-600 dark:hover:text-yellow-500 mb-8 transition-all text-xs font-black uppercase tracking-widest group">
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Teams
         </Link>
 
@@ -181,14 +181,8 @@ const CommanderInfo = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
-                    <span className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em]">Personnel Record Verified</span>
-                    <button 
-                      onClick={() => window.location.href = `mailto:${officer.email}`}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500 text-slate-950 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
-                    >
-                      <Mail size={12} /> Contact
-                    </button>
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 relative z-10">
+                    <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">Personnel Record Verified</span>
                   </div>
                 </motion.div>
               ))}
