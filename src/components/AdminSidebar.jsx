@@ -38,7 +38,7 @@ const AdminSidebar = () => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'uniform_requests'), (snapshot) => {
-      const pending = snapshot.docs.filter(d => d.data().status !== 'Completed').length;
+      const pending = snapshot.docs.filter(d => d.data().status === 'Pending').length;
       setRequestCount(pending);
     });
     return () => unsub();

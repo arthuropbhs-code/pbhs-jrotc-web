@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, ExternalLink, Image as ImageIcon, FolderOpen } from 'lucide-react';
+import { ExternalLink, Image as ImageIcon, FolderOpen } from 'lucide-react';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_PHOTOS } from '../data/defaultPageContent';
 
 const Photos = () => {
   usePageMeta({
@@ -10,39 +13,17 @@ const Photos = () => {
     description: 'Battalion event photo albums - parades, competitions, and community events.',
     path: '/photos',
   });
-  // CONFIGURATION: 
-  // 1. Drop your images into /public/covers/
-  // 2. Put the exact filename in the 'coverImage' field below.
-  const albums = [
-    { 
-      id: 1, 
-      title: "Yuletide Parade 2025-2026", 
-      count: "163 Photos",
-      coverImage: "/covers/Yuletide2025.webp", // Path to your local file
-      albumUrl: "https://photos.app.goo.gl/yQma34bERVQhy6zz8" 
-    },
-        { 
-      id: 2, 
-      title: "Raider States 2025-2026", 
-      count: "517 Photos",
-      coverImage: "/covers/Raiders2025.webp", 
-      albumUrl: "https://photos.app.goo.gl/NyxyyFzDe59e2x2V9" 
-    },
-    { 
-      id: 3,
-      title: "Raider County Competition 2025-2026", 
-      count: "303 Photos",
-      coverImage: "/covers/JV_Raiders.webp", 
-      albumUrl: "https://photos.app.goo.gl/buYtCpjc3usGEWVc8" 
-    },
-    { 
-      id: 4, 
-      title: "Military Ball 2024-2025", 
-      count: "848 Photos",
-      coverImage: "/covers/ball2024.webp", 
-      albumUrl: "https://photos.app.goo.gl/UvXhZzj8Yca7ojEE6" 
-    }
-  ];
+
+  const [photosContent, setPhotosContent] = useState(DEFAULT_PHOTOS);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'pageContent', 'photos'), (snap) => {
+      if (snap.exists()) setPhotosContent({ ...DEFAULT_PHOTOS, ...snap.data() });
+    });
+    return () => unsub();
+  }, []);
+
+  const albums = photosContent.albums;
 
   return (
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6">

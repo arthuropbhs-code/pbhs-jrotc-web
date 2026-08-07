@@ -186,6 +186,17 @@ export const DEFAULT_PROMOTION_BOARD = {
   }
 };
 
+// Photo Gallery albums — each album links out to an external Google Photos URL.
+// Admins can add/edit/remove albums from Admin → Content → Photo Gallery.
+export const DEFAULT_PHOTOS = {
+  albums: [
+    { id: 1, title: "Yuletide Parade 2025-2026",         count: "163 Photos", coverImage: "/covers/Yuletide2025.webp",    albumUrl: "https://photos.app.goo.gl/yQma34bERVQhy6zz8" },
+    { id: 2, title: "Raider States 2025-2026",            count: "517 Photos", coverImage: "/covers/Raiders2025.webp",     albumUrl: "https://photos.app.goo.gl/NyxyyFzDe59e2x2V9" },
+    { id: 3, title: "Raider County Competition 2025-2026",count: "303 Photos", coverImage: "/covers/JV_Raiders.webp",      albumUrl: "https://photos.app.goo.gl/buYtCpjc3usGEWVc8" },
+    { id: 4, title: "Military Ball 2024-2025",            count: "848 Photos", coverImage: "/covers/ball2024.webp",        albumUrl: "https://photos.app.goo.gl/UvXhZzj8Yca7ojEE6" },
+  ]
+};
+
 // Homepage content — slideshow slides and quick-access cards.
 // Slides use cover images already in /public/covers/; admins can swap URLs
 // to any Cloudinary-hosted image uploaded through the portrait upload flow.

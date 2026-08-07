@@ -433,9 +433,10 @@ export default async function handler(req, res) {
       // actually S-4 tier itself - mirrors UniformRequests.jsx's isS4Master
       // exactly, since the client-side check alone isn't a real boundary.
       const callerRole = await getUserField(accessToken, projectId, callerUid, 'role');
-      const isS4Master = callerRole === 's4_logistics' || (ROLE_HIERARCHY[callerRole] || 0) >= 80;
-      if (!isS4Master) {
-        return res.status(403).json({ error: 'Only S-4 or Command can send this notification.' });
+      // Mirrors UniformRequests.jsx APPROVE_ROLES — keep in sync.
+      const APPROVE_ROLES = ['s4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'];
+      if (!APPROVE_ROLES.includes(callerRole)) {
+        return res.status(403).json({ error: 'Only S-4, XO, or Command can send this notification.' });
       }
 
       const { toEmail, cadetName, item, detail } = req.body || {};

@@ -4,7 +4,7 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
-import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOME } from '../data/defaultPageContent';
+import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOME, DEFAULT_PHOTOS } from '../data/defaultPageContent';
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import {
   FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
@@ -18,6 +18,7 @@ const TABS = [
   { id: 'about',          label: 'About' },
   { id: 'cadet-info',     label: 'General Info' },
   { id: 'promotion-board',label: 'Promotion Board' },
+  { id: 'photos',         label: 'Photo Gallery' },
   { id: 'visibility',     label: 'Visibility' },
 ];
 
@@ -49,6 +50,7 @@ const AdminContent = () => {
   const [status, setStatus] = useState(null);
 
   const [homeForm, setHomeForm] = useState(DEFAULT_HOME);
+  const [photosForm, setPhotosForm] = useState(DEFAULT_PHOTOS);
   const [aboutForm, setAboutForm] = useState(DEFAULT_ABOUT);
   const [cadetInfoForm, setCadetInfoForm] = useState(DEFAULT_CADET_INFO);
   const [promoForm, setPromoForm] = useState(DEFAULT_PROMOTION_BOARD);
@@ -62,6 +64,9 @@ const AdminContent = () => {
       onSnapshot(doc(db, "pageContent", "home"), (snap) => {
         if (snap.exists()) setHomeForm({ ...DEFAULT_HOME, ...snap.data() });
         setDataLoading(false);
+      }),
+      onSnapshot(doc(db, "pageContent", "photos"), (snap) => {
+        if (snap.exists()) setPhotosForm({ ...DEFAULT_PHOTOS, ...snap.data() });
       }),
       onSnapshot(doc(db, "pageContent", "about"), (snap) => {
         if (snap.exists()) setAboutForm({ ...DEFAULT_ABOUT, ...snap.data() });
@@ -111,6 +116,18 @@ const AdminContent = () => {
     quickAccess[index] = { ...quickAccess[index], [field]: value };
     setHomeForm({ ...homeForm, quickAccess });
   };
+
+  // --- PHOTOS helpers ---
+  const updateAlbum = (index, field, value) => {
+    const albums = [...photosForm.albums];
+    albums[index] = { ...albums[index], [field]: value };
+    setPhotosForm({ ...photosForm, albums });
+  };
+  const addAlbum = () => setPhotosForm({
+    ...photosForm,
+    albums: [...photosForm.albums, { id: Date.now(), title: '', count: '', coverImage: '', albumUrl: '' }]
+  });
+  const removeAlbum = (i) => setPhotosForm({ ...photosForm, albums: photosForm.albums.filter((_, idx) => idx !== i) });
 
   // --- ABOUT helpers ---
   const updateHistory = (index, field, value) => {
@@ -424,6 +441,62 @@ const AdminContent = () => {
             </button>
           </div>
         )}
+        {/* --- PHOTOS TAB --- */}
+        {activeTab === 'photos' && (
+          <div className="space-y-6">
+            <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-[11px] text-blue-700 dark:text-blue-300">
+              <Info size={16} className="flex-shrink-0 mt-0.5" />
+              Each album links to an external Google Photos URL. Cover images should be file paths from <code className="bg-blue-500/10 px-1 rounded">/public/covers/</code> (e.g. <code className="bg-blue-500/10 px-1 rounded">/covers/Yuletide2025.webp</code>).
+            </div>
+
+            <div className="space-y-4">
+              {photosForm.albums.map((album, i) => (
+                <div key={album.id ?? i} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-black uppercase text-yellow-600 dark:text-yellow-500 tracking-widest">Album {i + 1}</span>
+                    <button onClick={() => removeAlbum(i)} className="text-slate-400 hover:text-red-500 transition-colors" title="Remove album">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Album Title</label>
+                    <input className={inputClass} value={album.title} onChange={e => updateAlbum(i, 'title', e.target.value)} placeholder="e.g. Military Ball 2025-2026" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Photo Count</label>
+                      <input className={inputClass} value={album.count} onChange={e => updateAlbum(i, 'count', e.target.value)} placeholder="e.g. 248 Photos" />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Cover Image Path</label>
+                      <input className={inputClass} value={album.coverImage} onChange={e => updateAlbum(i, 'coverImage', e.target.value)} placeholder="/covers/filename.webp" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Google Photos Album URL</label>
+                    <input className={inputClass} value={album.albumUrl} onChange={e => updateAlbum(i, 'albumUrl', e.target.value)} placeholder="https://photos.app.goo.gl/…" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addAlbum}
+              className="w-full py-4 border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl text-xs font-black uppercase text-slate-400 hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-500 transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={14} /> Add Album
+            </button>
+
+            <button
+              disabled={saving}
+              onClick={() => saveTab('photos', photosForm)}
+              className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all text-sm shadow-lg shadow-yellow-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save size={18} /> Save Photo Gallery
+            </button>
+          </div>
+        )}
+
         {/* --- VISIBILITY TAB --- */}
         {activeTab === 'visibility' && (
           <div className="space-y-6">

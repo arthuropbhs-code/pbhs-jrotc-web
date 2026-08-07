@@ -42,20 +42,25 @@ const UniformRequests = () => {
   const userRole = userProfile?.role || 'cadet';
   const userLevel = ROLE_HIERARCHY[userRole] || 1;
 
-  // S4 specifically, plus Sergeant Major and above (top command)
-  const isS4Master = userRole === 's4_logistics' || userLevel >= ADMIN_LEVEL;
+  // Roles that can APPROVE (mark issued): S4 logistics, XO, BC, CSM.
+  // Note: BC/CSM outrank XO so they're included even though the request
+  // said "S4 and XO" — omitting senior command would block them from
+  // managing logistics which is clearly not the intent.
+  const APPROVE_ROLES = ['s4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'];
+  const canApprove = APPROVE_ROLES.includes(userRole);
 
-  // General Staff (S1-S7) excluding S4
+  // Roles that can REQUEST (submit a new issuance): S4 assistants + approvers.
+  const REQUEST_ROLES = ['company_s4_assistant', ...APPROVE_ROLES];
+  const canRequest = REQUEST_ROLES.includes(userRole);
+
+  // S4 Assistant specifically (affects form labels + email notification path)
+  const isS4Assistant = userRole === 'company_s4_assistant';
+
+  // General Staff observer (S1-S7 excluding S4) — can view all records
   const isStaffObserver = userLevel === STAFF_LEVEL && userRole !== 's4_logistics';
 
-  // Company Leadership (Company Commander through First Sergeant)
+  // Company Leadership (CC through 1SG) — can view their company's records
   const isCompanyLeadership = userLevel >= 45 && userLevel <= 55;
-
-  // S4 Assistant (Specifically Level 35)
-  const isS4Assistant = userRole.includes('s4_assistant') && userLevel === 35;
-
-  // FIX 1: New Issuance button is only for S4 Masters and S4 Assistants
-  const canAccessCreateButton = isS4Master || isS4Assistant;
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -68,8 +73,7 @@ const UniformRequests = () => {
 
           setFormData(prev => ({
             ...prev,
-            // FIX 2: Issued By defaults to current user if they are S4 Staff
-            issuedBy: (isS4Master || isS4Assistant) ? (data.fullName || '') : '',
+            issuedBy: canRequest ? (data.fullName || '') : '',
             company: data.company || COMPANIES[0] || 'Zulu'
           }));
         }
@@ -86,7 +90,7 @@ const UniformRequests = () => {
     if (!userProfile) return;
 
     let q;
-    if (isS4Master || isStaffObserver) {
+    if (canApprove || isStaffObserver) {
       q = query(collection(db, "uniform_requests"), orderBy("timestamp", "desc"));
     } else if (isS4Assistant || isCompanyLeadership) {
       q = query(collection(db, "uniform_requests"), where("company", "==", userProfile.company));
@@ -96,7 +100,7 @@ const UniformRequests = () => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (isS4Assistant || isCompanyLeadership || (!isS4Master && !isStaffObserver)) {
+      if (isS4Assistant || isCompanyLeadership || (!canApprove && !isStaffObserver)) {
         reqs.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
       }
       setRequests(reqs);
@@ -129,8 +133,8 @@ const UniformRequests = () => {
 
   // --- ACTIONS ---
   const handleToggleStatus = async (req) => {
-    if (!isS4Master) {
-      showNotify("Access Denied: Only S-4 or Command can issue items.", "error");
+    if (!canApprove) {
+      showNotify("Access Denied: Only S-4, XO, or Command can approve requests.", "error");
       return;
     }
     const newStatus = req.status === 'Pending' ? 'Completed' : 'Pending';
@@ -163,7 +167,7 @@ const UniformRequests = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!isS4Master) return;
+    if (!canApprove) return;
     await deleteDoc(doc(db, "uniform_requests", id));
     setDeleteConfirm(null);
     showNotify("Request permanently deleted", "error");
@@ -171,9 +175,9 @@ const UniformRequests = () => {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
-    if (isCompanyLeadership) return;
+    if (!canRequest) return;
 
-    const finalIssuedBy = isS4Assistant ? (userProfile?.fullName) : formData.issuedBy;
+    const finalIssuedBy = formData.issuedBy || userProfile?.fullName;
     
     if (!finalIssuedBy || !formData.cadetName || !formData.company || !formData.item || (formData.item !== "Unit Crest" && !formData.detail)) {
       showNotify("Incomplete Information.", "error");
@@ -186,10 +190,9 @@ const UniformRequests = () => {
         issuedBy: finalIssuedBy,
         status: 'Pending',
         timestamp: serverTimestamp(),
-        // Only set for S4 Assistant submissions - that's who gets notified
-        // when S4 marks the request issued. An S4 Master's own direct
-        // transaction doesn't need to notify itself.
-        requestedByEmail: isS4Assistant ? (userProfile?.email || null) : null
+        // Set for anyone who isn't an approver — they need to be notified
+        // when S4/XO marks the request as issued.
+        requestedByEmail: !canApprove ? (userProfile?.email || null) : null
       });
       setShowModal(false);
       setFormData(prev => ({ 
@@ -274,10 +277,9 @@ const UniformRequests = () => {
               onChange={(e) => setSearchTerm(e.target.value || '')}
             />
           </div>
-          {/* FIX 1: BUTTON GATED FOR COMPANY LEADERSHIP */}
-          {canAccessCreateButton && (
+          {canRequest && (
             <button onClick={() => setShowModal(true)} className="bg-yellow-500 text-slate-950 px-6 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-yellow-400 transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/10">
-              <Plus size={16} /> New Issuance
+              <Plus size={16} /> Request Issuance
             </button>
           )}
         </div>
@@ -302,7 +304,7 @@ const UniformRequests = () => {
                 <h3 className="font-black text-lg uppercase tracking-tighter">{req.cadetName}</h3>
                 <p className="text-[10px] text-slate-500 font-bold uppercase">Issued By: {req.issuedBy || "S-4 Staff"}</p>
               </div>
-              {isS4Master && (
+              {canApprove && (
                 <button title="Delete request" onClick={() => setDeleteConfirm(req.id)} className="text-slate-700 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
               )}
             </div>
@@ -316,14 +318,14 @@ const UniformRequests = () => {
               </div>
             </div>
 
-            {isS4Master ? (
-              <button 
+            {canApprove ? (
+              <button
                 onClick={() => handleToggleStatus(req)}
                 className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all ${
                   req.status === 'Pending' ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400' : 'bg-green-500/10 text-green-500'
                 }`}
               >
-                {req.status === 'Pending' ? <><Clock size={14} /> Mark Issued</> : <><CheckCircle2 size={14} /> Completed</>}
+                {req.status === 'Pending' ? <><Clock size={14} /> Approve & Mark Issued</> : <><CheckCircle2 size={14} /> Completed</>}
               </button>
             ) : (
               <div className={`w-full py-3 rounded-xl font-black uppercase text-[10px] text-center border border-white/5 ${req.status === 'Pending' ? 'text-yellow-500/40' : 'text-green-500'}`}>
@@ -341,7 +343,7 @@ const UniformRequests = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Issue Supply</h2>
+                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Request for Issuance</h2>
                 <button title="Close" onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white"><X /></button>
               </div>
 
@@ -351,9 +353,9 @@ const UniformRequests = () => {
                     <UserCheck size={12}/> Issued By
                   </label>
                   <input 
-                    readOnly={isS4Assistant}
-                    className={`w-full bg-black/30 border border-white/5 p-3 rounded-xl text-sm outline-none ${isS4Assistant ? 'text-slate-400 cursor-not-allowed' : 'focus:border-yellow-500 text-white'}`} 
-                    value={isS4Assistant ? (userProfile?.fullName || '') : formData.issuedBy} 
+                    readOnly
+                    className="w-full bg-black/30 border border-white/5 p-3 rounded-xl text-sm outline-none text-slate-400 cursor-not-allowed"
+                    value={userProfile?.fullName || ''}
                     onChange={e => setFormData({...formData, issuedBy: e.target.value})}
                   />
                 </div>
@@ -416,7 +418,7 @@ const UniformRequests = () => {
                 </div>
 
                 <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-500/10">
-                  {isS4Assistant ? "Submit Request to S-4" : "Complete Transaction"}
+                  {canApprove ? "Log Request" : "Submit Request to S-4"}
                 </button>
               </form>
             </motion.div>
