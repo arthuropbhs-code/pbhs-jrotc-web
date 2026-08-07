@@ -129,8 +129,8 @@ const Navbar = () => {
             </div>
             )}
 
-            {/* --- BATTALION DROPDOWN (shows if announcements is visible) --- */}
-            {vis.announcements && (
+            {/* --- BATTALION DROPDOWN (shows if announcements or photos is visible) --- */}
+            {(vis.announcements || vis.photos) && (
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors
@@ -141,7 +141,12 @@ const Navbar = () => {
               </div>
               <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200
                               bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
-                <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
+                {vis.announcements && !isActive('/announcements') && (
+                  <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
+                )}
+                {vis.photos && !isActive('/photos') && (
+                  <Link to="/photos" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Photo Gallery</Link>
+                )}
               </div>
             </div>
             )}
@@ -226,7 +231,7 @@ const Navbar = () => {
               )}
 
               {/* Mobile Battalion Accordion Node */}
-              {vis.announcements && (
+              {(vis.announcements || vis.photos) && (
               <div className="py-2 border-b border-white/5">
                 <button
                   onClick={() => setMobileBattalionOpen(!mobileBattalionOpen)}
@@ -237,7 +242,8 @@ const Navbar = () => {
                 </button>
                 {mobileBattalionOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
-                    <MobileNavLink to="/announcements" currentPath={currentPath} onNavigate={closeMenu} indent>Announcements</MobileNavLink>
+                    {vis.announcements && <MobileNavLink to="/announcements" currentPath={currentPath} onNavigate={closeMenu} indent>Announcements</MobileNavLink>}
+                    {vis.photos && <MobileNavLink to="/photos" currentPath={currentPath} onNavigate={closeMenu} indent>Photo Gallery</MobileNavLink>}
                   </div>
                 )}
               </div>
