@@ -24,6 +24,51 @@ let app;
 let auth;
 let db;
 
+// Gate: analytics never loads until the user has actually accepted cookies
+// via the CookieConsent banner - loading GA unconditionally on every visit
+// (what this used to do) is exactly the thing a consent banner exists to
+// prevent. CONSENT_KEY is the single source of truth CookieConsent.jsx reads
+// and writes too.
+export const CONSENT_KEY = 'cookie-consent';
+
+function loadAnalytics() {
+  if (!app || !firebaseConfig.measurementId) return;
+  // Dynamically imported so firebase/analytics's code is fetched and
+  // parsed in its own chunk after the app's critical render, not bundled
+  // into the initial vendor-firebase chunk every page pays for up front.
+  // isSupported() guards against environments without analytics support
+  // (e.g. browsers blocking storage) instead of letting getAnalytics() throw.
+  // Wrapped defensively end-to-end - a rejected config fetch or a bad
+  // measurementId/appId shouldn't be able to break anything else on the
+  // page just because analytics couldn't start.
+  import("firebase/analytics")
+    .then(({ getAnalytics, isSupported }) =>
+      isSupported().then((supported) => {
+        if (!supported) return;
+        try {
+          getAnalytics(app);
+        } catch (error) {
+          console.warn("Firebase Analytics failed to initialize:", error);
+        }
+      })
+    )
+    .catch((error) => {
+      console.warn("Firebase Analytics support check failed:", error);
+    });
+}
+
+// Called by CookieConsent.jsx when the user clicks Accept - the only path
+// analytics ever loads through, besides an already-accepted prior visit.
+export function enableAnalytics() {
+  try {
+    localStorage.setItem(CONSENT_KEY, 'accepted');
+  } catch {
+    // Storage can throw in locked-down/private-browsing contexts - consent
+    // just won't persist across visits there, not worth failing over.
+  }
+  loadAnalytics();
+}
+
 try {
   // Only attempt to start Firebase if an API key is actually present
   if (firebaseConfig.apiKey) {
@@ -34,29 +79,8 @@ try {
     setPersistence(auth, browserSessionPersistence);
     db = getFirestore(app);
 
-    // Dynamically imported so firebase/analytics's code is fetched and
-    // parsed in its own chunk after the app's critical render, not bundled
-    // into the initial vendor-firebase chunk every page pays for up front.
-    // isSupported() guards against environments without analytics support
-    // (e.g. browsers blocking storage) instead of letting getAnalytics() throw.
-    // Wrapped defensively end-to-end - a rejected config fetch or a bad
-    // measurementId/appId shouldn't be able to break anything else on the
-    // page just because analytics couldn't start.
-    if (firebaseConfig.measurementId) {
-      import("firebase/analytics")
-        .then(({ getAnalytics, isSupported }) =>
-          isSupported().then((supported) => {
-            if (!supported) return;
-            try {
-              getAnalytics(app);
-            } catch (error) {
-              console.warn("Firebase Analytics failed to initialize:", error);
-            }
-          })
-        )
-        .catch((error) => {
-          console.warn("Firebase Analytics support check failed:", error);
-        });
+    if (typeof window !== 'undefined' && localStorage.getItem(CONSENT_KEY) === 'accepted') {
+      loadAnalytics();
     }
   } else {
     console.warn("Firebase configuration keys are missing. Skipping initialization.");

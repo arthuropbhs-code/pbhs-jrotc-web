@@ -10,6 +10,7 @@ import { canAccessRoute } from './lib/authz';
 // them out would just add a network round-trip with no bundle-size upside.
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import CookieConsent from './components/CookieConsent';
 
 // --- PAGES ---
 // Lazy-loaded so each route gets its own chunk instead of all ~30 pages
@@ -230,6 +231,8 @@ const AppContent = () => {
 
       {/* SHOW FOOTER ONLY ON PUBLIC PAGES */}
       {!isAdminPage && <Footer />}
+
+      <CookieConsent />
     </div>
   );
 };
