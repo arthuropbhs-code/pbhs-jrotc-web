@@ -70,9 +70,12 @@ const AdminTeams = () => {
     }
   }, [authLoading, user, isAuthorized]);
 
-  // Sync Dossier
+  // Sync Dossier - userData comes from useAuth's async Firestore listener,
+  // not available synchronously at mount, so a lazy useState initializer
+  // can't replace this. Populates the editable form once real data arrives.
   useEffect(() => {
     if (userData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDossier({ bio: userData.bio || '', practiceDays: userData.practiceDays || '' });
     }
   }, [userData]);
@@ -96,7 +99,7 @@ const AdminTeams = () => {
         updatedAt: new Date()
       });
       triggerStatus('success');
-    } catch (err) { triggerStatus('error'); }
+    } catch { triggerStatus('error'); }
     setUploading(false);
   };
 
@@ -119,7 +122,7 @@ const AdminTeams = () => {
       setEditingId(null);
       setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', leadership: [] });
       triggerStatus('success');
-    } catch (err) { triggerStatus('error'); }
+    } catch { triggerStatus('error'); }
   };
 
   const addLeader = () => {
@@ -368,7 +371,7 @@ const AdminTeams = () => {
                     await deleteDoc(doc(db, 'specialTeams', deleteConfirm.id));
                     setDeleteConfirm({ open: false, id: null, name: '' });
                     triggerStatus('success');
-                  } catch (err) { triggerStatus('error'); }
+                  } catch { triggerStatus('error'); }
                 }} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Purge</button>
               <button onClick={() => setDeleteConfirm({ open: false, id: null, name: '' })} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest bg-slate-100 dark:bg-white/5">Abort Mission</button>
             </div>

@@ -14,7 +14,6 @@ const UniformRequests = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [filter, setFilter] = useState('Pending');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showRegs, setShowRegs] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   // --- NOTIFICATION & VALIDATION STATE ---
@@ -199,7 +198,8 @@ const UniformRequests = () => {
         notes: '' 
       }));
       showNotify("Request Logged Successfully!");
-    } catch (err) { 
+    } catch (err) {
+      console.error("Uniform request save failed:", err);
       showNotify("System Error.", "error");
     }
   };

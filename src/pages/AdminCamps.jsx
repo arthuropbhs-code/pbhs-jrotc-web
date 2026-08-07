@@ -103,7 +103,7 @@ const AdminCamps = () => {
       await deleteDoc(doc(db, "camps", deleteConfirm.id));
       setDeleteConfirm({ open: false, id: null, name: '' });
       showStatus("Camp Removed");
-    } catch (err) {
+    } catch {
       showStatus("Delete Failed");
     }
   };

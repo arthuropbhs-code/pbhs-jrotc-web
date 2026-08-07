@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Circle, X, PartyPopper } from 'lucide-react';
@@ -25,17 +25,17 @@ const OnboardingChecklist = ({ storageKey, title, items }) => {
   const dismissedKey = `onboarding-${storageKey}-dismissed`;
   const checkedKey = `onboarding-${storageKey}-checked`;
 
-  const [dismissed, setDismissed] = useState(true); // default true avoids a flash before the effect below reads localStorage
-  const [checked, setChecked] = useState([]);
-
-  useEffect(() => {
-    setDismissed(localStorage.getItem(dismissedKey) === 'true');
+  // Lazy initializers read localStorage synchronously on first render - no
+  // effect needed, and no pop-in flash where the card briefly shows (or
+  // hides) before flipping to the real persisted state a render later.
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissedKey) === 'true');
+  const [checked, setChecked] = useState(() => {
     try {
-      setChecked(JSON.parse(localStorage.getItem(checkedKey) || '[]'));
+      return JSON.parse(localStorage.getItem(checkedKey) || '[]');
     } catch {
-      setChecked([]);
+      return [];
     }
-  }, [dismissedKey, checkedKey]);
+  });
 
   if (dismissed) return null;
 

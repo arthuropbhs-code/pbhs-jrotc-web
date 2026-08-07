@@ -110,12 +110,12 @@ const AdminStats = () => {
     monthBuckets[key] = (monthBuckets[key] || 0) + 1;
   });
   const sortedMonths = Object.keys(monthBuckets).sort();
-  let running = 0;
-  const growthPoints = sortedMonths.map(key => {
-    running += monthBuckets[key];
+  const growthPoints = sortedMonths.reduce((points, key) => {
+    const running = (points[points.length - 1]?.total || 0) + monthBuckets[key];
     const [y, m] = key.split('-');
-    return { key, label: `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(m) - 1]} '${y.slice(2)}`, total: running };
-  });
+    points.push({ key, label: `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(m) - 1]} '${y.slice(2)}`, total: running });
+    return points;
+  }, []);
 
   // --- TASK / ORDER ACTIVITY ---
   const tasksCompleted = tasks.filter(t => t.status === 'completed').length;

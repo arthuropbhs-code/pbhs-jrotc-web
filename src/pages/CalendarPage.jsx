@@ -85,7 +85,7 @@ const CalendarPage = () => {
 
                 const hasEvent = events.some(e => {
                   if (!e.date) return false;
-                  const eventDate = new Date(e.date.replace(/-/g, '\/'));
+                  const eventDate = new Date(e.date.replace(/-/g, '/'));
                   return (
                     eventDate.getDate() === day && 
                     eventDate.getMonth() === currentDate.getMonth() &&
@@ -137,7 +137,7 @@ const CalendarPage = () => {
                 {events
                   .filter(e => {
                     if (!e.date) return false;
-                    const eventDate = new Date(e.date.replace(/-/g, '\/'));
+                    const eventDate = new Date(e.date.replace(/-/g, '/'));
                     return eventDate.getMonth() === currentDate.getMonth() && eventDate.getFullYear() === currentDate.getFullYear();
                   })
                   .map((event, idx) => (
@@ -171,7 +171,7 @@ const CalendarPage = () => {
 
               {events.filter(e => {
                 if(!e.date) return false;
-                return new Date(e.date.replace(/-/g, '\/')).getMonth() === currentDate.getMonth();
+                return new Date(e.date.replace(/-/g, '/')).getMonth() === currentDate.getMonth();
               }).length === 0 && (
                 <div className="text-center py-24 bg-slate-100/50 dark:bg-transparent border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] text-slate-400 dark:text-slate-800 text-[10px] font-black uppercase tracking-widest">
                   No Mission Entries

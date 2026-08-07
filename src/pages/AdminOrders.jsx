@@ -125,7 +125,7 @@ const AdminOrders = () => {
     try {
       await deleteDoc(doc(db, mode === 'order' ? "orders" : "events", deleteConfirm.id));
       setDeleteConfirm({ show: false, id: null });
-    } catch (error) {
+    } catch {
       showError("Sync Error: Deletion failed.");
     }
   };
@@ -162,7 +162,7 @@ const AdminOrders = () => {
       setSelectedTargets([]);
       setStatus({ loading: false, success: true });
       setTimeout(() => setStatus({ loading: false, success: false }), 3000);
-    } catch (error) {
+    } catch {
       setStatus({ loading: false, success: false });
       showError("System Error: Failed to publish transmission.");
     }

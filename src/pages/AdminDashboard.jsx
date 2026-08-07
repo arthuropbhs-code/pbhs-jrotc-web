@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import MyDuties from '../components/MyDuties';
 import Footer from '../components/Footer';
 import OnboardingChecklist from '../components/OnboardingChecklist';
-import { getInitials } from '../components/Navbar';
+import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -344,9 +344,9 @@ const AdminDashboard = () => {
         )}
 
         {isStaffOrS4 ? (
-          <OnboardingChecklist storageKey="staff" title="Getting Started as Staff" items={staffOnboardingItems} />
+          <OnboardingChecklist key="staff" storageKey="staff" title="Getting Started as Staff" items={staffOnboardingItems} />
         ) : (
-          <OnboardingChecklist storageKey="cadet" title="Getting Started" items={cadetOnboardingItems} />
+          <OnboardingChecklist key="cadet" storageKey="cadet" title="Getting Started" items={cadetOnboardingItems} />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

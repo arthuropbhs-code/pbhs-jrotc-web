@@ -31,13 +31,11 @@ const AdminUsers = () => {
   
   const [personnel, setPersonnel] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(true);
-  const [unlinkedAccounts, setUnlinkedAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [status, setStatus] = useState(null);
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [linkingRecord, setLinkingRecord] = useState(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginEmailStatus, setLoginEmailStatus] = useState(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState(null);
@@ -113,12 +111,7 @@ const AdminUsers = () => {
           ? allDocs
           : allDocs.filter(p => p.company === user?.company);
 
-        const unlinked = allDocs.filter(doc =>
-          doc.uid && doc.id === doc.uid && (!doc.fullName || doc.fullName === '')
-        );
-
         setPersonnel(roster);
-        setUnlinkedAccounts(unlinked);
         setRosterLoading(false);
       }, () => setRosterLoading(false));
       return () => unsubscribe();
@@ -172,7 +165,7 @@ const AdminUsers = () => {
         showStatus("Cadet Added to Roster");
       }
       setFormData(initialFormState);
-    } catch (err) {
+    } catch {
       showStatus("Error Saving Record");
     }
   };

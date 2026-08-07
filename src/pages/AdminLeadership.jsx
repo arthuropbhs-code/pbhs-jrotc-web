@@ -111,7 +111,7 @@ const AdminLeadership = () => {
       setEditingLeader(null);
       setLeaderForm(initialLeaderForm);
       showStatus("Leadership Record Saved");
-    } catch (err) {
+    } catch {
       showStatus("Error Saving Record");
     }
   };
@@ -121,7 +121,7 @@ const AdminLeadership = () => {
     try {
       await deleteDoc(doc(db, "leadership", id));
       showStatus("Record Removed");
-    } catch (err) {
+    } catch {
       showStatus("Error Removing Record");
     }
   };
@@ -142,7 +142,7 @@ const AdminLeadership = () => {
       setEditingInstructor(null);
       setInstructorForm(initialInstructorForm);
       showStatus("Instructor Saved");
-    } catch (err) {
+    } catch {
       showStatus("Error Saving Instructor");
     }
   };
@@ -152,7 +152,7 @@ const AdminLeadership = () => {
     try {
       await deleteDoc(doc(db, "instructors", id));
       showStatus("Instructor Removed");
-    } catch (err) {
+    } catch {
       showStatus("Error Removing Instructor");
     }
   };

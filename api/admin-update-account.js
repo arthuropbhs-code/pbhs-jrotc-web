@@ -60,7 +60,7 @@ function getServiceAccount() {
   let parsed;
   try {
     parsed = JSON.parse(raw);
-  } catch (err) {
+  } catch {
     throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON - re-paste the full downloaded key file as-is.');
   }
 
@@ -308,7 +308,7 @@ export default async function handler(req, res) {
       callerUid = verifyResult.payload.sub;
       callerEmail = verifyResult.payload.email;
       accessToken = token;
-    } catch (err) {
+    } catch {
       return res.status(401).json({ error: 'Invalid or expired auth token' });
     }
 
@@ -536,7 +536,7 @@ export default async function handler(req, res) {
       // Auth user and Firestore record are independent deletes - run them
       // concurrently. Firestore's REST delete is idempotent-ish (404 on an
       // already-missing doc), so only the Auth deletion's failure is fatal.
-      const [identityRes, firestoreRes] = await Promise.all([
+      const [identityRes] = await Promise.all([
         fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },

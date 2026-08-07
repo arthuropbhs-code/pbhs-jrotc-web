@@ -3,17 +3,39 @@ import { Link, useLocation } from 'react-router-dom';
 import { Shield, ChevronDown, Menu, X, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { getInitials } from '../utils/getInitials';
 
-// Best-effort initials from "LASTNAME, FIRSTNAME" (or plain "First Last").
-export const getInitials = (fullName) => {
-  if (!fullName) return '';
-  const commaParts = fullName.split(',').map(s => s.trim()).filter(Boolean);
-  if (commaParts.length === 2) {
-    const [last, first] = commaParts;
-    return `${first[0] || ''}${last[0] || ''}`.toUpperCase();
-  }
-  const words = fullName.split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+// Hoisted out of Navbar so it isn't recreated (and remounted, losing any
+// state) on every Navbar render - takes currentPath as a prop instead of
+// closing over it. Desktop link that hides itself on its own active page.
+const NavLink = ({ to, currentPath, children }) => {
+  if (to === currentPath) return null;
+  return (
+    <Link
+      to={to}
+      className="text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-200
+                 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:scale-105 active:scale-95"
+    >
+      {children}
+    </Link>
+  );
+};
+
+// Same reasoning as NavLink - hoisted, takes currentPath + onNavigate props
+// instead of closing over Navbar's isActive/setIsOpen. Auto-closes the
+// mobile menu on navigation via onNavigate.
+const MobileNavLink = ({ to, currentPath, onNavigate, children, indent = false }) => {
+  if (to === currentPath) return null;
+  return (
+    <Link
+      to={to}
+      onClick={onNavigate}
+      className={`block py-3 text-xs font-black uppercase tracking-[0.2em] transition-colors
+        ${indent ? 'pl-6 text-slate-400 border-l border-white/5 ml-2' : 'text-slate-200 hover:text-yellow-500'}`}
+    >
+      {children}
+    </Link>
+  );
 };
 
 const Navbar = () => {
@@ -27,35 +49,7 @@ const Navbar = () => {
   const [mobileBattalionOpen, setMobileBattalionOpen] = useState(false);
 
   const isActive = (path) => currentPath === path;
-
-  // Refined NavLink component for Desktop
-  const NavLink = ({ to, children }) => {
-    if (isActive(to)) return null;
-    return (
-      <Link 
-        to={to} 
-        className="text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-200 
-                   text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:scale-105 active:scale-95"
-      >
-        {children}
-      </Link>
-    );
-  };
-
-  // Mobile Link helper that auto-closes navigation menu
-  const MobileNavLink = ({ to, children, indent = false }) => {
-    if (isActive(to)) return null;
-    return (
-      <Link
-        to={to}
-        onClick={() => setIsOpen(false)}
-        className={`block py-3 text-xs font-black uppercase tracking-[0.2em] transition-colors
-          ${indent ? 'pl-6 text-slate-400 border-l border-white/5 ml-2' : 'text-slate-200 hover:text-yellow-500'}`}
-      >
-        {children}
-      </Link>
-    );
-  };
+  const closeMenu = () => setIsOpen(false);
 
   return (
     <nav className="fixed top-0 w-full z-50 h-16 transition-colors duration-300
@@ -81,7 +75,7 @@ const Navbar = () => {
 
           {/* DESKTOP LINKS */}
           <div className="hidden md:flex items-center gap-8">
-            <NavLink to="/about">About</NavLink>
+            <NavLink to="/about" currentPath={currentPath}>About</NavLink>
 
             {/* --- CADET INFO DROPDOWN --- */}
             <div className="relative group py-5">
@@ -136,8 +130,8 @@ const Navbar = () => {
               </div>
             </div>
 
-            <NavLink to="/leadership">Leadership</NavLink>
-            <NavLink to="/teams">Teams</NavLink>
+            <NavLink to="/leadership" currentPath={currentPath}>Leadership</NavLink>
+            <NavLink to="/teams" currentPath={currentPath}>Teams</NavLink>
           </div>
         </div>
 
@@ -188,7 +182,7 @@ const Navbar = () => {
             className="absolute top-16 left-0 w-full bg-[#0a0c12] border-b border-white/10 shadow-2xl px-6 py-6 md:hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <div className="flex flex-col space-y-1">
-              <MobileNavLink to="/about">About</MobileNavLink>
+              <MobileNavLink to="/about" currentPath={currentPath} onNavigate={closeMenu}>About</MobileNavLink>
               
               {/* Mobile Cadet Accordion Node */}
               <div className="py-2 border-b border-white/5">
@@ -201,10 +195,10 @@ const Navbar = () => {
                 </button>
                 {mobileCadetOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
-                    <MobileNavLink to="/cadet-info" indent>General Info</MobileNavLink>
-                    <MobileNavLink to="/promotion-board" indent>Promotion Board</MobileNavLink>
-                    <MobileNavLink to="/cadet-info/winning-colors" indent>Winning Colors</MobileNavLink>
-                    <MobileNavLink to="/documents" indent>Documents & Regs</MobileNavLink>
+                    <MobileNavLink to="/cadet-info" currentPath={currentPath} onNavigate={closeMenu} indent>General Info</MobileNavLink>
+                    <MobileNavLink to="/promotion-board" currentPath={currentPath} onNavigate={closeMenu} indent>Promotion Board</MobileNavLink>
+                    <MobileNavLink to="/cadet-info/winning-colors" currentPath={currentPath} onNavigate={closeMenu} indent>Winning Colors</MobileNavLink>
+                    <MobileNavLink to="/documents" currentPath={currentPath} onNavigate={closeMenu} indent>Documents & Regs</MobileNavLink>
                   </div>
                 )}
               </div>
@@ -220,22 +214,22 @@ const Navbar = () => {
                 </button>
                 {mobileBattalionOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
-                    <MobileNavLink to="/announcements" indent>Announcements</MobileNavLink>
-                    <MobileNavLink to="/photos" indent>Photo Gallery</MobileNavLink>
+                    <MobileNavLink to="/announcements" currentPath={currentPath} onNavigate={closeMenu} indent>Announcements</MobileNavLink>
+                    <MobileNavLink to="/photos" currentPath={currentPath} onNavigate={closeMenu} indent>Photo Gallery</MobileNavLink>
                   </div>
                 )}
               </div>
 
-              <MobileNavLink to="/leadership">Leadership</MobileNavLink>
-              <MobileNavLink to="/teams">Teams</MobileNavLink>
+              <MobileNavLink to="/leadership" currentPath={currentPath} onNavigate={closeMenu}>Leadership</MobileNavLink>
+              <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Teams</MobileNavLink>
 
               <div className="pt-4 mt-2 border-t border-white/5">
                 {user ? (
-                  <MobileNavLink to="/admin/dashboard">
+                  <MobileNavLink to="/admin/dashboard" currentPath={currentPath} onNavigate={closeMenu}>
                     {userData?.fullName || 'Command Dashboard'}
                   </MobileNavLink>
                 ) : (
-                  <MobileNavLink to="/admin">Admin</MobileNavLink>
+                  <MobileNavLink to="/admin" currentPath={currentPath} onNavigate={closeMenu}>Admin</MobileNavLink>
                 )}
               </div>
             </div>

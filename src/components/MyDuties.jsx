@@ -22,6 +22,12 @@ const MyDuties = () => {
   useEffect(() => {
     if (!role || !userData?.position || !userData?.company) return;
 
+    // Intentional: resets the loading state when role/position/company
+    // change (e.g. a live reassignment), not just on mount (loading already
+    // starts true there) - the fresh onSnapshot listeners below set it back
+    // to false once they resolve. Not something a lazy initializer or
+    // derived value can express, since this needs to re-fire on dep change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
 
     // TASK QUERY: Position specific

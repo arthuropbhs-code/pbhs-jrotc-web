@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getInitials } from '../components/Navbar';
+import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -255,6 +255,27 @@ const MyProfile = () => {
           </div>
           {resetStatus && resetStatus !== 'sending' && resetStatus !== 'success' && (
             <p className="text-[10px] text-red-500 font-bold -mt-4">{resetStatus}</p>
+          )}
+        </div>
+
+        {/* DANGER ZONE */}
+        <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 shadow-sm dark:shadow-none mt-6">
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-6">Danger Zone</h2>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-bold">Delete Account</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Permanently removes your login and personnel record. Cannot be undone.</p>
+            </div>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteAccountStatus === 'working'}
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+            >
+              <Trash2 size={16} /> {deleteAccountStatus === 'working' ? 'Deleting...' : 'Delete My Account'}
+            </button>
+          </div>
+          {deleteAccountStatus && deleteAccountStatus !== 'working' && (
+            <p className="text-[10px] text-red-500 font-bold mt-4">{deleteAccountStatus}</p>
           )}
         </div>
       </div>
