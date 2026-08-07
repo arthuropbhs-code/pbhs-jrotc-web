@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { withRetry } from '../utils/withRetry';
 
 // Same unsigned-upload pattern as AdminLeadership.jsx's portrait uploads -
 // this app hosts all uploaded files on Cloudinary rather than Firebase
@@ -72,14 +73,20 @@ const AdminDocuments = () => {
       body.append('file', file);
       body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
-        method: 'POST',
-        body
+      // Retried: a dropped connection mid-upload is far more likely than
+      // Cloudinary having actually accepted a broken/duplicate file, and an
+      // unsigned upload with no server-side side effect is safe to repeat.
+      const data = await withRetry(async () => {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+          method: 'POST',
+          body
+        });
+        const json = await res.json();
+        if (!res.ok || !json.secure_url) {
+          throw new Error(json.error?.message || 'Upload failed');
+        }
+        return json;
       });
-      const data = await res.json();
-      if (!res.ok || !data.secure_url) {
-        throw new Error(data.error?.message || 'Upload failed');
-      }
       setForm(prev => ({
         ...prev,
         fileUrl: data.secure_url,

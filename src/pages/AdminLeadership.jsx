@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { withRetry } from '../utils/withRetry';
 
 const COMPANIES = ["None", "Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
@@ -82,14 +83,17 @@ const AdminLeadership = () => {
       body.append('file', file);
       body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body
+      const data = await withRetry(async () => {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body
+        });
+        const json = await res.json();
+        if (!res.ok || !json.secure_url) {
+          throw new Error(json.error?.message || 'Upload failed');
+        }
+        return json;
       });
-      const data = await res.json();
-      if (!res.ok || !data.secure_url) {
-        throw new Error(data.error?.message || 'Upload failed');
-      }
       setLeaderForm(prev => ({ ...prev, portrait: data.secure_url }));
     } catch (err) {
       console.error("Portrait upload failed:", err);
