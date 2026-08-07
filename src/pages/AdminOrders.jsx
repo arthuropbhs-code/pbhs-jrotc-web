@@ -194,7 +194,7 @@ const AdminOrders = () => {
             <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
               Orders <span className="text-yellow-500">& Events</span>
             </h1>
-            <p className="text-blue-300 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
+            <p className="text-blue-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
               Authorized Personnel | {userData?.company || "Battalion"}
             </p>
           </div>
@@ -290,7 +290,7 @@ const AdminOrders = () => {
         {/* LOG HISTORY */}
         <div className="mt-16 space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-black text-blue-300 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+            <h3 className="text-[10px] font-black text-blue-600 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
               <Clock size={14} /> Recent Log
             </h3>
             <div className="h-px flex-1 bg-blue-100 dark:bg-white/5 mx-4"></div>
@@ -305,7 +305,7 @@ const AdminOrders = () => {
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
                     <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>
-                    <span className="text-[9px] text-blue-300 dark:text-slate-600 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
+                    <span className="text-[9px] text-blue-600 dark:text-slate-400 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
                   </div>
                 </div>
                 
@@ -332,7 +332,7 @@ const AdminOrders = () => {
                 <AlertTriangle size={32} />
               </div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">Confirm <span className="text-red-500">Destruction</span></h3>
-              <p className="text-blue-300 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed px-4">This transmission will be permanently scrubbed. This action cannot be undone.</p>
+              <p className="text-blue-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed px-4">This transmission will be permanently scrubbed. This action cannot be undone.</p>
               <div className="flex flex-col gap-3">
                 <button onClick={confirmDelete} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl transition-all shadow-xl shadow-red-600/20">Confirm Destruction</button>
                 <button onClick={() => setDeleteConfirm({ show: false, id: null })} className="w-full py-4 bg-blue-50 dark:bg-slate-800 text-blue-400 dark:text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl transition-all">Abort Mission</button>

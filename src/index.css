@@ -16,7 +16,19 @@
 :root {
   min-height: 100vh;
   /* Default to dark if no classes are present, but allows override */
-  background-color: #020617; 
+  background-color: #020617;
+}
+
+/* Site-wide keyboard focus indicator (WCAG 2.4.7). Plenty of interactive
+   elements here (nav links especially) had no focus style at all - a mouse
+   user never notices, but a keyboard user tabbing through has no way to
+   tell where they are. :focus-visible (not :focus) so this only shows for
+   keyboard/programmatic focus, not every mouse click - matches native
+   browser behavior and doesn't add a ring to a button someone just clicked. */
+:focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .nav-link-glow:hover {

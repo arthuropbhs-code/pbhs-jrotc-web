@@ -87,7 +87,7 @@ const MyDuties = () => {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <div className="w-6 h-6 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
-        <p className="text-blue-400 dark:text-slate-500 animate-pulse text-[10px] font-black uppercase tracking-[0.2em]">
+        <p className="text-blue-600 dark:text-slate-500 animate-pulse text-[10px] font-black uppercase tracking-[0.2em]">
           Syncing HQ Transmissions...
         </p>
       </div>
@@ -108,7 +108,7 @@ const MyDuties = () => {
         <div className="space-y-3">
           {orders.length === 0 ? (
             <div className="pl-4 py-4 border-l border-blue-100 dark:border-white/5">
-              <p className="text-blue-300 dark:text-slate-600 text-[10px] uppercase font-bold tracking-tight">No current broadcast orders.</p>
+              <p className="text-blue-600 dark:text-slate-400 text-[10px] uppercase font-bold tracking-tight">No current broadcast orders.</p>
             </div>
           ) : (
             orders.map((order) => (
@@ -125,12 +125,12 @@ const MyDuties = () => {
                       {order.content}
                     </p>
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest">
-                      <span className="text-blue-400 dark:text-slate-500">Issuer: {order.issuer}</span>
+                      <span className="text-blue-600 dark:text-slate-500">Issuer: {order.issuer}</span>
                       <span className="w-1 h-1 bg-blue-200 dark:bg-slate-800 rounded-full"></span>
                       <span className="text-yellow-500 opacity-80">Command Feed</span>
                     </div>
                   </div>
-                  <span className="text-[9px] font-black text-blue-300 dark:text-slate-700 tabular-nums">
+                  <span className="text-[9px] font-black text-blue-600 dark:text-slate-400 tabular-nums">
                     {order.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) || "RECENT"}
                   </span>
                 </div>
@@ -144,7 +144,7 @@ const MyDuties = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-500 dark:bg-blue-600 rounded-full"></div>
-          <h4 className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+          <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
             <ClipboardCheck size={14} /> My Action Items
           </h4>
         </div>
@@ -184,7 +184,7 @@ const MyDuties = () => {
                     }`}>
                       {task.taskContent}
                     </p>
-                    <p className="text-[9px] font-black text-blue-400 dark:text-slate-600 uppercase mt-1 tracking-widest">
+                    <p className="text-[9px] font-black text-blue-600 dark:text-slate-400 uppercase mt-1 tracking-widest">
                       Assigner: {task.assignedByPos}
                     </p>
                   </div>

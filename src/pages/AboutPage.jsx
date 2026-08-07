@@ -141,7 +141,7 @@ const AboutPage = () => {
       </div>
 
       <footer className="py-20 border-t border-slate-200 dark:border-white/5 text-center bg-white dark:bg-slate-900/20 transition-colors duration-300">
-        <p className="text-slate-400 dark:text-slate-700 text-[10px] font-black uppercase tracking-[0.5em]">
+        <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.5em]">
           Character • Leadership • Academic Excellence
         </p>
       </footer>

@@ -330,7 +330,7 @@ const AdminDashboard = () => {
               )}
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black uppercase text-blue-300 dark:text-slate-600 leading-none mb-1">My Profile</p>
+              <p className="text-[10px] font-black uppercase text-blue-600 dark:text-slate-400 leading-none mb-1">My Profile</p>
               <p className="text-xs font-bold text-slate-900 dark:text-slate-300 uppercase tracking-tighter">
                 {ROLE_LABELS[role] || role?.replace('_', ' ')}
               </p>
@@ -363,7 +363,7 @@ const AdminDashboard = () => {
                 <h2 className="text-xl font-black uppercase italic flex items-center gap-3 text-slate-900 dark:text-white">
                   <ClipboardCheck className="text-yellow-500" /> Command Feed
                 </h2>
-                <span className="flex items-center gap-2 text-[10px] font-bold text-blue-300 dark:text-slate-600 uppercase tracking-widest">
+                <span className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-slate-400 uppercase tracking-widest">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                   Live Updates
                 </span>
@@ -399,7 +399,7 @@ const AdminDashboard = () => {
 
             <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-3xl p-8 shadow-sm transition-colors">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 dark:text-slate-600 flex items-center gap-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-slate-400 flex items-center gap-2">
                    <Calendar size={14} /> Upcoming Events
                 </h3>
                 <Link to="/events" className="text-yellow-500 p-1 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition-all">
@@ -416,7 +416,7 @@ const AdminDashboard = () => {
                     <p className="text-[10px] text-blue-400 dark:text-slate-500 font-bold uppercase mt-1">{event.location}</p>
                   </div>
                 )) : (
-                  <div className="py-4 text-center text-xs text-blue-300 dark:text-slate-600 italic">No events scheduled.</div>
+                  <div className="py-4 text-center text-xs text-blue-600 dark:text-slate-400 italic">No events scheduled.</div>
                 )}
               </div>
             </div>
