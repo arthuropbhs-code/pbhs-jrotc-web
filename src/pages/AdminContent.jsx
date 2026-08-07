@@ -4,18 +4,35 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
-import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD } from '../data/defaultPageContent';
+import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOME } from '../data/defaultPageContent';
+import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import {
-  FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info
+  FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
+  Eye, EyeOff, LayoutDashboard, Plus, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 
 const TABS = [
-  { id: 'about', label: 'About JROTC' },
-  { id: 'cadet-info', label: 'General Info' },
-  { id: 'promotion-board', label: 'Promotion Board' }
+  { id: 'home',           label: 'Home' },
+  { id: 'about',          label: 'About' },
+  { id: 'cadet-info',     label: 'General Info' },
+  { id: 'promotion-board',label: 'Promotion Board' },
+  { id: 'visibility',     label: 'Visibility' },
 ];
+
+const PAGE_VISIBILITY_LABELS = {
+  about:             'About JROTC',
+  'cadet-info':      'Cadet Info (General)',
+  'promotion-board': 'Promotion Board',
+  'winning-colors':  'Winning Colors',
+  documents:         'Documents & Regs',
+  announcements:     'Announcements',
+  teams:             'Battalion Teams',
+  leadership:        'Leadership',
+  photos:            'Photo Gallery',
+  events:            'Events Calendar',
+};
 
 const linesToArray = (text) => (text || '').split('\n').map(s => s.trim()).filter(Boolean);
 
@@ -31,24 +48,33 @@ const AdminContent = () => {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null);
 
+  const [homeForm, setHomeForm] = useState(DEFAULT_HOME);
   const [aboutForm, setAboutForm] = useState(DEFAULT_ABOUT);
   const [cadetInfoForm, setCadetInfoForm] = useState(DEFAULT_CADET_INFO);
   const [promoForm, setPromoForm] = useState(DEFAULT_PROMOTION_BOARD);
+  const [visibilityForm, setVisibilityForm] = useState(DEFAULT_VISIBILITY);
   const [expandedRank, setExpandedRank] = useState(null);
   const [expandedStaffSection, setExpandedStaffSection] = useState(null);
 
   useEffect(() => {
     if (!isAuthorized) return;
     const unsubs = [
+      onSnapshot(doc(db, "pageContent", "home"), (snap) => {
+        if (snap.exists()) setHomeForm({ ...DEFAULT_HOME, ...snap.data() });
+        setDataLoading(false);
+      }),
       onSnapshot(doc(db, "pageContent", "about"), (snap) => {
         if (snap.exists()) setAboutForm({ ...DEFAULT_ABOUT, ...snap.data() });
-        setDataLoading(false);
       }),
       onSnapshot(doc(db, "pageContent", "cadet-info"), (snap) => {
         if (snap.exists()) setCadetInfoForm({ ...DEFAULT_CADET_INFO, ...snap.data() });
       }),
       onSnapshot(doc(db, "pageContent", "promotion-board"), (snap) => {
         if (snap.exists()) setPromoForm({ ...DEFAULT_PROMOTION_BOARD, ...snap.data() });
+      }),
+      onSnapshot(doc(db, "settings", "pageVisibility"), (snap) => {
+        if (snap.exists()) setVisibilityForm({ ...DEFAULT_VISIBILITY, ...snap.data() });
+        else setVisibilityForm(DEFAULT_VISIBILITY);
       })
     ];
     return () => unsubs.forEach(u => u());
@@ -70,6 +96,20 @@ const AdminContent = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // --- HOME helpers ---
+  const updateSlide = (index, field, value) => {
+    const slides = [...homeForm.slides];
+    slides[index] = { ...slides[index], [field]: value };
+    setHomeForm({ ...homeForm, slides });
+  };
+  const addSlide = () => setHomeForm({ ...homeForm, slides: [...homeForm.slides, { url: '', title: '', subtitle: '' }] });
+  const removeSlide = (i) => setHomeForm({ ...homeForm, slides: homeForm.slides.filter((_, idx) => idx !== i) });
+  const updateQuickAccess = (index, field, value) => {
+    const quickAccess = [...homeForm.quickAccess];
+    quickAccess[index] = { ...quickAccess[index], [field]: value };
+    setHomeForm({ ...homeForm, quickAccess });
   };
 
   // --- ABOUT helpers ---
@@ -145,6 +185,62 @@ const AdminContent = () => {
             </button>
           ))}
         </div>
+
+        {/* --- HOME TAB --- */}
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            {/* Slideshow */}
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 rounded-[2rem] space-y-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">Hero Slideshow ({homeForm.slides.length} slides)</h3>
+                <button onClick={addSlide} className="flex items-center gap-1.5 text-[10px] font-black uppercase text-yellow-600 dark:text-yellow-500 hover:opacity-70 transition-opacity">
+                  <Plus size={14} /> Add Slide
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest -mt-2">
+                Use Cloudinary image URLs or paths under /covers/ (e.g. /covers/Yuletide2025.webp)
+              </p>
+              <div className="space-y-4">
+                {homeForm.slides.map((slide, i) => (
+                  <div key={i} className="bg-slate-50 dark:bg-black/30 border border-slate-100 dark:border-white/5 p-4 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Slide {i + 1}</span>
+                      {homeForm.slides.length > 1 && (
+                        <button onClick={() => removeSlide(i)} className="text-red-400 hover:text-red-500 transition-colors p-1">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <input className={inputClass} placeholder="Title (e.g. TORNADO)" value={slide.title} onChange={e => updateSlide(i, 'title', e.target.value)} />
+                      <input className={inputClass} placeholder="Subtitle (e.g. BATTALION)" value={slide.subtitle} onChange={e => updateSlide(i, 'subtitle', e.target.value)} />
+                    </div>
+                    <input className={inputClass} placeholder="Image URL or /covers/filename.webp" value={slide.url} onChange={e => updateSlide(i, 'url', e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Access Cards */}
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 rounded-[2rem] space-y-5">
+              <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">Quick Access Cards</h3>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest -mt-2">
+                The three cards at the bottom of the homepage. Icons are fixed (Cadet Info → Shield, Leadership → Users, Teams → Award).
+              </p>
+              {homeForm.quickAccess.map((card, i) => (
+                <div key={i} className="grid md:grid-cols-3 gap-3 pb-4 border-b border-slate-100 dark:border-white/5 last:border-0 last:pb-0">
+                  <input className={inputClass} placeholder="Title" value={card.title} onChange={e => updateQuickAccess(i, 'title', e.target.value)} />
+                  <input className={inputClass} placeholder="Description" value={card.desc} onChange={e => updateQuickAccess(i, 'desc', e.target.value)} />
+                  <input className={inputClass} placeholder="Link (e.g. /cadet-info)" value={card.link} onChange={e => updateQuickAccess(i, 'link', e.target.value)} />
+                </div>
+              ))}
+            </div>
+
+            <button disabled={saving} onClick={() => saveTab('home', homeForm)} className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all text-sm shadow-lg shadow-yellow-500/20 disabled:opacity-50 flex items-center justify-center gap-2">
+              <Save size={18} /> Save Homepage
+            </button>
+          </div>
+        )}
 
         {/* --- ABOUT TAB --- */}
         {activeTab === 'about' && (
@@ -325,6 +421,60 @@ const AdminContent = () => {
               className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all text-sm shadow-lg shadow-yellow-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={18} /> Save Promotion Board
+            </button>
+          </div>
+        )}
+        {/* --- VISIBILITY TAB --- */}
+        {activeTab === 'visibility' && (
+          <div className="space-y-6">
+            <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-[11px] text-blue-700 dark:text-blue-300">
+              <Info size={16} className="flex-shrink-0 mt-0.5" />
+              Hiding a page removes it from the navigation bar on the public site. The page URL still works — this is a nav-level control, not a security gate.
+            </div>
+
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 rounded-[2rem] space-y-3">
+              <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest mb-5">Public Navigation Links</h3>
+              {Object.entries(PAGE_VISIBILITY_LABELS).map(([key, label]) => {
+                const visible = visibilityForm[key] !== false;
+                return (
+                  <div key={key} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 hover:border-yellow-500/30 transition-colors">
+                    <div>
+                      <p className="font-black uppercase text-sm text-slate-800 dark:text-slate-200">{label}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">/{key}</p>
+                    </div>
+                    <button
+                      onClick={() => setVisibilityForm({ ...visibilityForm, [key]: !visible })}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                        visible
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 hover:bg-green-500/20'
+                          : 'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-white/5 hover:border-yellow-500/30'
+                      }`}
+                    >
+                      {visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {visible ? 'Visible' : 'Hidden'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await setDoc(doc(db, 'settings', 'pageVisibility'), visibilityForm);
+                  showStatus('Visibility saved — live on the site now');
+                } catch (err) {
+                  console.error('Visibility save failed:', err);
+                  showStatus('Save Failed');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all text-sm shadow-lg shadow-yellow-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save size={18} /> Save Visibility Settings
             </button>
           </div>
         )}

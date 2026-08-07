@@ -4,6 +4,7 @@ import { Shield, ChevronDown, Menu, X, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../utils/getInitials';
+import { usePageVisibility } from '../hooks/usePageVisibility';
 
 // Hoisted out of Navbar so it isn't recreated (and remounted, losing any
 // state) on every Navbar render - takes currentPath as a prop instead of
@@ -43,6 +44,7 @@ const Navbar = () => {
   const currentPath = location.pathname;
   const [isOpen, setIsOpen] = useState(false);
   const { user, userData } = useAuth();
+  const vis = usePageVisibility();
 
   // Mobile Dropdown Accordion States
   const [mobileCadetOpen, setMobileCadetOpen] = useState(false);
@@ -86,49 +88,52 @@ const Navbar = () => {
 
           {/* DESKTOP LINKS */}
           <div className="hidden md:flex items-center gap-8">
-            <NavLink to="/about" currentPath={currentPath}>About</NavLink>
+            {vis.about && <NavLink to="/about" currentPath={currentPath}>About</NavLink>}
 
-            {/* --- CADET INFO DROPDOWN --- */}
+            {/* --- CADET INFO DROPDOWN (shows if any sub-item is visible) --- */}
+            {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents) && (
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer">
-                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
-                  ${currentPath.includes('cadet') || currentPath === '/promotion-board' || currentPath.includes('winning-colors') 
-                  ? 'text-yellow-500' 
+                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors
+                  ${currentPath.includes('cadet') || currentPath === '/promotion-board' || currentPath.includes('winning-colors')
+                  ? 'text-yellow-500'
                   : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                   Cadet Info
                 </span>
                 <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" />
               </div>
-              
-              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 
+
+              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200
                               bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
-                {!isActive('/cadet-info') && (
+                {vis['cadet-info'] && !isActive('/cadet-info') && (
                   <Link to="/cadet-info" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     General Info
                   </Link>
                 )}
-                {!isActive('/promotion-board') && (
+                {vis['promotion-board'] && !isActive('/promotion-board') && (
                   <Link to="/promotion-board" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     Promotion Board
                   </Link>
                 )}
-                {!isActive('/cadet-info/winning-colors') && (
+                {vis['winning-colors'] && !isActive('/cadet-info/winning-colors') && (
                   <Link to="/cadet-info/winning-colors" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     Winning Colors
                   </Link>
                 )}
-                {!isActive('/documents') && (
+                {vis.documents && !isActive('/documents') && (
                   <Link to="/documents" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
                     Documents & Regs
                   </Link>
                 )}
               </div>
             </div>
+            )}
 
-            {/* --- BATTALION DROPDOWN --- */}
+            {/* --- BATTALION DROPDOWN (shows if announcements is visible) --- */}
+            {vis.announcements && (
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
-                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors 
+                <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors
                   ${['/announcements', '/photos'].includes(currentPath) ? 'text-yellow-500' : 'group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                   Battalion
                 </span>
@@ -139,9 +144,10 @@ const Navbar = () => {
                 <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
               </div>
             </div>
+            )}
 
-            <NavLink to="/leadership" currentPath={currentPath}>Leadership</NavLink>
-            <NavLink to="/teams" currentPath={currentPath}>Teams</NavLink>
+            {vis.leadership && <NavLink to="/leadership" currentPath={currentPath}>Leadership</NavLink>}
+            {vis.teams && <NavLink to="/teams" currentPath={currentPath}>Teams</NavLink>}
           </div>
         </div>
 
@@ -196,11 +202,12 @@ const Navbar = () => {
             className="absolute top-16 left-0 w-full bg-[#0a0c12] border-b border-white/10 shadow-2xl px-6 py-6 md:hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
           >
             <div className="flex flex-col space-y-1">
-              <MobileNavLink to="/about" currentPath={currentPath} onNavigate={closeMenu}>About</MobileNavLink>
-              
+              {vis.about && <MobileNavLink to="/about" currentPath={currentPath} onNavigate={closeMenu}>About</MobileNavLink>}
+
               {/* Mobile Cadet Accordion Node */}
+              {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents) && (
               <div className="py-2 border-b border-white/5">
-                <button 
+                <button
                   onClick={() => setMobileCadetOpen(!mobileCadetOpen)}
                   className="w-full flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-slate-200 py-1"
                 >
@@ -209,17 +216,19 @@ const Navbar = () => {
                 </button>
                 {mobileCadetOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
-                    <MobileNavLink to="/cadet-info" currentPath={currentPath} onNavigate={closeMenu} indent>General Info</MobileNavLink>
-                    <MobileNavLink to="/promotion-board" currentPath={currentPath} onNavigate={closeMenu} indent>Promotion Board</MobileNavLink>
-                    <MobileNavLink to="/cadet-info/winning-colors" currentPath={currentPath} onNavigate={closeMenu} indent>Winning Colors</MobileNavLink>
-                    <MobileNavLink to="/documents" currentPath={currentPath} onNavigate={closeMenu} indent>Documents & Regs</MobileNavLink>
+                    {vis['cadet-info'] && <MobileNavLink to="/cadet-info" currentPath={currentPath} onNavigate={closeMenu} indent>General Info</MobileNavLink>}
+                    {vis['promotion-board'] && <MobileNavLink to="/promotion-board" currentPath={currentPath} onNavigate={closeMenu} indent>Promotion Board</MobileNavLink>}
+                    {vis['winning-colors'] && <MobileNavLink to="/cadet-info/winning-colors" currentPath={currentPath} onNavigate={closeMenu} indent>Winning Colors</MobileNavLink>}
+                    {vis.documents && <MobileNavLink to="/documents" currentPath={currentPath} onNavigate={closeMenu} indent>Documents & Regs</MobileNavLink>}
                   </div>
                 )}
               </div>
+              )}
 
               {/* Mobile Battalion Accordion Node */}
+              {vis.announcements && (
               <div className="py-2 border-b border-white/5">
-                <button 
+                <button
                   onClick={() => setMobileBattalionOpen(!mobileBattalionOpen)}
                   className="w-full flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-slate-200 py-1"
                 >
@@ -232,9 +241,10 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+              )}
 
-              <MobileNavLink to="/leadership" currentPath={currentPath} onNavigate={closeMenu}>Leadership</MobileNavLink>
-              <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Teams</MobileNavLink>
+              {vis.leadership && <MobileNavLink to="/leadership" currentPath={currentPath} onNavigate={closeMenu}>Leadership</MobileNavLink>}
+              {vis.teams && <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Teams</MobileNavLink>}
 
               <div className="pt-4 mt-2 border-t border-white/5">
                 {user ? (

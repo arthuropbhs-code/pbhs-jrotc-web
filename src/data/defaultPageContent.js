@@ -185,3 +185,24 @@ export const DEFAULT_PROMOTION_BOARD = {
     ]
   }
 };
+
+// Homepage content — slideshow slides and quick-access cards.
+// Slides use cover images already in /public/covers/; admins can swap URLs
+// to any Cloudinary-hosted image uploaded through the portrait upload flow.
+export const DEFAULT_HOME = {
+  slides: [
+    { url: "/covers/Yuletide2025.webp",    title: "TORNADO",    subtitle: "BATTALION" },
+    { url: "/covers/Raiders_Awards.webp",  title: "EXCELLENCE", subtitle: "RECOGNIZED AT EVERY LEVEL" },
+    { url: "/covers/ball2024.webp",        title: "DECORATED",  subtitle: "UNIT WITH DISTINCTION" },
+    { url: "/covers/Open_House.webp",      title: "COMMUNITY",  subtitle: "LEADERS OF TOMORROW" },
+    { url: "/covers/Raiders2025.webp",     title: "PHYSICAL",   subtitle: "READY FOR THE CHALLENGE" },
+    { url: "/covers/Color_Guard.webp",     title: "PRECISION",  subtitle: "IN EVERY MOVEMENT" },
+    { url: "/covers/fallenheros2025.webp", title: "HONORING",   subtitle: "OUR FALLEN HEROES" },
+    { url: "/covers/JV_Raiders.webp",      title: "TRAINING",   subtitle: "THE NEXT GENERATION" }
+  ],
+  quickAccess: [
+    { title: "Cadet Info",    desc: "Regulations, Creed, and Knowledge.", link: "/cadet-info" },
+    { title: "Leadership",    desc: "Battalion Staff & Command.",         link: "/leadership" },
+    { title: "Special Teams", desc: "Raiders, Drill, and Color Guard.",  link: "/teams" }
+  ]
+};

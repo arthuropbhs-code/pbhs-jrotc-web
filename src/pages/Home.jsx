@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+import { DEFAULT_HOME } from '../data/defaultPageContent';
 
 // Army Values with full descriptions from official JROTC reference content.
 // Short names (displayed on the card) match the long-form entry (shown in the popup).
@@ -28,23 +29,23 @@ const Home = () => {
     path: '/',
   });
   const [selectedValue, setSelectedValue] = useState(null);
+  const [homeContent, setHomeContent] = useState(DEFAULT_HOME);
   const [topThree, setTopThree] = useState([]);
   const [topThreeLoading, setTopThreeLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
 
-  // --- SLIDESHOW DATA ---
-  const slides = [
-    { url: "/covers/Yuletide2025.webp", title: "TORNADO", subtitle: "BATTALION" },
-    { url: "/covers/Raiders_Awards.webp", title: "EXCELLENCE", subtitle: "RECOGNIZED AT EVERY LEVEL" },
-    { url: "/covers/ball2024.webp", title: "DECORATED", subtitle: "UNIT WITH DISTINCTION" },
-    { url: "/covers/Open_House.webp", title: "COMMUNITY", subtitle: "LEADERS OF TOMORROW" },
-    { url: "/covers/Raiders2025.webp", title: "PHYSICAL", subtitle: "READY FOR THE CHALLENGE" },
-    { url: "/covers/Color_Guard.webp", title: "PRECISION", subtitle: "IN EVERY MOVEMENT" },
-    { url: "/covers/fallenheros2025.webp", title: "HONORING", subtitle: "OUR FALLEN HEROES" },
-    { url: "/covers/JV_Raiders.webp", title: "TRAINING", subtitle: "THE NEXT GENERATION" }
-  ];
+  // slides and quickAccess come from Firestore (with DEFAULT_HOME as the fallback)
+  const slides = homeContent.slides;
+
+  // --- HOMEPAGE CONTENT (slides + quick access) ---
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "pageContent", "home"), (snap) => {
+      if (snap.exists()) setHomeContent({ ...DEFAULT_HOME, ...snap.data() });
+    });
+    return () => unsub();
+  }, []);
 
   // --- LIVE FIRESTORE LEADERSHIP DATA FOR TOP 3 & QUOTES ---
   useEffect(() => {
@@ -369,10 +370,16 @@ const Home = () => {
       </section>
 
       {/* --- QUICK ACCESS --- */}
+      {/* Icons are structural (non-editable content) — fixed by position */}
       <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/5">
-        <Reveal><InfoCard icon={<Shield />} title="Cadet Info" desc="Regulations, Creed, and Knowledge." link="/cadet-info" /></Reveal>
-        <Reveal delay={0.1}><InfoCard icon={<Users />} title="Leadership" desc="Battalion Staff & Command." link="/leadership" /></Reveal>
-        <Reveal delay={0.2}><InfoCard icon={<Award />} title="Special Teams" desc="Raiders, Drill, and Color Guard." link="/teams" /></Reveal>
+        {homeContent.quickAccess.map((card, i) => {
+          const ICONS = [<Shield />, <Users />, <Award />];
+          return (
+            <Reveal key={i} delay={i * 0.1}>
+              <InfoCard icon={ICONS[i] || <Shield />} title={card.title} desc={card.desc} link={card.link} />
+            </Reveal>
+          );
+        })}
       </section>
     </div>
   );
