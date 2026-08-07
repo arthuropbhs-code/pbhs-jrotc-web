@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import MyDuties from '../components/MyDuties';
 import Footer from '../components/Footer';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 import { getInitials } from '../components/Navbar';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -67,6 +68,20 @@ const AdminDashboard = () => {
   const isStaffOrS4 = userLevel >= STAFF_LEVEL;
 
   const isActive = (path) => location.pathname === path;
+
+  const cadetOnboardingItems = [
+    { id: 'profile', label: 'Complete your profile', description: 'Add your rank, position, and company so staff can find you.', link: '/admin/profile', linkText: 'My Profile' },
+    { id: 'cadet-info', label: 'Review Cadet Info', description: 'Rank structure, LET levels, and what to expect this year.', link: '/cadet-info', linkText: 'View' },
+    { id: 'uniform', label: 'Check your uniform items', description: 'See what has been issued to you and request anything missing.', link: '/uniform-requests', linkText: 'View' },
+    { id: 'documents', label: 'Read documents & regulations', description: 'Battalion policies, forms, and required reading.', link: '/documents', linkText: 'View' },
+  ];
+
+  const staffOnboardingItems = [
+    { id: 'personnel', label: 'Explore Manage Personnel', description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users', linkText: 'Open' },
+    { id: 'broadcast', label: 'Send a Global Broadcast', description: 'See how battalion-wide announcements work.', link: '/admin/announcements', linkText: 'Open' },
+    { id: 'leadership', label: 'Review Manage Leadership', description: 'Command staff listing shown on the public site.', link: '/admin/leadership', linkText: 'Open' },
+    { id: 'stats', label: 'Check Battalion Stats', description: 'Roster breakdown, uniform logistics, and camp attendance.', link: '/admin/stats', linkText: 'Open' },
+  ];
 
   // Client-side only - a real security boundary for this also needs a
   // matching Firestore rule (restricting what a pending account can read/
@@ -326,6 +341,12 @@ const AdminDashboard = () => {
               Staff Access Active. <span className="text-yellow-500">Command features are restricted based on your role.</span>
             </p>
           </div>
+        )}
+
+        {isStaffOrS4 ? (
+          <OnboardingChecklist storageKey="staff" title="Getting Started as Staff" items={staffOnboardingItems} />
+        ) : (
+          <OnboardingChecklist storageKey="cadet" title="Getting Started" items={cadetOnboardingItems} />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

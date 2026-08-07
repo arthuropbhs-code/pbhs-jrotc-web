@@ -24,6 +24,19 @@ const EMAIL_MANAGER_ROLES = [
   's1_adjutant', 's6_technology'
 ];
 
+// Pure authorization decision for acting on someone ELSE's account, pulled
+// out of the handler so it's unit-testable without mocking Firestore/JWT
+// verification. Behavior is unchanged from the inline checks this replaced.
+export function canManageAccount(callerRole, targetRole) {
+  if (!EMAIL_MANAGER_ROLES.includes(callerRole)) {
+    return { allowed: false, reason: 'Only battalion command, S1, or S6 can manage another cadet\'s account.' };
+  }
+  if ((ROLE_HIERARCHY[targetRole] || 0) >= (ROLE_HIERARCHY[callerRole] || 0)) {
+    return { allowed: false, reason: 'You can only manage accounts for personnel below your own rank.' };
+  }
+  return { allowed: true };
+}
+
 // Firebase ID tokens are signed with Google's securetoken key set - this is
 // the same public JWKS endpoint firebase-admin's verifyIdToken() uses
 // internally, just called directly instead of through the firebase-admin
@@ -327,11 +340,9 @@ export default async function handler(req, res) {
         getUserField(accessToken, projectId, targetUid, 'role'),
       ]);
 
-      if (!EMAIL_MANAGER_ROLES.includes(callerRole)) {
-        return res.status(403).json({ error: 'Only battalion command, S1, or S6 can manage another cadet\'s account.' });
-      }
-      if ((ROLE_HIERARCHY[targetRole] || 0) >= (ROLE_HIERARCHY[callerRole] || 0)) {
-        return res.status(403).json({ error: 'You can only manage accounts for personnel below your own rank.' });
+      const decision = canManageAccount(callerRole, targetRole);
+      if (!decision.allowed) {
+        return res.status(403).json({ error: decision.reason });
       }
     }
 

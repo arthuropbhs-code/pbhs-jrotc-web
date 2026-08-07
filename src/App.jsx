@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useAuth } from './hooks/useAuth';
 import { useIdleLogout } from './hooks/useIdleLogout';
 import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
+import { canAccessRoute } from './lib/authz';
 
 // --- COMPONENTS ---
 // Navbar/Footer stay eager: they render on almost every route, so splitting
@@ -69,10 +70,7 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   // allowedRoles isolates specific roles (e.g. S5/S6) that a level threshold
   // can't express on its own, since they're tied with every other S-role at
   // STAFF_LEVEL. Top command can always override, same as everywhere else.
-  if (allowedRoles) {
-    const hasAccess = allowedRoles.includes(role) || userLevel >= ADMIN_LEVEL;
-    if (!hasAccess) return <Navigate to="/admin/dashboard" />;
-  } else if (minLevel && userLevel < minLevel) {
+  if (!canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel: ADMIN_LEVEL })) {
     return <Navigate to="/admin/dashboard" />;
   }
 
