@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
-import { withRetry } from '../utils/withRetry';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
 const COMPANIES = ["None", "Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
@@ -20,12 +20,6 @@ const INSTRUCTOR_TYPES = ["SAI", "AI"];
 // looks for - that's how a company entry ends up in its correct box on the
 // public page instead of silently not showing up anywhere.
 const COMPANY_POSITIONS = ["Commander", "Executive Officer", "First Sergeant"];
-
-// Cloud name and unsigned upload preset are not secrets - Cloudinary's
-// unsigned-upload flow is designed to be called directly from client code.
-// Never put the API key/secret here; those are for signed (server-side) uploads.
-const CLOUDINARY_CLOUD_NAME = 'q77zogcy';
-const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
 
 const initialLeaderForm = { name: '', role: '', rank: '', portrait: '', desc: '', quote: '', company: 'None' };
 const initialInstructorForm = { type: 'SAI', name: '' };
@@ -79,25 +73,11 @@ const AdminLeadership = () => {
     if (!file) return;
     setUploadingPortrait(true);
     try {
-      const body = new FormData();
-      body.append('file', file);
-      body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-      const data = await withRetry(async () => {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-          method: 'POST',
-          body
-        });
-        const json = await res.json();
-        if (!res.ok || !json.secure_url) {
-          throw new Error(json.error?.message || 'Upload failed');
-        }
-        return json;
-      });
+      const data = await uploadToCloudinary(file, 'image');
       setLeaderForm(prev => ({ ...prev, portrait: data.secure_url }));
     } catch (err) {
       console.error("Portrait upload failed:", err);
-      showStatus("Portrait Upload Failed");
+      showStatus(err.message || "Portrait Upload Failed");
     } finally {
       setUploadingPortrait(false);
     }

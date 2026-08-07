@@ -3,13 +3,14 @@ import { db } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
-import { 
-  Save, Trash2, Edit3, ShieldAlert, 
+import {
+  Save, Trash2, Edit3, ShieldAlert,
   ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
-  UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks
+  UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks, UploadCloud, ImageOff
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import Footer from '../components/Footer';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
@@ -22,11 +23,12 @@ const AdminTeams = () => {
 
   const [formData, setFormData] = useState({
     name: '', status: 'Open Practice', description: '', practice: '', location: '',
-    requirements: '', disciplines: '', leadership: []
+    requirements: '', disciplines: '', leadership: [], photo: ''
   });
 
   const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
   const [uploading, setUploading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [personnel, setPersonnel] = useState([]);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
@@ -120,7 +122,7 @@ const AdminTeams = () => {
     try {
       await setDoc(doc(db, "specialTeams", docId), finalData);
       setEditingId(null);
-      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', leadership: [] });
+      setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', leadership: [], photo: '' });
       triggerStatus('success');
     } catch { triggerStatus('error'); }
   };
@@ -150,6 +152,21 @@ const AdminTeams = () => {
       email: person?.email || selectedEmail
     };
     setFormData({ ...formData, leadership: updatedLeadership });
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const data = await uploadToCloudinary(file, 'image');
+      setFormData(prev => ({ ...prev, photo: data.secure_url }));
+    } catch (err) {
+      console.error("Team photo upload failed:", err);
+      triggerStatus('error');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleEdit = (team) => {
@@ -227,7 +244,7 @@ const AdminTeams = () => {
                     {editingId ? `Modifying: ${formData.name}` : "Add New Team"}
                   </h2>
                   {editingId && (
-                    <button type="button" onClick={() => { setEditingId(null); setFormData({name:'', status:'Open Practice', description:'', practice:'', location:'', requirements:'', disciplines:'', leadership:[]}); }} className="text-[10px] font-black text-slate-400 uppercase hover:text-red-500 transition-colors">Reset</button>
+                    <button type="button" onClick={() => { setEditingId(null); setFormData({name:'', status:'Open Practice', description:'', practice:'', location:'', requirements:'', disciplines:'', leadership:[], photo:''}); }} className="text-[10px] font-black text-slate-400 uppercase hover:text-red-500 transition-colors">Reset</button>
                   )}
                 </div>
                 
@@ -250,6 +267,24 @@ const AdminTeams = () => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Mission Directives</label>
                   <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-sm h-32 text-slate-900 dark:text-white outline-none" />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Team Photo</label>
+                  <div className="flex items-center gap-4">
+                    {formData.photo ? (
+                      <img src={formData.photo} alt="" className="w-16 h-16 rounded-2xl object-cover border border-slate-200 dark:border-white/10" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center text-slate-300 dark:text-slate-700">
+                        <ImageOff size={20} />
+                      </div>
+                    )}
+                    <label className="flex-1 flex items-center justify-center gap-3 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-4 cursor-pointer hover:border-yellow-500 transition-all text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+                      {uploadingPhoto ? <Loader2 className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                      {uploadingPhoto ? 'Uploading...' : formData.photo ? 'Replace Photo' : 'Upload Photo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-white/5">

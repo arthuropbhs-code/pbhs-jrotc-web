@@ -145,7 +145,11 @@ const Navbar = () => {
               className="flex items-center gap-2 group"
             >
               <div className="w-8 h-8 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-[11px] font-black uppercase group-hover:scale-105 transition-transform overflow-hidden">
-                {getInitials(userData?.fullName) || <UserCircle size={20} />}
+                {userData?.portrait ? (
+                  <img src={userData.portrait} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(userData?.fullName) || <UserCircle size={20} />
+                )}
               </div>
             </Link>
           ) : (

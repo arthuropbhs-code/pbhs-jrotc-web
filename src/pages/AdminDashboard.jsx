@@ -322,8 +322,12 @@ const AdminDashboard = () => {
             title="My Profile"
             className="bg-white dark:bg-slate-900 pl-4 pr-5 py-3 rounded-2xl border border-blue-100 dark:border-white/5 flex items-center gap-3 shadow-sm transition-colors hover:border-yellow-500/40 group"
           >
-            <div className="w-10 h-10 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-xs font-black uppercase shrink-0 group-hover:scale-105 transition-transform">
-              {getInitials(userData?.fullName) || <UserCircle size={20} />}
+            <div className="w-10 h-10 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-xs font-black uppercase shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
+              {userData?.portrait ? (
+                <img src={userData.portrait} alt="" className="w-full h-full object-cover" />
+              ) : (
+                getInitials(userData?.fullName) || <UserCircle size={20} />
+              )}
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black uppercase text-blue-300 dark:text-slate-600 leading-none mb-1">My Profile</p>

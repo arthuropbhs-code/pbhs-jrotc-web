@@ -126,9 +126,17 @@ const handleContactCommander = () => {
                   </div>
 
                   <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8">
-                    <div className="p-4 bg-slate-950 border border-white/5 rounded-2xl w-fit">
-                      {currentTeam.icon}
-                    </div>
+                    {currentTeam.photo ? (
+                      <img
+                        src={currentTeam.photo}
+                        alt={`${activeTeam} team photo`}
+                        className="w-20 h-20 rounded-2xl object-cover border border-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="p-4 bg-slate-950 border border-white/5 rounded-2xl w-fit">
+                        {currentTeam.icon}
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-3xl font-black text-white uppercase italic tracking-tight">{activeTeam}</h3>
                       <p className="text-yellow-500/80 text-[10px] font-bold uppercase tracking-widest mb-1">{currentTeam.seasonText}</p>

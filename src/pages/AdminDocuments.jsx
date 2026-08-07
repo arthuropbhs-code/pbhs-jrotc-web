@@ -11,15 +11,13 @@ import {
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
-import { withRetry } from '../utils/withRetry';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
 // Same unsigned-upload pattern as AdminLeadership.jsx's portrait uploads -
 // this app hosts all uploaded files on Cloudinary rather than Firebase
 // Storage, so there's no separate Storage security rule to publish here.
-// "auto" (instead of "image") lets Cloudinary accept PDFs/docs, not just
-// images.
-const CLOUDINARY_CLOUD_NAME = 'q77zogcy';
-const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
+// uploadToCloudinary validates the real file bytes are a PDF (not just the
+// extension) before it ever reaches Cloudinary.
 
 const CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
 
@@ -69,34 +67,17 @@ const AdminDocuments = () => {
     if (!file) return;
     setUploading(true);
     try {
-      const body = new FormData();
-      body.append('file', file);
-      body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-      // Retried: a dropped connection mid-upload is far more likely than
-      // Cloudinary having actually accepted a broken/duplicate file, and an
-      // unsigned upload with no server-side side effect is safe to repeat.
-      const data = await withRetry(async () => {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
-          method: 'POST',
-          body
-        });
-        const json = await res.json();
-        if (!res.ok || !json.secure_url) {
-          throw new Error(json.error?.message || 'Upload failed');
-        }
-        return json;
-      });
+      const data = await uploadToCloudinary(file, 'document');
       setForm(prev => ({
         ...prev,
         fileUrl: data.secure_url,
-        fileName: file.name,
+        fileName: data.fileName,
         fileSize: data.bytes,
         title: prev.title || file.name.replace(/\.[^/.]+$/, '')
       }));
     } catch (err) {
       console.error("Document upload failed:", err);
-      showStatus("Upload Failed");
+      showStatus(err.message || "Upload Failed");
     } finally {
       setUploading(false);
     }
@@ -226,8 +207,8 @@ const AdminDocuments = () => {
                 <label className={labelClass}>File</label>
                 <label className="flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-6 cursor-pointer hover:border-yellow-500 transition-all text-xs font-black uppercase text-slate-500">
                   {uploading ? <Loader2 className="animate-spin" size={16} /> : <UploadCloud size={16} />}
-                  {uploading ? 'Uploading...' : form.fileName || 'Choose PDF or File'}
-                  <input type="file" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                  {uploading ? 'Uploading...' : form.fileName || 'Choose PDF'}
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handleFileSelect} disabled={uploading} />
                 </label>
               </div>
 

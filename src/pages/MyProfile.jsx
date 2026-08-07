@@ -7,7 +7,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { ROLE_LABELS } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2 } from 'lucide-react';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
 const formatCooldown = (seconds) => {
   if (seconds < 60) return `${seconds}s`;
@@ -28,6 +29,7 @@ const MyProfile = () => {
   const [resetCooldownUntil, setResetCooldownUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [deleteAccountStatus, setDeleteAccountStatus] = useState(null);
+  const [uploadingPortrait, setUploadingPortrait] = useState(false);
 
   const resetCooldownSeconds = Math.max(0, Math.ceil((resetCooldownUntil - now) / 1000));
 
@@ -45,6 +47,20 @@ const MyProfile = () => {
   useEffect(() => {
     setLoginEmail(user?.email || '');
   }, [user?.email]);
+
+  const handlePortraitUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !user) return;
+    setUploadingPortrait(true);
+    try {
+      const data = await uploadToCloudinary(file, 'image');
+      await updateDoc(doc(db, "users", user.uid), { portrait: data.secure_url });
+    } catch (err) {
+      console.error("Portrait upload failed:", err);
+    } finally {
+      setUploadingPortrait(false);
+    }
+  };
 
   const handleSavePhone = async (e) => {
     e.preventDefault();
@@ -154,9 +170,19 @@ const MyProfile = () => {
         </Link>
 
         <div className="flex items-center gap-5 mb-8">
-          <div className="w-16 h-16 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-xl font-black uppercase shrink-0">
-            {getInitials(userData?.fullName) || '?'}
-          </div>
+          <label className="relative w-16 h-16 shrink-0 rounded-full cursor-pointer group" title="Change portrait">
+            {userData?.portrait ? (
+              <img src={userData.portrait} alt="" className="w-16 h-16 rounded-full object-cover" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-xl font-black uppercase">
+                {getInitials(userData?.fullName) || '?'}
+              </div>
+            )}
+            <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+              {uploadingPortrait ? <Loader2 className="animate-spin" size={18} /> : <Camera size={18} />}
+            </div>
+            <input type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} disabled={uploadingPortrait} />
+          </label>
           <div>
             <h1 className="text-3xl font-black uppercase italic tracking-tighter">My Profile</h1>
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
