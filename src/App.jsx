@@ -11,6 +11,7 @@ import { canAccessRoute } from './lib/authz';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
+import AdminLayout from './components/AdminLayout';
 
 // --- PAGES ---
 // Lazy-loaded so each route gets its own chunk instead of all ~30 pages
@@ -128,106 +129,112 @@ const AppContent = () => {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
 
-          {/* --- PROTECTED ADMIN ROUTES --- */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route
-            path="/admin/assign-tasks"
-            element={
-              <ProtectedRoute minLevel={COMMAND_LEVEL}>
-                <TaskManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/orders"
-            element={
-              <ProtectedRoute minLevel={COMMAND_LEVEL}>
-                <AdminOrders />
-              </ProtectedRoute>
-            }
-          />
-          {/* No minLevel here: any signed-in cadet needs to see their own uniform request status */}
-          <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
+          {/* --- PROTECTED ADMIN ROUTES (wrapped in AdminLayout for persistent sidebar) --- */}
+          {/* AdminLayout is a pathless layout route that renders <AdminSidebar /> +
+              <Outlet /> so the sidebar appears on every admin page automatically.
+              /admin (login) and /admin/signup are outside this wrapper on purpose —
+              those pages don't need the authenticated sidebar. */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route
+              path="/admin/assign-tasks"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <TaskManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <AdminOrders />
+                </ProtectedRoute>
+              }
+            />
+            {/* No minLevel here: any signed-in cadet needs to see their own uniform request status */}
+            <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
 
-          {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
-          <Route
-            path="/admin/announcements"
-            element={
-              <ProtectedRoute minLevel={STAFF_LEVEL}>
-                <AdminAnnouncements />
-              </ProtectedRoute>
-            }
-          />
+            {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
+            <Route
+              path="/admin/announcements"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminAnnouncements />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute minLevel={STAFF_LEVEL}>
-                <AdminUsers />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* No minLevel here: AdminTeams.jsx gates per-team access itself via commanderEmails, independent of rank */}
-          <Route path="/admin/teams" element={<ProtectedRoute><AdminTeams /></ProtectedRoute>} />
+            {/* No minLevel here: AdminTeams.jsx gates per-team access itself via commanderEmails, independent of rank */}
+            <Route path="/admin/teams" element={<ProtectedRoute><AdminTeams /></ProtectedRoute>} />
 
-          <Route
-            path="/admin/leadership"
-            element={
-              <ProtectedRoute minLevel={STAFF_LEVEL}>
-                <AdminLeadership />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/leadership"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminLeadership />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/content"
-            element={
-              <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
-                <AdminContent />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/content"
+              element={
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                  <AdminContent />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/documents"
-            element={
-              <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
-                <AdminDocuments />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/documents"
+              element={
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                  <AdminDocuments />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/camps"
-            element={
-              <ProtectedRoute minLevel={STAFF_LEVEL}>
-                <AdminCamps />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/camps"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminCamps />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/stats"
-            element={
-              <ProtectedRoute minLevel={STAFF_LEVEL}>
-                <AdminStats />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/stats"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminStats />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* No minLevel here: every signed-in user manages their own profile */}
-          <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
+            {/* No minLevel here: every signed-in user manages their own profile */}
+            <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
-          {/* SAI/AI only: configure battalion company names */}
-          <Route
-            path="/admin/companies"
-            element={
-              <ProtectedRoute minLevel={ADMIN_LEVEL}>
-                <AdminCompanies />
-              </ProtectedRoute>
-            }
-          />
+            {/* SAI/AI only: configure battalion company names */}
+            <Route
+              path="/admin/companies"
+              element={
+                <ProtectedRoute minLevel={ADMIN_LEVEL}>
+                  <AdminCompanies />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
 
           {/* CATCH ALL - was a silent redirect to Home; now a real 404 page.
               Note: since this is a client-side SPA with a Vercel rewrite
