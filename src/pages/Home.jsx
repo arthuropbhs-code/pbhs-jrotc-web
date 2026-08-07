@@ -6,6 +6,7 @@ import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const Home = () => {
   // No title override here: the root page keeps the plain "PBHS JROTC"
@@ -240,7 +241,7 @@ const Home = () => {
 
       {/* --- ARMY VALUES --- */}
       <section className="py-24 bg-white text-slate-950">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+        <Reveal className="max-w-7xl mx-auto px-6 text-center">
           <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-16">The Seven Army Values</h2>
           <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
             {['Loyalty', 'Duty', 'Respect', 'Service', 'Honor', 'Integrity', 'Courage'].map((val, i) => (
@@ -250,12 +251,12 @@ const Home = () => {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* --- TOP 3 COMMAND SECTION --- */}
       <section className="py-24 bg-slate-950 border-t border-white/5 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
+        <Reveal className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
             <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
@@ -304,14 +305,14 @@ const Home = () => {
               </motion.div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* --- QUICK ACCESS --- */}
       <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/5">
-        <InfoCard icon={<Shield />} title="Cadet Info" desc="Regulations, Creed, and Knowledge." link="/cadet-info" />
-        <InfoCard icon={<Users />} title="Leadership" desc="Battalion Staff & Command." link="/leadership" />
-        <InfoCard icon={<Award />} title="Special Teams" desc="Raiders, Drill, and Color Guard." link="/teams" />
+        <Reveal><InfoCard icon={<Shield />} title="Cadet Info" desc="Regulations, Creed, and Knowledge." link="/cadet-info" /></Reveal>
+        <Reveal delay={0.1}><InfoCard icon={<Users />} title="Leadership" desc="Battalion Staff & Command." link="/leadership" /></Reveal>
+        <Reveal delay={0.2}><InfoCard icon={<Award />} title="Special Teams" desc="Raiders, Drill, and Color Guard." link="/teams" /></Reveal>
       </section>
     </div>
   );
