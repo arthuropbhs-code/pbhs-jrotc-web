@@ -22,3 +22,43 @@
 .nav-link-glow:hover {
   text-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
 }
+
+/* Custom scrollbar - brand yellow thumb, theme-aware track. Firefox uses the
+   two-value `scrollbar-color` shorthand; everything Chromium/WebKit-based
+   needs the ::-webkit-scrollbar-* pseudo-elements instead, so both are
+   defined here to cover the same look across browsers. */
+:root {
+  scrollbar-color: #eab308 #e2e8f0; /* thumb track - light mode default */
+  scrollbar-width: thin;
+}
+
+.dark {
+  scrollbar-color: #eab308 #0f172a; /* thumb track - dark mode */
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #eab308;
+  border-radius: 999px;
+  border: 3px solid #e2e8f0;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  border-color: #0f172a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #ca8a04;
+}

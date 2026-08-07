@@ -63,7 +63,7 @@ const AdminContent = () => {
     setSaving(true);
     try {
       await setDoc(doc(db, "pageContent", id), data);
-      showStatus("Saved — live on the site now");
+      showStatus("Saved and live on the site now");
     } catch (err) {
       console.error("Save failed:", err);
       showStatus("Save Failed");
