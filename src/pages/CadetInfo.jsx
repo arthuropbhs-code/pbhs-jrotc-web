@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_CADET_INFO } from '../data/defaultPageContent';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 // --- DYNAMIC RANK SYMBOL ENGINE (CLEAN & SPACED) ---
 const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
@@ -162,7 +163,7 @@ const CadetInfo = () => {
       <div className="max-w-7xl mx-auto">
         
         {/* HERO HEADER */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <h1 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter mb-4">
             Cadet <span className="text-yellow-500">Info</span>
           </h1>
@@ -171,10 +172,10 @@ const CadetInfo = () => {
             <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
             <span>Est. 2006</span>
           </div>
-        </div>
+        </Reveal>
 
         {/* TOP ROW: MISSION & MEANINGS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Reveal delay={0.1} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-yellow-500 p-6 rounded-3xl text-slate-950 shadow-lg shadow-yellow-500/10">
             <h3 className="text-xs font-black uppercase mb-1 opacity-70 tracking-widest">The Mission</h3>
             <p className="text-xl font-black uppercase italic leading-tight">{content.missionText}</p>
@@ -192,12 +193,13 @@ const CadetInfo = () => {
               {content.leadershipDefinition}
             </p>
           </div>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-8 lg:col-span-2">
-            
+
             {/* INSIGNIA SECTION */}
+            <Reveal delay={0.05}>
             <Section title="Insignia of Grade" icon={GraduationCap} color="yellow">
               <div className="space-y-10">
                 <div>
@@ -227,15 +229,19 @@ const CadetInfo = () => {
                 </div>
               </div>
             </Section>
+            </Reveal>
 
             {/* THE CREED */}
+            <Reveal delay={0.1}>
             <Section title="The Cadet Creed" icon={Shield} color="yellow">
               <p className="text-sm leading-relaxed italic text-slate-300 whitespace-pre-line border-l-2 border-yellow-500/50 pl-6 py-2">
                 {content.cadetCreed}
               </p>
             </Section>
+            </Reveal>
 
             {/* 11 PRINCIPLES */}
+            <Reveal delay={0.15}>
             <Section title="11 Principles of Leadership" icon={Scale} color="blue">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {content.principles.map((p, i) => (
@@ -246,10 +252,12 @@ const CadetInfo = () => {
                 ))}
               </div>
             </Section>
+            </Reveal>
           </div>
 
           <div className="space-y-8">
             {/* DYNAMIC BATTALION LEADERSHIP ELEMENTS */}
+            <Reveal delay={0.05}>
             <Section title="Battalion Leadership" icon={Users} color="yellow">
               <div className="space-y-4">
                 <div className="bg-yellow-500 p-4 rounded-2xl text-slate-950 shadow-lg">
@@ -269,8 +277,10 @@ const CadetInfo = () => {
                 </div>
               </div>
             </Section>
+            </Reveal>
 
             {/* ARMY VALUES */}
+            <Reveal delay={0.1}>
             <Section title="Army Values" icon={Award} color="yellow">
               <div className="space-y-3">
                 {content.armyValues.map((item) => (
@@ -284,8 +294,10 @@ const CadetInfo = () => {
                 ))}
               </div>
             </Section>
+            </Reveal>
 
             {/* INSTRUCTORS SECTION */}
+            <Reveal delay={0.15}>
             <Section title="Instructors" icon={Target} color="yellow">
               <div className="space-y-2">
                 <div className="p-4 rounded-xl border border-white/5 bg-black/20 flex items-center justify-between group hover:bg-black/40 transition-all">
@@ -298,6 +310,7 @@ const CadetInfo = () => {
                 </div>
               </div>
             </Section>
+            </Reveal>
           </div>
         </div>
       </div>

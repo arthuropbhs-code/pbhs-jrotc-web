@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { DocumentRowSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const formatBytes = (bytes) => {
   if (!bytes) return '';
@@ -74,8 +75,9 @@ const Documents = () => {
         )}
 
         <div className="space-y-16">
-          {Object.entries(grouped).map(([category, docs]) => (
-            <section key={category}>
+          {Object.entries(grouped).map(([category, docs], i) => (
+            <Reveal key={category} delay={i * 0.08}>
+            <section>
               <h2 className="text-2xl font-black uppercase italic border-l-4 border-yellow-500 pl-6 mb-6">
                 {category}
               </h2>
@@ -107,6 +109,7 @@ const Documents = () => {
                 ))}
               </div>
             </section>
+            </Reveal>
           ))}
         </div>
       </div>

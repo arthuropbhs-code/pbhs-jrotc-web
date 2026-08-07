@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera, ExternalLink, Image as ImageIcon, FolderOpen } from 'lucide-react';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const Photos = () => {
   usePageMeta({
@@ -47,6 +48,7 @@ const Photos = () => {
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
         
+        <Reveal>
         <header className="mb-16 text-left border-l-4 border-[oklch(79.5%_0.184_86.047)] pl-8">
           <div className="flex items-center gap-3 mb-2">
             <FolderOpen className="text-[oklch(79.5%_0.184_86.047)]" size={24} />
@@ -56,7 +58,9 @@ const Photos = () => {
             Photo <span className="text-slate-500">Gallery</span>
           </h1>
         </header>
+        </Reveal>
 
+        <Reveal delay={0.1}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {albums.map((album) => (
             <motion.a
@@ -99,6 +103,7 @@ const Photos = () => {
             </motion.a>
           ))}
         </div>
+        </Reveal>
       </div>
     </div>
   );

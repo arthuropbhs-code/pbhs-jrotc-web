@@ -6,6 +6,7 @@ import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_PROMOTION_BOARD } from '../data/defaultPageContent';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const PromotionBoard = () => {
   usePageMeta({
@@ -46,11 +47,13 @@ const PromotionBoard = () => {
           <ChevronLeft size={16} className="mr-1" /> Back
         </Link>
 
+        <Reveal>
         <header className="mb-12">
           <h1 className="text-4xl md:text-6xl font-black text-white uppercase italic font-military tracking-tighter">
             Promotion <span className="text-yellow-500">Board</span>
           </h1>
         </header>
+        </Reveal>
 
         {/* RANK SELECTOR */}
         <div className="flex gap-2 mb-12 flex-wrap">

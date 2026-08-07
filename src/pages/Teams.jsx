@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { TeamsPageSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const Teams = () => {
   usePageMeta({
@@ -75,12 +76,14 @@ const handleContactCommander = () => {
     <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6 text-left font-sans">
       <div className="max-w-6xl mx-auto">
         
+        <Reveal>
         <header className="mb-12">
           <h2 className="text-xs font-black text-yellow-500 tracking-[0.4em] uppercase mb-4">Extracurricular Activites</h2>
           <h1 className="text-5xl md:text-7xl font-black text-white uppercase italic tracking-tighter font-military">
             Battalion <span className="text-slate-500">Teams</span>
           </h1>
         </header>
+        </Reveal>
 
         {loading ? (
           <TeamsPageSkeleton />

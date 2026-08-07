@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, Arr
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 const CalendarPage = () => {
   usePageMeta({
@@ -38,7 +39,7 @@ const CalendarPage = () => {
       <div className="max-w-6xl mx-auto mt-8">
         
         {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        <Reveal className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-2 hover:text-yellow-600 dark:hover:text-yellow-500 transition-all">
               <ArrowLeft size={14} /> Back to Command
@@ -59,7 +60,7 @@ const CalendarPage = () => {
               <ChevronRight />
             </button>
           </div>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
           

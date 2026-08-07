@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ROLE_HIERARCHY } from '../constants';
 import { AnnouncementCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import Reveal from '../components/Reveal';
 
 // Mirrors AdminAnnouncements.jsx's getAvailableTargets() so a viewer only
 // sees announcements actually addressed to them (plus anything sent to "All").
@@ -62,7 +63,7 @@ const Announcements = () => {
       <div className="max-w-5xl mx-auto">
 
         {/* HEADER */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <div className="inline-flex p-3 bg-yellow-500/10 rounded-full text-yellow-500 mb-4 animate-pulse">
             <Megaphone size={32} />
           </div>
@@ -72,7 +73,7 @@ const Announcements = () => {
           <p className="text-slate-400 max-w-xl mx-auto text-xs uppercase tracking-[0.2em] font-bold">
             Stay informed on upcoming events and official updates.
           </p>
-        </div>
+        </Reveal>
 
         {/* LOADING STATE */}
         {loading ? (
@@ -91,9 +92,9 @@ const Announcements = () => {
         ) : (
           /* ANNOUNCEMENT FEED LIST */
           <div className="space-y-8">
-            {announcements.map((post) => (
+            {announcements.map((post, idx) => (
+              <Reveal key={post.id} delay={idx * 0.05}>
               <article
-                key={post.id}
                 className="bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden hover:border-yellow-500/20 transition-all duration-300 shadow-2xl p-8"
               >
                 {/* META BADGES */}
@@ -125,6 +126,7 @@ const Announcements = () => {
                   {post.content}
                 </div>
               </article>
+              </Reveal>
             ))}
           </div>
         )}
