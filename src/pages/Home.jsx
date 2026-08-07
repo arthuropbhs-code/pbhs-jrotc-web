@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock, X } from 'lucide-react';
+import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, doc, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -28,7 +28,7 @@ const Home = () => {
     description: 'Official site of the Pompano Beach High School Army JROTC Tornado Battalion - leadership, discipline, and citizenship.',
     path: '/',
   });
-  const [selectedValue, setSelectedValue] = useState(null);
+  const [openValueIdx, setOpenValueIdx] = useState(null);
   const [homeContent, setHomeContent] = useState(DEFAULT_HOME);
   const [topThree, setTopThree] = useState([]);
   const [topThreeLoading, setTopThreeLoading] = useState(true);
@@ -254,65 +254,62 @@ const Home = () => {
       )}
 
       {/* --- ARMY VALUES --- */}
-      <section className="py-24 bg-white text-slate-950 relative">
+      <section className="py-24 bg-white text-slate-950">
         <Reveal className="max-w-7xl mx-auto px-6 text-center">
           <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-4">The Seven Army Values</h2>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-12">Tap a value to learn more</p>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-12">Select a value to expand</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             {ARMY_VALUES.map((val, i) => (
               <button
                 key={i}
-                onClick={() => setSelectedValue(val)}
-                className="group border border-slate-100 p-5 flex flex-col items-center hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all duration-300 rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
-                aria-label={`Learn about ${val.name}`}
+                onClick={() => setOpenValueIdx(prev => prev === i ? null : i)}
+                aria-expanded={openValueIdx === i}
+                aria-label={`${openValueIdx === i ? 'Collapse' : 'Expand'} ${val.name}`}
+                className={`group border p-5 flex flex-col items-center transition-all duration-200 rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 ${
+                  openValueIdx === i
+                    ? 'bg-slate-950 text-white border-slate-950'
+                    : 'border-slate-100 text-slate-950 hover:bg-slate-100 hover:border-slate-200'
+                }`}
               >
-                <Star className="text-yellow-500 mb-3 group-hover:scale-110 transition-transform" size={18} />
+                <Star
+                  className={`mb-3 transition-transform duration-200 text-yellow-500 ${openValueIdx === i ? 'scale-110' : 'group-hover:scale-110'}`}
+                  size={18}
+                />
                 <span className="text-[10px] font-black uppercase tracking-widest leading-snug">{val.name}</span>
               </button>
             ))}
           </div>
-        </Reveal>
 
-        {/* Army Values popup modal */}
-        <AnimatePresence>
-          {selectedValue && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedValue(null)} />
+          {/* Inline expansion panel — no overlay, no backdrop, instant feel */}
+          <AnimatePresence mode="wait">
+            {openValueIdx !== null && (
               <motion.div
-                className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-slate-950 z-10"
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
+                key={openValueIdx}
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden text-left"
               >
-                <button
-                  onClick={() => setSelectedValue(null)}
-                  className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={18} />
-                </button>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-3 bg-yellow-500/10 rounded-xl">
-                    <Star className="text-yellow-500" size={22} />
+                <div className="bg-slate-950 text-white rounded-2xl px-7 py-6 flex items-center gap-5">
+                  <div className="p-3 bg-yellow-500/10 rounded-xl shrink-0">
+                    <Star className="text-yellow-500" size={20} />
                   </div>
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Army Value</p>
-                    <h3 className="text-2xl font-black uppercase italic tracking-tight">{selectedValue.full}</h3>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Army Value</p>
+                    <h3 className="text-lg font-black uppercase italic tracking-tight text-white mb-1">
+                      {ARMY_VALUES[openValueIdx].full}
+                    </h3>
+                    <p className="text-slate-300 text-sm leading-relaxed">{ARMY_VALUES[openValueIdx].desc}</p>
                   </div>
-                </div>
-                <p className="text-slate-600 font-medium leading-relaxed">{selectedValue.desc}</p>
-                <div className="mt-6 text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">
-                  L · D · R · S · H · I · PC
+                  <div className="ml-auto text-[9px] font-black uppercase tracking-widest text-slate-700 hidden lg:block shrink-0 self-center">
+                    L · D · R · S · H · I · PC
+                  </div>
                 </div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </Reveal>
       </section>
 
       {/* --- TOP 3 COMMAND SECTION --- */}
