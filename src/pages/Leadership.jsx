@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Users } from 'lucide-react';
+import { ShieldCheck, Users, GraduationCap } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { useCompanies } from '../hooks/useCompanies';
 
 const Leadership = () => {
   usePageMeta({
@@ -11,15 +12,27 @@ const Leadership = () => {
     description: 'Meet the PBHS JROTC Tornado Battalion command staff, company leadership, and instructors.',
     path: '/leadership',
   });
+  const { companies: rawCompanies } = useCompanies();
   const [activeTab, setActiveTab] = useState('staff');
   const [cmsEntries, setCmsEntries] = useState([]);
+  // Instructors (SAI/AI) live in their own collection, separate from the
+  // cadet chain of command in `leadership` - this page's own meta
+  // description already promised them, they just weren't actually fetched
+  // or rendered anywhere on it.
+  const [instructors, setInstructors] = useState([]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "leadership"), (snapshot) => {
       setCmsEntries(snapshot.docs.map(d => d.data()));
     });
-    return () => unsubscribe();
+    const unsubInstructors = onSnapshot(collection(db, "instructors"), (snapshot) => {
+      setInstructors(snapshot.docs.map(d => d.data()));
+    });
+    return () => { unsubscribe(); unsubInstructors(); };
   }, []);
+
+  const sai = instructors.find(i => (i.type || '').toUpperCase().trim() === 'SAI');
+  const ai = instructors.find(i => (i.type || '').toUpperCase().trim() === 'AI');
 
   // --- 1. COMMAND TEAM FILTERS ---
   const getRole = (roleTitle, fallbackName) => {
@@ -71,7 +84,8 @@ const Leadership = () => {
   }).sort((a, b) => (a.role || "").localeCompare(b.role || ""));
 
   // --- 3. DYNAMIC COMPANY GENERATOR ---
-  const companyNames = ["Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
+  // Derived from useCompanies() → matches AdminLeadership's format exactly.
+  const companyNames = rawCompanies.map(c => `${c} Company`);
   
   const companies = companyNames.map((companyName) => {
     const companyMembers = cmsEntries.filter((item) => {
@@ -111,6 +125,34 @@ const Leadership = () => {
           </h1>
           <div className="h-1 w-24 bg-yellow-500 mx-auto rounded-full" />
         </motion.div>
+
+        {/* INSTRUCTORS (SAI/AI) - real Army/DoD instructors, distinct from the cadet chain of command below */}
+        {(sai || ai) && (
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 max-w-2xl mx-auto">
+            {sai && (
+              <div className="flex-1 bg-slate-900 border border-white/5 rounded-2xl p-5 flex items-center gap-4 text-left">
+                <div className="p-3 bg-yellow-500/10 rounded-xl text-yellow-500 shrink-0">
+                  <GraduationCap size={22} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black tracking-widest text-yellow-500 uppercase">Senior Army Instructor</p>
+                  <h3 className="text-lg font-black text-white uppercase italic leading-tight">{sai.name}</h3>
+                </div>
+              </div>
+            )}
+            {ai && (
+              <div className="flex-1 bg-slate-900 border border-white/5 rounded-2xl p-5 flex items-center gap-4 text-left">
+                <div className="p-3 bg-yellow-500/10 rounded-xl text-yellow-500 shrink-0">
+                  <GraduationCap size={22} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black tracking-widest text-yellow-500 uppercase">Army Instructor</p>
+                  <h3 className="text-lg font-black text-white uppercase italic leading-tight">{ai.name}</h3>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TOP COMMAND COMMANDER */}
         <div className="flex flex-col items-center gap-10">

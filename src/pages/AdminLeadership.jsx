@@ -13,8 +13,9 @@ import {
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { useCompanies } from '../hooks/useCompanies';
 
-const COMPANIES = ["None", "Zulu Company", "Alpha Company", "Bravo Company", "Charlie Company", "Delta Company"];
+// COMPANIES is now built from useCompanies() inside the component.
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
 // Must exactly match the position names Leadership.jsx's getCompanyPosition()
 // looks for - that's how a company entry ends up in its correct box on the
@@ -27,6 +28,11 @@ const initialInstructorForm = { type: 'SAI', name: '' };
 const AdminLeadership = () => {
   const { role, loading: authLoading } = useAuth();
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
+
+  // Build the company dropdown from live Firestore config.
+  // Format must match Leadership.jsx's companyNames (e.g. "Zulu Company").
+  const { companies: rawCompanies } = useCompanies();
+  const COMPANIES = ["None", ...rawCompanies.map(c => `${c} Company`)];
 
   const [activeTab, setActiveTab] = useState('leadership');
   const [leadership, setLeadership] = useState([]);

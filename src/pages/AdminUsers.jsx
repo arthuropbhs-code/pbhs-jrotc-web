@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
+import { useCompanies } from '../hooks/useCompanies';
 import Footer from '../components/Footer';
 import { RosterRowSkeleton } from '../components/Skeleton';
 
@@ -71,17 +72,17 @@ const AdminUsers = () => {
     EMAIL_MANAGER_ROLES.includes(role) && (ROLE_HIERARCHY[targetRole] || 0) < userLevel;
 
   const ROLE_OPTIONS = Object.entries(ROLE_LABELS);
+  const { companiesWithBattalion: COMPANIES } = useCompanies();
 
   // Dropdown Constants
   const JROTC_RANKS = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
   const LET_LEVELS = ["LET 1", "LET 2", "LET 3", "LET 4"];
-  const COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta", "Battalion"];
   const PLATOONS = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
   const JROTC_POSITIONS = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO", "Company Commander", "Battalion Staff (S-1)", "Battalion Staff (S-2)", "Battalion Staff (S-3)", "Battalion Staff (S-4)", "Battalion Staff (S-5)", "Battalion Staff (S-6)", "Battalion XO", "Battalion CSM", "Battalion Commander", "Team Lead"];
 
   const initialFormState = {
-    fullName: '', email: '', company: user?.company || 'Zulu',
+    fullName: '', email: '', company: user?.company || COMPANIES[0] || 'Zulu',
     platoon: '1st Platoon', squad: '1st Squad', rank: 'C/PVT',
     position: 'Squad Member', letLevel: 'LET 1', status: 'Active',
     gender: 'Male', isManual: true, role: 'cadet'

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useCompanies } from '../hooks/useCompanies';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import {
@@ -102,7 +103,7 @@ const SignUp = () => {
   // existing account's rank there could silently save the wrong value.
   const ranks = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
   const positions = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO", "Company Commander", "Battalion Staff (S-1)", "Battalion Staff (S-2)", "Battalion Staff (S-3)", "Battalion Staff (S-4)", "Battalion Staff (S-5)", "Battalion Staff (S-6)", "Battalion XO", "Battalion CSM", "Battalion Commander", "Team Lead"];
-  const companies = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta", "Battalion"];
+  const { companiesWithBattalion: companies } = useCompanies();
   const platoons = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const squads = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
 

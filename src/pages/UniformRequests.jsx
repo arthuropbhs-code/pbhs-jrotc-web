@@ -7,9 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Import constants
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
+import { useCompanies } from '../hooks/useCompanies';
 import Footer from '../components/Footer';
 
 const UniformRequests = () => {
+  const { companiesWithBattalion: COMPANIES } = useCompanies();
   const [requests, setRequests] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [filter, setFilter] = useState('Pending');
@@ -24,7 +26,7 @@ const UniformRequests = () => {
   const [formData, setFormData] = useState({
     issuedBy: '',   
     cadetName: '',  
-    company: 'Zulu',
+    company: COMPANIES[0] ?? 'Zulu',
     rank: '',
     item: '', 
     detail: '', 
@@ -68,7 +70,7 @@ const UniformRequests = () => {
             ...prev,
             // FIX 2: Issued By defaults to current user if they are S4 Staff
             issuedBy: (isS4Master || isS4Assistant) ? (data.fullName || '') : '',
-            company: data.company || 'Zulu'
+            company: data.company || COMPANIES[0] || 'Zulu'
           }));
         }
       }
@@ -377,14 +379,9 @@ const UniformRequests = () => {
                     <select 
                       className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white" 
                       value={formData.company} 
-                      onChange={e => setFormData({...formData, company: e.target.value || 'Zulu'})}
+                      onChange={e => setFormData({...formData, company: e.target.value || COMPANIES[0] || 'Zulu'})}
                     >
-                      <option value="Zulu">Zulu</option>
-                      <option value="Alpha">Alpha</option>
-                      <option value="Bravo">Bravo</option>
-                      <option value="Charlie">Charlie</option>
-                      <option value="Delta">Delta</option>
-                      <option value="Battalion">Battalion</option>
+                      {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </div>

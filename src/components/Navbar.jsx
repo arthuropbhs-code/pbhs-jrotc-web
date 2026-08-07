@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Shield, ChevronDown, Menu, X, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,6 +47,17 @@ const Navbar = () => {
   // Mobile Dropdown Accordion States
   const [mobileCadetOpen, setMobileCadetOpen] = useState(false);
   const [mobileBattalionOpen, setMobileBattalionOpen] = useState(false);
+
+  // Close the mobile drawer (and any open accordions) whenever the route changes.
+  // This is more reliable than relying solely on onClick — on real mobile devices,
+  // touch events can cause React Router to navigate before the React synthetic
+  // click event fires on the Link, leaving the drawer open. Watching location.pathname
+  // guarantees closure regardless of how navigation was triggered.
+  useEffect(() => {
+    setIsOpen(false);
+    setMobileCadetOpen(false);
+    setMobileBattalionOpen(false);
+  }, [location.pathname]);
 
   const isActive = (path) => currentPath === path;
   const closeMenu = () => setIsOpen(false);

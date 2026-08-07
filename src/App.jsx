@@ -42,6 +42,7 @@ const Documents = lazy(() => import('./pages/Documents'));
 const AdminDocuments = lazy(() => import('./pages/AdminDocuments'));
 const AdminCamps = lazy(() => import('./pages/AdminCamps'));
 const AdminStats = lazy(() => import('./pages/AdminStats'));
+const AdminCompanies = lazy(() => import('./pages/AdminCompanies'));
 const MyProfile = lazy(() => import('./pages/MyProfile'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
@@ -217,6 +218,16 @@ const AppContent = () => {
 
           {/* No minLevel here: every signed-in user manages their own profile */}
           <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
+
+          {/* SAI/AI only: configure battalion company names */}
+          <Route
+            path="/admin/companies"
+            element={
+              <ProtectedRoute minLevel={ADMIN_LEVEL}>
+                <AdminCompanies />
+              </ProtectedRoute>
+            }
+          />
 
           {/* CATCH ALL - was a silent redirect to Home; now a real 404 page.
               Note: since this is a client-side SPA with a Vercel rewrite

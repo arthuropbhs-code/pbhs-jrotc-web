@@ -8,15 +8,15 @@ import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { 
-  LayoutDashboard, 
-  ClipboardCheck, 
-  UserCircle, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  ClipboardCheck,
+  UserCircle,
+  LogOut,
   PlusSquare,
   BarChart3,
   Users,
-  UserCog, 
+  UserCog,
   Shirt,
   Calendar,
   ChevronRight,
@@ -28,7 +28,8 @@ import {
   Clock,
   FileText,
   Tent,
-  Camera
+  Camera,
+  Building2
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 
@@ -258,6 +259,19 @@ const AdminDashboard = () => {
                  >
                    <BarChart3 size={18} /> Battalion Stats
                  </Link>
+              )}
+
+              {isTopFour && (
+                <Link
+                  to="/admin/companies"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/companies')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Building2 size={18} /> Company Names
+                </Link>
               )}
             </>
           )}
