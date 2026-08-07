@@ -77,13 +77,14 @@ const Section = ({ title, icon: Icon, children, color = "yellow" }) => (
   </div>
 );
 
-const RankItem = ({ name, description, symbolProps }) => (
+const RankItem = ({ name, abbr, description, symbolProps }) => (
   <div className="flex flex-col items-center bg-black/40 p-4 rounded-xl border border-white/5 group hover:border-yellow-500/50 transition-colors">
     <div className="w-full h-44 mb-3 bg-white/5 rounded-lg flex items-center justify-center p-2 text-center overflow-hidden">
       <RankSymbol {...symbolProps} />
     </div>
     <span className="text-[10px] font-black uppercase text-center leading-tight tracking-tighter mb-1 text-slate-500">{description}</span>
     <span className="text-[11px] font-black uppercase text-center leading-tight tracking-tighter">{name}</span>
+    {abbr && <span className="text-[9px] font-bold text-yellow-500/70 tracking-widest mt-1">{abbr}</span>}
   </div>
 );
 
@@ -132,26 +133,28 @@ const CadetInfo = () => {
     return () => { unsubContent(); unsubLeadership(); unsubInstructors(); };
   }, []);
 
+  // Abbreviations match JROTC_RANKS in AdminUsers.jsx/UniformRequests.jsx (C/PVT ... C/COL) -
+  // keeping this page's naming consistent with what staff actually assign on the roster.
   const officerRanks = [
-    { name: "Cadet Colonel", desc: "3 Diamonds", props: { type: 'officer', count: 3 } },
-    { name: "Cadet LTC", desc: "2 Diamonds", props: { type: 'officer', count: 2 } },
-    { name: "Cadet Major", desc: "1 Diamond", props: { type: 'officer', count: 1 } },
-    { name: "Cadet Captain", desc: "3 Disks", props: { type: 'officer-disk', count: 3 } },
-    { name: "Cadet 1st LT", desc: "2 Disks", props: { type: 'officer-disk', count: 2 } },
-    { name: "Cadet 2nd LT", desc: "1 Disk", props: { type: 'officer-disk', count: 1 } },
+    { name: "Cadet Colonel", abbr: "C/COL", desc: "3 Diamonds", props: { type: 'officer', count: 3 } },
+    { name: "Cadet Lieutenant Colonel", abbr: "C/LTC", desc: "2 Diamonds", props: { type: 'officer', count: 2 } },
+    { name: "Cadet Major", abbr: "C/MAJ", desc: "1 Diamond", props: { type: 'officer', count: 1 } },
+    { name: "Cadet Captain", abbr: "C/CPT", desc: "3 Disks", props: { type: 'officer-disk', count: 3 } },
+    { name: "Cadet 1st Lieutenant", abbr: "C/1LT", desc: "2 Disks", props: { type: 'officer-disk', count: 2 } },
+    { name: "Cadet 2nd Lieutenant", abbr: "C/2LT", desc: "1 Disk", props: { type: 'officer-disk', count: 1 } },
   ];
 
   const enlistedRanks = [
-    { name: "Cadet CSM", desc: "3 Up / 3 Down / Wreath", props: { count: "3/3", hasWreath: true, hasStar: true } },
-    { name: "Cadet SGM", desc: "3 Up / 3 Down / Star", props: { count: "3/3", hasStar: true } },
-    { name: "Cadet 1SG", desc: "3 Up / 3 Down / Diamond", props: { count: "3/3", hasDiamond: true } },
-    { name: "Cadet MSG", desc: "3 Up / 3 Down", props: { count: "3/3" } },
-    { name: "Cadet SFC", desc: "3 Up / 2 Down", props: { count: "3/2" } },
-    { name: "Cadet SSG", desc: "3 Up / 1 Down", props: { count: "3/1" } },
-    { name: "Cadet SGT", desc: "3 Up", props: { count: "3/0" } },
-    { name: "Cadet CPL", desc: "2 Up", props: { count: "2/0" } },
-    { name: "Cadet PFC", desc: "1 Up / 1 Down", props: { count: "1/1" } },
-    { name: "Cadet Private", desc: "1 Up", props: { count: "1/0" } },
+    { name: "Cadet Command Sergeant Major", abbr: "C/CSM", desc: "3 Up / 3 Down / Wreath", props: { count: "3/3", hasWreath: true, hasStar: true } },
+    { name: "Cadet Sergeant Major", abbr: "C/SGM", desc: "3 Up / 3 Down / Star", props: { count: "3/3", hasStar: true } },
+    { name: "Cadet First Sergeant", abbr: "C/1SG", desc: "3 Up / 3 Down / Diamond", props: { count: "3/3", hasDiamond: true } },
+    { name: "Cadet Master Sergeant", abbr: "C/MSG", desc: "3 Up / 3 Down", props: { count: "3/3" } },
+    { name: "Cadet Sergeant First Class", abbr: "C/SFC", desc: "3 Up / 2 Down", props: { count: "3/2" } },
+    { name: "Cadet Staff Sergeant", abbr: "C/SSG", desc: "3 Up / 1 Down", props: { count: "3/1" } },
+    { name: "Cadet Sergeant", abbr: "C/SGT", desc: "3 Up", props: { count: "3/0" } },
+    { name: "Cadet Corporal", abbr: "C/CPL", desc: "2 Up", props: { count: "2/0" } },
+    { name: "Cadet Private First Class", abbr: "C/PFC", desc: "1 Up / 1 Down", props: { count: "1/1" } },
+    { name: "Cadet Private", abbr: "C/PVT", desc: "1 Up", props: { count: "1/0" } },
   ];
 
   return (
@@ -205,7 +208,7 @@ const CadetInfo = () => {
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                     {officerRanks.map(r => (
-                      <RankItem key={r.name} name={r.name} description={r.desc} symbolProps={r.props} />
+                      <RankItem key={r.name} name={r.name} abbr={r.abbr} description={r.desc} symbolProps={r.props} />
                     ))}
                   </div>
                 </div>
@@ -218,7 +221,7 @@ const CadetInfo = () => {
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                     {enlistedRanks.map(r => (
-                      <RankItem key={r.name} name={r.name} description={r.desc} symbolProps={r.props} />
+                      <RankItem key={r.name} name={r.name} abbr={r.abbr} description={r.desc} symbolProps={r.props} />
                     ))}
                   </div>
                 </div>
