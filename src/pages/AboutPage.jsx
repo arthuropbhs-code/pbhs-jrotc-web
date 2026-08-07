@@ -57,6 +57,9 @@ const AboutPage = () => {
           <p className="text-slate-500 font-bold uppercase tracking-[0.4em] mt-4 text-xs md:text-sm">
             Pompano Beach High School JROTC
           </p>
+          <p className="text-yellow-500 font-black uppercase tracking-[0.35em] mt-3 text-xs">
+            Above and Beyond
+          </p>
         </div>
       </div>
 

@@ -247,8 +247,8 @@ const SignUp = () => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
 
           <div className="mb-8">
-            <h2 className="text-3xl font-black uppercase italic text-yellow-500 tracking-tighter">Enlist</h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1">New Personnel Registration</p>
+            <h2 className="text-3xl font-black uppercase italic text-yellow-500 tracking-tighter">Sign Up</h2>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1">Create Your Cadet Account</p>
           </div>
           
           {error && (

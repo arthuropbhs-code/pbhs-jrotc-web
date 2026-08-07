@@ -25,16 +25,16 @@ export const DEFAULT_CADET_INFO = {
   missionText: "To motivate young people to be better citizens.",
   jrotcDefinition: "Junior Reserve Officer Training Corps",
   letDefinition: "Leadership Education Training",
-  leadershipDefinition: "The ability to influence others to accomplish a mission by providing purpose, direction, and motivation.",
+  leadershipDefinition: "The ability to motivate (guide) others to accomplish a mission (task) in the manner desired by providing purpose, direction, and motivation.",
   cadetCreed: [
     "I am an Army Junior R.O.T.C. Cadet.",
     "I will always conduct myself to bring credit to my family, country, school, and the Corps of Cadets.",
     "I am loyal and patriotic. I am the future of the United States of America.",
-    "I do not lie, cheat, or steal, and will always be held accountable for my actions and deeds.",
+    "I do not lie, cheat, or steal, and will always be accountable for my actions and deeds.",
     "I will always practice good citizenship and patriotism.",
     "I will work hard to improve my mind and strengthen my body.",
     "I will seek the mantle of leadership and stand prepared to uphold the Constitution and the American Way of Life.",
-    "May God grant me the strength to always live by this creed."
+    "May God always grant me the strength to always live by this creed."
   ].join('\n'),
   principles: [
     "Know yourself and seek self-improvement.",
@@ -50,13 +50,13 @@ export const DEFAULT_CADET_INFO = {
     "Train your subordinates as a team."
   ],
   armyValues: [
-    { l: "L", v: "Loyalty", d: "True faith and allegiance." },
-    { l: "D", v: "Duty", d: "Fulfill your obligations." },
-    { l: "R", v: "Respect", d: "Treat others as they should be." },
-    { l: "S", v: "Selfless Service", d: "Nation before self." },
-    { l: "H", v: "Honor", d: "Live up to all values." },
-    { l: "I", v: "Integrity", d: "Do what is right." },
-    { l: "P", v: "Personal Courage", d: "Face fear or adversity." }
+    { l: "L", v: "Loyalty",         d: "To bear true faith and allegiance to the US Constitution and your peers." },
+    { l: "D", v: "Duty",            d: "To fulfill all obligations." },
+    { l: "R", v: "Respect",         d: "To treat others the way they should be treated." },
+    { l: "S", v: "Selfless Service",d: "To put the welfare of the nation before your own." },
+    { l: "H", v: "Honor",           d: "To live up to all values." },
+    { l: "I", v: "Integrity",       d: "To do what is right, legally and morally." },
+    { l: "P", v: "Personal Courage",d: "To face fear, danger, or adversity." }
   ]
 };
 

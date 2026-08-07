@@ -28,7 +28,6 @@ import {
   Clock,
   FileText,
   Tent,
-  Camera,
   Building2
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
@@ -119,7 +118,9 @@ const AdminDashboard = () => {
           <p className="text-[10px] text-blue-400 dark:text-slate-500 uppercase font-bold tracking-[0.2em]">Admin Dashboard</p>
         </div>
 
-        <nav className="flex-1 space-y-2">
+        {/* Helper for consistent nav link styling */}
+        <nav className="flex-1 overflow-y-auto">
+          {/* Always-visible top links */}
           <Link
             to="/"
             className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-yellow-500 transition-all mb-2 border-b border-blue-100 dark:border-white/5 pb-4"
@@ -130,44 +131,74 @@ const AdminDashboard = () => {
           <Link
             to="/admin/dashboard"
             className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-              isActive('/admin/dashboard') 
-                ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
+              isActive('/admin/dashboard')
+                ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
                 : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-yellow-500'
             }`}
           >
             <LayoutDashboard size={18} /> Dashboard
           </Link>
-          
+
           {loading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 mt-2">
               <div className="h-10 bg-blue-50/50 dark:bg-white/5 animate-pulse rounded-xl mx-1" />
               <div className="h-10 bg-blue-50/50 dark:bg-white/5 animate-pulse rounded-xl mx-1" />
             </div>
           ) : isCommander && (
             <>
-              {isStaffOrS4 && (
-                <Link 
-                  to="/admin/users" 
-                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                    isActive('/admin/users') 
-                      ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' 
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <UserCog size={18} /> Manage Personnel
-                </Link>
-              )}
+              {/* ── GROUP 1: OPERATIONS ─────────────────── */}
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-5 pb-1">Operations</p>
 
-              <Link 
-                to="/admin/orders" 
+              <Link
+                to="/admin/orders"
                 className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                  isActive('/admin/orders') 
-                    ? 'bg-yellow-500 text-slate-950' 
+                  isActive('/admin/orders')
+                    ? 'bg-yellow-500 text-slate-950'
                     : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
                 }`}
               >
                 <PlusSquare size={18} /> Issue Orders/Events
               </Link>
+
+              <Link
+                to="/admin/assign-tasks"
+                className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                  isActive('/admin/assign-tasks')
+                    ? 'bg-yellow-500 text-slate-950'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                }`}
+              >
+                <ClipboardCheck size={18} /> Assign Tasks
+              </Link>
+
+              {isStaffOrS4 && (
+                <Link
+                  to="/admin/announcements"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/announcements')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Megaphone size={18} /> Global Broadcast
+                </Link>
+              )}
+
+              {/* ── GROUP 2: MANAGE ─────────────────────── */}
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-5 pb-1">Manage</p>
+
+              {isStaffOrS4 && (
+                <Link
+                  to="/admin/users"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/users')
+                      ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <UserCog size={18} /> Personnel
+                </Link>
+              )}
 
               {isStaffOrS4 && (
                 <Link
@@ -179,86 +210,76 @@ const AdminDashboard = () => {
                   }`}
                 >
                   {isTopFour ? <Users size={18} /> : <Lock size={16} />}
-                  <span>Manage Teams</span>
+                  <span>Teams</span>
                 </Link>
               )}
 
               {isStaffOrS4 && (
-                 <Link
-                   to="/admin/announcements"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/announcements')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <Megaphone size={18} /> Global Broadcast
-                 </Link>
-              )}
-
-              {isStaffOrS4 && (
-                 <Link
-                   to="/admin/leadership"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/leadership')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <Star size={18} /> Manage Leadership
-                 </Link>
+                <Link
+                  to="/admin/leadership"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/leadership')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Star size={18} /> Leadership
+                </Link>
               )}
 
               {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && (
-                 <Link
-                   to="/admin/content"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/content')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <FileText size={18} /> Manage Content
-                 </Link>
+                <Link
+                  to="/admin/content"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/content')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <FileText size={18} /> Content
+                </Link>
               )}
 
               {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && (
-                 <Link
-                   to="/admin/documents"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/documents')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <FileText size={18} /> Manage Documents
-                 </Link>
+                <Link
+                  to="/admin/documents"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/documents')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <FileText size={18} /> Documents
+                </Link>
+              )}
+
+              {/* ── GROUP 3: ANALYTICS ──────────────────── */}
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-5 pb-1">Analytics</p>
+
+              {isStaffOrS4 && (
+                <Link
+                  to="/admin/camps"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/camps')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Tent size={18} /> Camp Attendance
+                </Link>
               )}
 
               {isStaffOrS4 && (
-                 <Link
-                   to="/admin/camps"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/camps')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <Tent size={18} /> Camp Attendance
-                 </Link>
-              )}
-
-              {isStaffOrS4 && (
-                 <Link
-                   to="/admin/stats"
-                   className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-                     isActive('/admin/stats')
-                       ? 'bg-yellow-500 text-slate-950'
-                       : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-                   }`}
-                 >
-                   <BarChart3 size={18} /> Battalion Stats
-                 </Link>
+                <Link
+                  to="/admin/stats"
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
+                    isActive('/admin/stats')
+                      ? 'bg-yellow-500 text-slate-950'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <BarChart3 size={18} /> Battalion Stats
+                </Link>
               )}
 
               {isTopFour && (
@@ -276,34 +297,26 @@ const AdminDashboard = () => {
             </>
           )}
 
-          <Link 
-            to="/uniform-requests" 
-            className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
-              isActive('/uniform-requests') 
-                ? 'bg-yellow-500 text-slate-950' 
-                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Shirt size={18} /> Uniform Items
-            </div>
-            {requestCount > 0 && (
-              <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
-                {requestCount}
-              </span>
-            )}
-          </Link>
-
-          <Link
-            to="/photos"
-            className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
-              isActive('/photos')
-                ? 'bg-yellow-500 text-slate-950'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-            }`}
-          >
-            <Camera size={18} /> Photo Gallery
-          </Link>
+          {/* ── ALWAYS-VISIBLE BOTTOM LINKS ─────────── */}
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-1">
+            <Link
+              to="/uniform-requests"
+              className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
+                isActive('/uniform-requests')
+                  ? 'bg-yellow-500 text-slate-950'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Shirt size={18} /> Uniform Items
+              </div>
+              {requestCount > 0 && (
+                <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
+                  {requestCount}
+                </span>
+              )}
+            </Link>
+          </div>
         </nav>
 
         <button 

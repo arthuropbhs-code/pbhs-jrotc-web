@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock } from 'lucide-react';
+import { Shield, Users, Award, ArrowRight, Star, ChevronLeft, ChevronRight, Megaphone, Clock, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+
+// Army Values with full descriptions from official JROTC reference content.
+// Short names (displayed on the card) match the long-form entry (shown in the popup).
+const ARMY_VALUES = [
+  { name: 'Loyalty',         full: 'Loyalty',         desc: 'Bear true faith and allegiance to the U.S. Constitution, the Army, your unit, and other soldiers.' },
+  { name: 'Duty',            full: 'Duty',             desc: 'Fulfill your obligations. Do what is right even when no one is looking.' },
+  { name: 'Respect',         full: 'Respect',          desc: 'Treat people as they should be treated. Dignity and respect have no rank.' },
+  { name: 'Selfless Service',full: 'Selfless Service', desc: 'Put the welfare of the nation, the Army, and your subordinates before your own.' },
+  { name: 'Honor',           full: 'Honor',            desc: 'Live up to all the Army Values. Honor is the "glue" that holds the values together.' },
+  { name: 'Integrity',       full: 'Integrity',        desc: 'Do what is right, legally and morally. Be honest in word and deed.' },
+  { name: 'Personal Courage',full: 'Personal Courage', desc: 'Face fear, danger, or adversity (physical or moral). Do what is right regardless of consequence.' },
+];
 
 const Home = () => {
   // No title override here: the root page keeps the plain "PBHS JROTC"
@@ -15,6 +27,7 @@ const Home = () => {
     description: 'Official site of the Pompano Beach High School Army JROTC Tornado Battalion - leadership, discipline, and citizenship.',
     path: '/',
   });
+  const [selectedValue, setSelectedValue] = useState(null);
   const [topThree, setTopThree] = useState([]);
   const [topThreeLoading, setTopThreeLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -240,18 +253,65 @@ const Home = () => {
       )}
 
       {/* --- ARMY VALUES --- */}
-      <section className="py-24 bg-white text-slate-950">
+      <section className="py-24 bg-white text-slate-950 relative">
         <Reveal className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-16">The Seven Army Values</h2>
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-            {['Loyalty', 'Duty', 'Respect', 'Service', 'Honor', 'Integrity', 'Courage'].map((val, i) => (
-              <div key={i} className="group border border-slate-100 p-6 flex flex-col items-center hover:bg-slate-950 hover:text-white transition-all duration-500 rounded-2xl cursor-default">
+          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-4">The Seven Army Values</h2>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-12">Tap a value to learn more</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+            {ARMY_VALUES.map((val, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedValue(val)}
+                className="group border border-slate-100 p-5 flex flex-col items-center hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all duration-300 rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
+                aria-label={`Learn about ${val.name}`}
+              >
                 <Star className="text-yellow-500 mb-3 group-hover:scale-110 transition-transform" size={18} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{val}</span>
-              </div>
+                <span className="text-[10px] font-black uppercase tracking-widest leading-snug">{val.name}</span>
+              </button>
             ))}
           </div>
         </Reveal>
+
+        {/* Army Values popup modal */}
+        <AnimatePresence>
+          {selectedValue && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedValue(null)} />
+              <motion.div
+                className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-slate-950 z-10"
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+              >
+                <button
+                  onClick={() => setSelectedValue(null)}
+                  className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-3 bg-yellow-500/10 rounded-xl">
+                    <Star className="text-yellow-500" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Army Value</p>
+                    <h3 className="text-2xl font-black uppercase italic tracking-tight">{selectedValue.full}</h3>
+                  </div>
+                </div>
+                <p className="text-slate-600 font-medium leading-relaxed">{selectedValue.desc}</p>
+                <div className="mt-6 text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">
+                  L · D · R · S · H · I · PC
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* --- TOP 3 COMMAND SECTION --- */}

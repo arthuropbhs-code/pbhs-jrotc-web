@@ -150,7 +150,7 @@ const AdminLogin = () => {
                 <Loader2 className="animate-spin" size={18} />
               ) : (
                 <>
-                  Authorize Entry
+                  Log In
                   <Shield size={16} className="opacity-50 group-hover:opacity-100 transition-opacity" />
                 </>
               )}
@@ -166,7 +166,7 @@ const AdminLogin = () => {
         </div>
         
         <p className="mt-8 text-center text-[9px] font-bold text-blue-200 dark:text-slate-600 uppercase tracking-widest">
-          Authorized Military Personnel Only
+          Authorized Cadets Only
         </p>
       </div>
     </div>

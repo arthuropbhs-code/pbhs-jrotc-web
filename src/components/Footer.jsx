@@ -14,8 +14,7 @@ const Footer = () => {
     ],
     battalion: [
       { name: "Leadership", path: "/leadership" },
-      { name: "Teams & Units", path: "/teams" },
-      { name: "Photo Gallery", path: "/photos" },
+      { name: "Teams", path: "/teams" },
       { name: "Announcements", path: "/announcements" },
     ],
   };
@@ -40,6 +39,9 @@ const Footer = () => {
             </div>
             <p className="text-sm text-slate-400 leading-relaxed italic">
               "To motivate young people to be better citizens."
+            </p>
+            <p className="text-xs font-black text-yellow-500 uppercase tracking-[0.25em]">
+              Above and Beyond
             </p>
             <div className="flex gap-4">
               <a
@@ -107,16 +109,13 @@ const Footer = () => {
                 <Mail size={18} className="text-yellow-500 shrink-0" />
                 <span>info@pbhsjrotc.com</span>
               </div>
+              <div className="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500 shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                <a href="tel:+17543222000" className="hover:text-white transition-colors">(754) 322-2000</a>
+              </div>
             </div>
           </div>
 
-        </div>
-
-        {/* DISCLAIMER BOX */}
-        <div className="mb-8 p-4 bg-white/5 border border-white/10 rounded-xl">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider leading-relaxed text-center">
-            <span className="text-yellow-500 font-black">Disclaimer:</span> This current website is not affiliated with PBHS JROTC Tornado Battalion BCPS, Army JROTC, or Pompano Beach High. This is an independent project.
-          </p>
         </div>
 
         {/* BOTTOM BAR */}

@@ -134,10 +134,9 @@ const Navbar = () => {
                 </span>
                 <ChevronDown size={14} />
               </div>
-              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 
+              <div className="absolute top-[100%] -left-4 w-56 p-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200
                               bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
                 <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
-                <Link to="/photos" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Photo Gallery</Link>
               </div>
             </div>
 
@@ -230,7 +229,6 @@ const Navbar = () => {
                 {mobileBattalionOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
                     <MobileNavLink to="/announcements" currentPath={currentPath} onNavigate={closeMenu} indent>Announcements</MobileNavLink>
-                    <MobileNavLink to="/photos" currentPath={currentPath} onNavigate={closeMenu} indent>Photo Gallery</MobileNavLink>
                   </div>
                 )}
               </div>
