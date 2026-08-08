@@ -137,7 +137,7 @@ const Home = () => {
           >
             <img 
               src={slides[currentIndex].url} 
-              alt="Battalion Slide"
+              alt={[slides[currentIndex].title, slides[currentIndex].subtitle].filter(Boolean).join(' ') || 'PBHS JROTC Tornado Battalion'}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
