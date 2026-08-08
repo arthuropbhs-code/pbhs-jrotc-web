@@ -123,6 +123,10 @@ const AppContent = () => {
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/signup" element={<SignUp />} />
           <Route path="/about" element={<AboutPage />} />
+          {/* Safety-net redirect: Home.jsx hero used "/About" (capital A) which
+              React Router v6 treats as a distinct path — this catches any
+              bookmarks or links still using the old casing. */}
+          <Route path="/About" element={<Navigate to="/about" replace />} />
           <Route path="/events" element={<CalendarPage />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

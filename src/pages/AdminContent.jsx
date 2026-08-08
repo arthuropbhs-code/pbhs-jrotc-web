@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
@@ -8,7 +8,7 @@ import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOM
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import {
   FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
-  Eye, EyeOff, LayoutDashboard, Plus, Trash2
+  Eye, EyeOff, LayoutDashboard, Plus, Trash2, Calendar, MapPin, Clock, Edit3, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -19,6 +19,7 @@ const TABS = [
   { id: 'cadet-info',     label: 'General Info' },
   { id: 'promotion-board',label: 'Promotion Board' },
   { id: 'photos',         label: 'Photo Gallery' },
+  { id: 'events',         label: 'Calendar' },
   { id: 'visibility',     label: 'Visibility' },
 ];
 
@@ -57,6 +58,58 @@ const AdminContent = () => {
   const [visibilityForm, setVisibilityForm] = useState(DEFAULT_VISIBILITY);
   const [expandedRank, setExpandedRank] = useState(null);
   const [expandedStaffSection, setExpandedStaffSection] = useState(null);
+
+  // Events CRUD
+  const [events, setEvents] = useState([]);
+  const [editingEvent, setEditingEvent] = useState(null); // null = closed, BLANK_EVENT = new, {id,...} = editing
+  const [eventSaving, setEventSaving] = useState(false);
+  const BLANK_EVENT = { title: '', date: '', location: '', time: '' };
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const eventsQuery = query(collection(db, 'events'), orderBy('date', 'asc'));
+    const unsub = onSnapshot(eventsQuery, (snap) => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [isAuthorized]);
+
+  const handleSaveEvent = async () => {
+    if (!editingEvent?.title || !editingEvent?.date) return;
+    setEventSaving(true);
+    try {
+      const payload = {
+        title: editingEvent.title,
+        date: editingEvent.date,
+        location: editingEvent.location || '',
+        time: editingEvent.time || '',
+        updatedAt: serverTimestamp(),
+      };
+      if (editingEvent.id) {
+        await updateDoc(doc(db, 'events', editingEvent.id), payload);
+      } else {
+        await addDoc(collection(db, 'events'), { ...payload, createdAt: serverTimestamp() });
+      }
+      setEditingEvent(null);
+      showStatus('Event saved');
+    } catch (err) {
+      console.error('Event save failed:', err);
+      showStatus('Save Failed');
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id) => {
+    if (!window.confirm('Delete this event?')) return;
+    try {
+      await deleteDoc(doc(db, 'events', id));
+      showStatus('Event deleted');
+    } catch (err) {
+      console.error('Delete failed:', err);
+      showStatus('Delete Failed');
+    }
+  };
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -494,6 +547,153 @@ const AdminContent = () => {
             >
               <Save size={18} /> Save Photo Gallery
             </button>
+          </div>
+        )}
+
+        {/* --- EVENTS (CALENDAR) TAB --- */}
+        {activeTab === 'events' && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-[11px] text-blue-700 dark:text-blue-300">
+              <Info size={16} className="flex-shrink-0 mt-0.5" />
+              Events appear on the public Calendar page ordered by date. Date format: YYYY-MM-DD. Location and time are optional.
+            </div>
+
+            {/* Event list */}
+            <div className="space-y-3">
+              {events.length === 0 && (
+                <div className="text-center py-10 text-slate-400 dark:text-slate-600 text-xs font-black uppercase tracking-widest">
+                  No events yet — add one below
+                </div>
+              )}
+              {events.map(ev => (
+                <div key={ev.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
+                  {editingEvent?.id === ev.id ? (
+                    /* Inline edit form */
+                    <div className="p-5 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelClass}>Title *</label>
+                          <input className={inputClass} value={editingEvent.title} onChange={e => setEditingEvent({ ...editingEvent, title: e.target.value })} placeholder="e.g. Military Ball 2025-2026" />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Date * (YYYY-MM-DD)</label>
+                          <input className={inputClass} type="date" value={editingEvent.date} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelClass}>Location</label>
+                          <input className={inputClass} value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} placeholder="e.g. Pine Bluff High School Gym" />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Time</label>
+                          <input className={inputClass} value={editingEvent.time} onChange={e => setEditingEvent({ ...editingEvent, time: e.target.value })} placeholder="e.g. 6:00 PM" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          disabled={eventSaving || !editingEvent.title || !editingEvent.date}
+                          onClick={handleSaveEvent}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-all"
+                        >
+                          {eventSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
+                        </button>
+                        <button onClick={() => setEditingEvent(null)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase rounded-xl hover:opacity-70 transition-all">
+                          <X size={14} /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Read view */
+                    <div className="flex items-center gap-4 p-5">
+                      <div className="flex-shrink-0 w-12 h-12 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center justify-center">
+                        <Calendar size={20} className="text-yellow-600 dark:text-yellow-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black uppercase italic text-sm text-slate-900 dark:text-white truncate">{ev.title}</p>
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1">
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                            {ev.date}
+                          </span>
+                          {ev.location && (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                              <MapPin size={10} /> {ev.location}
+                            </span>
+                          )}
+                          {ev.time && (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                              <Clock size={10} /> {ev.time}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => setEditingEvent({ id: ev.id, title: ev.title, date: ev.date, location: ev.location || '', time: ev.time || '' })}
+                          className="p-2 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
+                          title="Edit"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(ev.id)}
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* New event form */}
+            {editingEvent && !editingEvent.id ? (
+              <div className="bg-white dark:bg-slate-900/40 border border-yellow-500/30 rounded-2xl p-5 space-y-3">
+                <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">New Event</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Title *</label>
+                    <input className={inputClass} value={editingEvent.title} onChange={e => setEditingEvent({ ...editingEvent, title: e.target.value })} placeholder="e.g. Military Ball 2025-2026" autoFocus />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Date * (YYYY-MM-DD)</label>
+                    <input className={inputClass} type="date" value={editingEvent.date} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Location</label>
+                    <input className={inputClass} value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} placeholder="e.g. Pine Bluff High School Gym" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Time</label>
+                    <input className={inputClass} value={editingEvent.time} onChange={e => setEditingEvent({ ...editingEvent, time: e.target.value })} placeholder="e.g. 6:00 PM" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    disabled={eventSaving || !editingEvent.title || !editingEvent.date}
+                    onClick={handleSaveEvent}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-all"
+                  >
+                    {eventSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Add Event
+                  </button>
+                  <button onClick={() => setEditingEvent(null)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase rounded-xl hover:opacity-70 transition-all">
+                    <X size={14} /> Cancel
+                  </button>
+                </div>
+              </div>
+            ) : !editingEvent && (
+              <button
+                onClick={() => setEditingEvent({ ...BLANK_EVENT })}
+                className="w-full py-4 border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl text-xs font-black uppercase text-slate-400 hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-500 transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus size={14} /> New Event
+              </button>
+            )}
           </div>
         )}
 
