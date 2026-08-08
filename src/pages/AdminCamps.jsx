@@ -7,12 +7,12 @@ import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
-  Tent, ArrowLeft, Plus, Edit3, Trash2, X, Loader2, CheckCircle2, UserPlus, Users
+  Tent, ArrowLeft, Plus, Edit3, Trash2, X, Loader2, CheckCircle2, Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 
-const initialCampForm = { name: '', date: '', location: '', notes: '', attendees: [] };
+const initialCampForm = { name: '', date: '', location: '', notes: '', attendeeCount: '', attendeeNotes: '' };
 
 const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white";
 const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1";
@@ -22,7 +22,6 @@ const AdminCamps = () => {
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
 
   const [camps, setCamps] = useState([]);
-  const [personnel, setPersonnel] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
@@ -38,15 +37,7 @@ const AdminCamps = () => {
       setDataLoading(false);
     }, () => setDataLoading(false));
 
-    const unsubPersonnel = onSnapshot(collection(db, "users"), (snap) => {
-      const roster = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(p => p.fullName)
-        .sort((a, b) => a.fullName.localeCompare(b.fullName));
-      setPersonnel(roster);
-    });
-
-    return () => { unsubCamps(); unsubPersonnel(); };
+    return () => unsubCamps();
   }, [isAuthorized]);
 
   const showStatus = (msg) => {
@@ -57,32 +48,13 @@ const AdminCamps = () => {
   const openAdd = () => { setEditingCamp(null); setCampForm(initialCampForm); setShowModal(true); };
   const openEdit = (camp) => { setEditingCamp(camp); setCampForm({ ...initialCampForm, ...camp }); setShowModal(true); };
 
-  const addAttendeeRow = () => {
-    setCampForm({ ...campForm, attendees: [...campForm.attendees, { uid: '', name: '', rank: '', company: '' }] });
-  };
-
-  const removeAttendeeRow = (index) => {
-    setCampForm({ ...campForm, attendees: campForm.attendees.filter((_, i) => i !== index) });
-  };
-
-  // Fills name/rank/company from the selected roster account, same reasoning
-  // as AdminTeams.jsx's leadership picker: real cadets, not free text.
-  const selectAttendee = (index, uid) => {
-    const person = personnel.find(p => p.id === uid);
-    const attendees = [...campForm.attendees];
-    attendees[index] = {
-      uid,
-      name: person?.fullName || '',
-      rank: person?.rank || '',
-      company: person?.company || ''
-    };
-    setCampForm({ ...campForm, attendees });
-  };
-
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...campForm, attendees: campForm.attendees.filter(a => a.uid) };
+      const payload = {
+        ...campForm,
+        attendeeCount: parseInt(campForm.attendeeCount, 10) || 0,
+      };
       if (editingCamp) {
         await updateDoc(doc(db, "camps", editingCamp.id), { ...payload, updatedAt: serverTimestamp() });
       } else {
@@ -145,7 +117,7 @@ const AdminCamps = () => {
                   {camp.date && <span className="text-[9px] font-black text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded uppercase">{camp.date}</span>}
                   {camp.location && <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded uppercase">{camp.location}</span>}
                   <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                    <Users size={10} /> {camp.attendees?.length || 0} Attendees
+                    <Users size={10} /> {camp.attendeeCount ?? camp.attendees?.length ?? 0} Attendees
                   </span>
                 </div>
               </div>
@@ -198,33 +170,31 @@ const AdminCamps = () => {
                   <textarea className={`${inputClass} h-20 resize-none`} value={campForm.notes} onChange={e => setCampForm({ ...campForm, notes: e.target.value })} />
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <label className={labelClass + " mb-0"}>Attendees</label>
-                    <button type="button" onClick={addAttendeeRow} className="text-[9px] bg-yellow-500 text-slate-950 px-4 py-2 rounded-full font-black hover:bg-yellow-400 transition-all flex items-center gap-1">
-                      <UserPlus size={12} /> Add Attendee
-                    </button>
-                  </div>
-                  {campForm.attendees.map((attendee, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <select
-                        className={inputClass}
-                        value={attendee.uid || ''}
-                        onChange={e => selectAttendee(i, e.target.value)}
-                      >
-                        <option value="" disabled>Select Cadet...</option>
-                        {personnel.map(p => (
-                          <option key={p.id} value={p.id}>{p.fullName}{p.rank ? ` (${p.rank})` : ''}</option>
-                        ))}
-                      </select>
-                      <button type="button" title="Remove attendee" onClick={() => removeAttendeeRow(i)} className="p-3 text-slate-400 hover:text-red-500 flex-shrink-0">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  {campForm.attendees.length === 0 && (
-                    <p className="text-slate-400 dark:text-slate-600 text-[11px] italic">No attendees added yet.</p>
-                  )}
+                <div>
+                  <label className={labelClass}>
+                    Attendance Count <span className="text-yellow-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    className={inputClass}
+                    placeholder="e.g. 24"
+                    value={campForm.attendeeCount}
+                    onChange={e => setCampForm({ ...campForm, attendeeCount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Attendee Names / Ranks <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    className={`${inputClass} h-24 resize-none`}
+                    placeholder={"e.g.\nC/CPT DE ALMEIDA\nC/1LT SMITH\nC/SSG JONES"}
+                    value={campForm.attendeeNotes}
+                    onChange={e => setCampForm({ ...campForm, attendeeNotes: e.target.value })}
+                  />
+                  <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-1 ml-1">One cadet per line. Free text — no required format.</p>
                 </div>
 
                 <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all mt-4 text-sm shadow-lg shadow-yellow-500/20">

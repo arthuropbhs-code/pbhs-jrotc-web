@@ -27,6 +27,7 @@ import {
   FileText,
   Tent,
   Building2,
+  Image,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
@@ -121,7 +122,7 @@ const AdminSidebar = () => {
           <>
             {/* ── GROUP 1: OPERATIONS ─────────────── */}
             {groupLabel('Operations')}
-            {navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders/Events')}
+            {navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
             {navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
             {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
 
@@ -133,12 +134,13 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',   <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
             {groupLabel('Analytics')}
             {isStaffOrS4 && navLink('/admin/camps', <Tent size={18} />,     'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
-            {isTopFour   && navLink('/admin/companies', <Building2 size={18} />, 'Company Names')}
+            {isTopFour   && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
         )}
 

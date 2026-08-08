@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
-  collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
+  collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
@@ -19,9 +19,9 @@ import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 // uploadToCloudinary validates the real file bytes are a PDF (not just the
 // extension) before it ever reaches Cloudinary.
 
-const CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
+const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
 
-const initialForm = { title: '', description: '', category: 'Regulations', fileUrl: '', fileName: '' };
+const initialForm = { title: '', description: '', category: '', fileUrl: '', fileName: '' };
 
 const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white";
 const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1";
@@ -37,6 +37,7 @@ const AdminDocuments = () => {
   const isAuthorized = role === 's5_public_affairs' || role === 's6_technology' || (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
 
   const [documents, setDocuments] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [dataLoading, setDataLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(initialForm);
@@ -47,6 +48,13 @@ const AdminDocuments = () => {
 
   useEffect(() => {
     if (!isAuthorized) return;
+    // Load configurable categories from settings (falls back to DEFAULT_CATEGORIES if not yet set)
+    getDoc(doc(db, 'settings', 'documentCategories')).then(snap => {
+      if (snap.exists()) {
+        const cats = snap.data()?.categories;
+        if (Array.isArray(cats) && cats.length > 0) setCategories(cats);
+      }
+    });
     const q = query(collection(db, "documents"), orderBy("uploadedAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       setDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -60,7 +68,7 @@ const AdminDocuments = () => {
     setTimeout(() => setStatus(null), 3500);
   };
 
-  const openAdd = () => { setForm(initialForm); setShowModal(true); };
+  const openAdd = () => { setForm({ ...initialForm, category: categories[0] || 'Regulations' }); setShowModal(true); };
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -220,7 +228,7 @@ const AdminDocuments = () => {
               <div>
                 <label className={labelClass}>Category</label>
                 <select className={inputClass} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 

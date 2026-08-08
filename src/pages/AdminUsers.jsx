@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
   collection, doc, updateDoc, onSnapshot, query,
-  addDoc, serverTimestamp, deleteDoc
+  addDoc, serverTimestamp, deleteDoc, getDocs
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
@@ -263,6 +263,34 @@ const AdminUsers = () => {
     }
   };
 
+  // Quick delete from the roster row. Manual (isManual: true) records have
+  // no Firebase Auth account, so deleting the Firestore doc is sufficient.
+  // Real accounts must go through the API so both Auth and Firestore are
+  // cleaned up — the inline deleteDoc() was the bug leaving Auth ghosts.
+  const handleQuickDelete = async (record) => {
+    if (!window.confirm(`Delete ${record.fullName || 'this record'}? This cannot be undone.`)) return;
+    try {
+      if (record.isManual) {
+        // Pre-created roster entry — no Auth account exists.
+        await deleteDoc(doc(db, 'users', record.id));
+      } else {
+        // Real account — must delete Auth user via the server endpoint.
+        const idToken = await user.getIdToken();
+        const res = await fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ type: 'delete-account', targetUid: record.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to delete account');
+        // Close the edit panel if it was showing this record.
+        if (editingRecord?.id === record.id) setEditingRecord(null);
+      }
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  };
+
   // Permanently deletes the account (Firebase Auth user + Firestore
   // record) - irreversible, hence the typed confirmation instead of a
   // plain window.confirm.
@@ -280,6 +308,24 @@ const AdminUsers = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete account');
+
+      // After the auth+Firestore user doc is gone, scrub the deleted account's
+      // email from every team's leadership array so they don't retain a command
+      // slot on the public site or in AdminTeams.
+      const deletedEmail = editingRecord.email;
+      if (deletedEmail) {
+        const teamsSnap = await getDocs(collection(db, 'specialTeams'));
+        const cleanups = [];
+        teamsSnap.forEach(teamDoc => {
+          const { leadership = [] } = teamDoc.data();
+          const filtered = leadership.filter(l => l.email !== deletedEmail);
+          if (filtered.length !== leadership.length) {
+            cleanups.push(updateDoc(doc(db, 'specialTeams', teamDoc.id), { leadership: filtered }));
+          }
+        });
+        await Promise.all(cleanups);
+      }
+
       setEditingRecord(null);
       showStatus('Account Deleted');
     } catch (err) {
@@ -390,7 +436,7 @@ const AdminUsers = () => {
                       <Edit3 size={18} />
                     </button>
                     {(p.isManual || isBattalionStaff) && (
-                        <button title="Delete this record" onClick={async () => { if(window.confirm("Delete record?")) await deleteDoc(doc(db, "users", p.id)) }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+                        <button title="Delete this record" onClick={() => handleQuickDelete(p)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
                             <UserMinus size={18} />
                         </button>
                     )}

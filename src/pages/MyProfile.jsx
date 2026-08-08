@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import { ROLE_LABELS } from '../constants';
+import {
+  signOut,
+  multiFactor,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  RecaptchaVerifier,
+} from 'firebase/auth';
+import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff } from 'lucide-react';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const formatCooldown = (seconds) => {
   if (seconds < 60) return `${seconds}s`;
@@ -19,7 +26,14 @@ const formatCooldown = (seconds) => {
 
 const MyProfile = () => {
   const { user, userData, role } = useAuth();
+  const { theme, setTheme } = useThemeContext();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // mfaRequired: redirected here because 2FA enrollment is mandatory for this role
+  const mfaRequired = new URLSearchParams(location.search).get('mfa') === 'required';
+  // mfaMandatory: this user's level requires 2FA regardless of how they got here
+  const mfaMandatory = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -30,6 +44,20 @@ const MyProfile = () => {
   const [now, setNow] = useState(Date.now());
   const [deleteAccountStatus, setDeleteAccountStatus] = useState(null);
   const [uploadingPortrait, setUploadingPortrait] = useState(false);
+  const [portraitError, setPortraitError] = useState(null);
+
+  // Persisted across retries so we can .clear() before creating a new instance.
+  const enrollRecaptchaRef = useRef(null);
+
+  // MFA / 2FA enrollment state
+  const [mfaEnrolled, setMfaEnrolled] = useState(false);
+  const [mfaFactor, setMfaFactor] = useState(null);
+  // 'idle' | 'entering-phone' | 'entering-code'
+  const [mfaStep, setMfaStep] = useState('idle');
+  const [mfaPhone, setMfaPhone] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaVerificationId, setMfaVerificationId] = useState('');
+  const [mfaStatus, setMfaStatus] = useState(null); // null | 'sending' | 'verifying' | 'success' | error string
 
   const resetCooldownSeconds = Math.max(0, Math.ceil((resetCooldownUntil - now) / 1000));
 
@@ -48,15 +76,30 @@ const MyProfile = () => {
     setLoginEmail(user?.email || '');
   }, [user?.email]);
 
+  // Reflect current MFA enrollment whenever the auth user object updates.
+  useEffect(() => {
+    if (!user) return;
+    const factors = multiFactor(user).enrolledFactors;
+    if (factors.length > 0) {
+      setMfaEnrolled(true);
+      setMfaFactor(factors[0]);
+    } else {
+      setMfaEnrolled(false);
+      setMfaFactor(null);
+    }
+  }, [user]);
+
   const handlePortraitUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !user) return;
     setUploadingPortrait(true);
+    setPortraitError(null);
     try {
       const data = await uploadToCloudinary(file, 'image');
       await updateDoc(doc(db, "users", user.uid), { portrait: data.secure_url });
     } catch (err) {
       console.error("Portrait upload failed:", err);
+      setPortraitError(err.message || 'Upload failed. Try a JPEG, PNG, WebP, or HEIC image.');
     } finally {
       setUploadingPortrait(false);
     }
@@ -162,6 +205,86 @@ const MyProfile = () => {
     }
   };
 
+  // ── MFA enrollment ───────────────────────────────────────────────────────
+
+  // Step 1 — send SMS to the supplied phone number.
+  const handleSendEnrollCode = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    setMfaStatus('sending');
+    try {
+      const session = await multiFactor(user).getSession();
+      // Clear any stale verifier before creating a new one.
+      if (enrollRecaptchaRef.current) {
+        enrollRecaptchaRef.current.clear();
+        enrollRecaptchaRef.current = null;
+      }
+      const recaptchaVerifier = new RecaptchaVerifier(auth, 'enroll-recaptcha-container', { size: 'invisible' });
+      enrollRecaptchaRef.current = recaptchaVerifier;
+      const phoneAuthProvider = new PhoneAuthProvider(auth);
+      const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+        { phoneNumber: mfaPhone, session },
+        recaptchaVerifier
+      );
+      setMfaVerificationId(verificationId);
+      setMfaStep('entering-code');
+      setMfaStatus(null);
+    } catch (err) {
+      if (err.code === 'auth/requires-recent-login') {
+        setMfaStatus('Please sign out and sign back in before enrolling 2FA.');
+      } else {
+        setMfaStatus(err.message || 'Failed to send code. Check the number and try again.');
+      }
+    }
+  };
+
+  // Step 2 — verify the SMS code and finalize enrollment.
+  const handleConfirmEnroll = async (e) => {
+    e.preventDefault();
+    setMfaStatus('verifying');
+    try {
+      const cred = PhoneAuthProvider.credential(mfaVerificationId, mfaCode);
+      const assertion = PhoneMultiFactorGenerator.assertion(cred);
+      await multiFactor(user).enroll(assertion, 'Phone');
+      const enrolled = multiFactor(user).enrolledFactors;
+      setMfaEnrolled(true);
+      setMfaFactor(enrolled[0] ?? null);
+      setMfaStep('idle');
+      setMfaCode('');
+      setMfaPhone('');
+      setMfaStatus('success');
+      setTimeout(() => {
+        setMfaStatus(null);
+        // If they were redirected here because 2FA is required, send them
+        // back to the dashboard now that enrollment is complete.
+        if (mfaRequired) navigate('/admin/dashboard');
+      }, 1500);
+    } catch (err) {
+      setMfaStatus(
+        err.code === 'auth/invalid-verification-code'
+          ? 'Incorrect code — check your SMS and try again.'
+          : err.message || 'Enrollment failed. Please try again.'
+      );
+    }
+  };
+
+  // Unenroll — removes the enrolled phone factor.
+  const handleUnenroll = async () => {
+    if (!user || !mfaFactor) return;
+    const confirmed = window.confirm('Remove two-factor authentication? You can re-enroll at any time.');
+    if (!confirmed) return;
+    setMfaStatus('working');
+    try {
+      await multiFactor(user).unenroll(mfaFactor);
+      setMfaEnrolled(false);
+      setMfaFactor(null);
+      setMfaStep('idle');
+      setMfaStatus(null);
+    } catch (err) {
+      setMfaStatus(err.message || 'Failed to remove 2FA. Try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-blue-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pt-24 px-6 pb-20 transition-colors duration-300">
       <div className="max-w-2xl mx-auto">
@@ -185,6 +308,9 @@ const MyProfile = () => {
           </label>
           <div>
             <h1 className="text-3xl font-black uppercase italic tracking-tighter">My Profile</h1>
+            {portraitError && (
+              <p className="text-red-500 text-[10px] font-bold mt-1 max-w-xs">{portraitError}</p>
+            )}
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
               {userData?.rank} &middot; {ROLE_LABELS[role] || role?.replace('_', ' ')}
             </p>
@@ -282,6 +408,208 @@ const MyProfile = () => {
           {resetStatus && resetStatus !== 'sending' && resetStatus !== 'success' && (
             <p className="text-[10px] text-red-500 font-bold -mt-4">{resetStatus}</p>
           )}
+        </div>
+
+        {/* TWO-FACTOR AUTHENTICATION */}
+        <div className={`bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm dark:shadow-none mt-6 border ${mfaRequired && !mfaEnrolled ? 'border-red-400 dark:border-red-500/40' : 'border-blue-100 dark:border-white/10'}`}>
+
+          {/* Required banner — shown when redirected here by the MFA gate */}
+          {mfaRequired && !mfaEnrolled && (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6">
+              <ShieldOff size={16} className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-red-500">Action Required</p>
+                <p className="text-[10px] text-red-400 font-bold mt-0.5">
+                  Two-factor authentication is required for your role. Enroll below to access the command dashboard.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Two-Factor Authentication</h2>
+              {mfaMandatory && (
+                <span className="text-[9px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
+                  Required for your role
+                </span>
+              )}
+            </div>
+            {mfaEnrolled && (
+              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-green-500 bg-green-500/10 px-3 py-1 rounded-full">
+                <ShieldCheck size={12} /> Active
+              </span>
+            )}
+          </div>
+
+          {/* ── Enrolled: show phone hint + optional unenroll ── */}
+          {mfaEnrolled && mfaStep === 'idle' && (
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm font-bold">SMS Verification</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+                  {mfaFactor?.phoneInfo
+                    ? `Enrolled: ${mfaFactor.phoneInfo.replace(/\d(?=\d{4})/g, '•')}`
+                    : 'Phone number enrolled'}
+                </p>
+              </div>
+              {/* Mandatory-role accounts can't unenroll themselves */}
+              {mfaMandatory ? (
+                <span className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">
+                  Contact SAI to remove
+                </span>
+              ) : (
+                <button
+                  onClick={handleUnenroll}
+                  disabled={mfaStatus === 'working'}
+                  className="px-5 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all disabled:opacity-50 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-red-500/10 hover:text-red-500"
+                >
+                  <ShieldOff size={14} />
+                  {mfaStatus === 'working' ? 'Removing…' : 'Remove 2FA'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Not enrolled + idle: prompt to enable ── */}
+          {!mfaEnrolled && mfaStep === 'idle' && (
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm font-bold">SMS Verification</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+                  {mfaMandatory ? 'Required — enroll your phone number below' : 'Require a one-time code at login'}
+                </p>
+              </div>
+              <button
+                onClick={() => setMfaStep('entering-phone')}
+                className={`px-5 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all ${mfaMandatory ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20' : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-yellow-500/10 hover:text-yellow-600 dark:hover:text-yellow-500'}`}
+              >
+                <Smartphone size={14} /> {mfaMandatory ? 'Enroll Now' : 'Enable 2FA'}
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 1: Enter phone number ── */}
+          {mfaStep === 'entering-phone' && (
+            <form onSubmit={handleSendEnrollCode} className="space-y-4">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
+                Enter the phone number that will receive verification codes.
+              </p>
+              <div className="relative">
+                <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={16} />
+                <input
+                  type="tel"
+                  required
+                  placeholder="+1 (555) 000-0000"
+                  value={mfaPhone}
+                  onChange={(e) => setMfaPhone(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm font-bold focus:border-yellow-500 outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                {/* Only show cancel if not in required-enrollment flow */}
+                {!mfaRequired && (
+                  <button
+                    type="button"
+                    onClick={() => { setMfaStep('idle'); setMfaStatus(null); setMfaPhone(''); }}
+                    className="flex-1 py-3 rounded-xl font-black uppercase text-xs bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={mfaStatus === 'sending'}
+                  className="flex-1 py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50 transition-all"
+                >
+                  {mfaStatus === 'sending' ? <Loader2 className="animate-spin" size={14} /> : <Smartphone size={14} />}
+                  {mfaStatus === 'sending' ? 'Sending…' : 'Send Code'}
+                </button>
+              </div>
+              {/* Invisible reCAPTCHA anchor for enrollment */}
+              <div id="enroll-recaptcha-container" />
+            </form>
+          )}
+
+          {/* ── Step 2: Enter SMS code ── */}
+          {mfaStep === 'entering-code' && (
+            <form onSubmit={handleConfirmEnroll} className="space-y-4">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
+                Enter the 6-digit code sent to {mfaPhone}.
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="6-DIGIT CODE"
+                maxLength={6}
+                required
+                autoFocus
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl py-3 px-4 text-sm font-black tracking-[0.4em] text-center focus:border-yellow-500 outline-none transition-all"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setMfaStep('entering-phone'); setMfaStatus(null); setMfaCode(''); }}
+                  className="flex-1 py-3 rounded-xl font-black uppercase text-xs bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                >
+                  ← Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={mfaStatus === 'verifying' || mfaCode.length < 6}
+                  className="flex-1 py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50 transition-all"
+                >
+                  {mfaStatus === 'verifying' ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
+                  {mfaStatus === 'verifying' ? 'Verifying…' : 'Enable 2FA'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Status messages */}
+          {mfaStatus && mfaStatus !== 'sending' && mfaStatus !== 'verifying' && mfaStatus !== 'working' && (
+            <p className={`text-[10px] font-bold mt-3 ${mfaStatus === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+              {mfaStatus === 'success' ? '✓ Two-factor authentication enabled.' : mfaStatus}
+            </p>
+          )}
+
+          {mfaStep === 'idle' && (
+            <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest mt-5 pt-5 border-t border-slate-100 dark:border-white/5">
+              {mfaMandatory
+                ? 'Required for battalion staff (S1–S7) and all command ranks. Contact SAI to remove an enrolled factor.'
+                : "When enabled, you'll be asked for a code from your phone each time you log in."}
+            </p>
+          )}
+        </div>
+
+        {/* APPEARANCE */}
+        <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl p-8 shadow-sm dark:shadow-none mt-6">
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Appearance</h2>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-4">Color Theme</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: 'light', label: 'Light', Icon: Sun },
+              { value: 'system', label: 'System', Icon: Monitor },
+              { value: 'dark', label: 'Dark', Icon: Moon },
+            ].map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                onClick={() => setTheme(value)}
+                className={`flex flex-col items-center gap-2 py-4 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${
+                  theme === value
+                    ? 'bg-yellow-500 border-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
+                    : 'bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-500 hover:border-yellow-500/40'
+                }`}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* DANGER ZONE */}

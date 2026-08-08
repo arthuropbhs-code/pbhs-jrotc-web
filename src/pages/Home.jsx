@@ -122,7 +122,7 @@ const Home = () => {
   const prevSlide = () => setCurrentIndex(currentIndex === 0 ? slides.length - 1 : currentIndex - 1);
 
   return (
-    <div className="bg-slate-950 text-slate-200 min-h-screen font-sans">
+    <div className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 min-h-screen font-sans">
       
       {/* --- HERO SLIDESHOW --- */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -223,11 +223,11 @@ const Home = () => {
           jumped down the instant announcements loaded in. Reserving the
           section's space from first paint eliminates that. */}
       {(newsLoading || news.length > 0) && (
-        <section className="py-12 bg-slate-900/50 border-y border-white/5">
+        <section className="py-12 bg-slate-100 dark:bg-slate-900/50 border-y border-slate-200 dark:border-white/5">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center gap-3 mb-8">
               <Megaphone className="text-yellow-500" size={20} />
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-white">Battalion Bulletins</h2>
+              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 dark:text-white">Battalion Bulletins</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {newsLoading ? (
@@ -238,12 +238,12 @@ const Home = () => {
                 </>
               ) : (
                 news.map((item) => (
-                  <div key={item.id} className="bg-slate-950 border border-white/5 p-6 rounded-2xl">
+                  <div key={item.id} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-6 rounded-2xl">
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-3 font-bold uppercase tracking-widest">
                       <Clock size={12} />
                       {item.timestamp?.toDate().toLocaleDateString() || "Active Order"}
                     </div>
-                    <p className="text-slate-300 text-sm leading-relaxed mb-4">{item.content}</p>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-4">{item.content}</p>
                     <div className="text-yellow-500/40 text-[9px] font-black uppercase tracking-widest">Signed: {item.author}</div>
                   </div>
                 ))
@@ -254,10 +254,10 @@ const Home = () => {
       )}
 
       {/* --- ARMY VALUES --- */}
-      <section className="py-24 bg-white text-slate-950">
+      <section className="py-24 bg-white dark:bg-slate-900 text-slate-950 dark:text-white">
         <Reveal className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 uppercase mb-4">The Seven Army Values</h2>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-12">Select a value to expand</p>
+          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 dark:text-slate-400 uppercase mb-4">The Seven Army Values</h2>
+          <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-12">Select a value to expand</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             {ARMY_VALUES.map((val, i) => (
               <button
@@ -267,8 +267,8 @@ const Home = () => {
                 aria-label={`${openValueIdx === i ? 'Collapse' : 'Expand'} ${val.name}`}
                 className={`group border p-5 flex flex-col items-center transition-all duration-200 rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 ${
                   openValueIdx === i
-                    ? 'bg-slate-950 text-white border-slate-950'
-                    : 'border-slate-100 text-slate-950 hover:bg-slate-100 hover:border-slate-200'
+                    ? 'bg-slate-950 dark:bg-yellow-500 text-white dark:text-slate-950 border-slate-950 dark:border-yellow-500'
+                    : 'border-slate-100 dark:border-slate-800 text-slate-950 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-600'
                 }`}
               >
                 <Star
@@ -313,11 +313,11 @@ const Home = () => {
       </section>
 
       {/* --- TOP 3 COMMAND SECTION --- */}
-      <section className="py-24 bg-slate-950 border-t border-white/5 overflow-hidden">
+      <section className="py-24 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-white/5 overflow-hidden">
         <Reveal className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
-            <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
+            <h3 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
           </div>
           {/* Same reasoning as Battalion Bulletins above: skeleton cards
               while topThree is still loading reserve this grid's real
@@ -337,7 +337,7 @@ const Home = () => {
                 whileHover={{ y: -10 }}
                 className="group relative"
               >
-                <div className="aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 bg-slate-900 relative mb-6">
+                <div className="aspect-[3/4] overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-300 dark:bg-slate-900 relative mb-6">
                   <img 
                     src={leader.image} 
                     alt={leader.name}
@@ -347,7 +347,7 @@ const Home = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
                 </div>
                 <div className="space-y-1 mb-4 text-center sm:text-left">
-                  <h4 className="text-white font-black uppercase text-lg italic leading-tight tracking-tight">
+                  <h4 className="text-slate-900 dark:text-white font-black uppercase text-lg italic leading-tight tracking-tight">
                     {leader.name}
                   </h4>
                   <p className="text-yellow-500 font-bold uppercase text-[10px] tracking-widest">
@@ -356,7 +356,7 @@ const Home = () => {
                 </div>
                 <div className="relative">
                   <span className="text-4xl text-yellow-500/20 font-serif absolute -top-4 -left-2">"</span>
-                  <p className="text-slate-400 text-xs italic leading-relaxed pl-4 border-l border-yellow-500/20">
+                  <p className="text-slate-500 dark:text-slate-400 text-xs italic leading-relaxed pl-4 border-l border-yellow-500/20">
                     {leader.quote}
                   </p>
                 </div>
@@ -368,7 +368,7 @@ const Home = () => {
 
       {/* --- QUICK ACCESS --- */}
       {/* Icons are structural (non-editable content) — fixed by position */}
-      <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/5">
+      <section className="py-32 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-slate-200 dark:border-white/5">
         {homeContent.quickAccess.map((card, i) => {
           const ICONS = [<Shield />, <Users />, <Award />];
           return (
@@ -383,15 +383,15 @@ const Home = () => {
 };
 
 const InfoCard = ({ icon, title, desc, link }) => (
-  <Link to={link} className="bg-slate-900 border border-white/5 p-10 rounded-3xl hover:border-yellow-500/40 transition-all block group relative">
+  <Link to={link} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 p-10 rounded-3xl hover:border-yellow-500/40 transition-all block group relative shadow-sm dark:shadow-none">
     <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity text-yellow-500">
       <ArrowRight size={20} />
     </div>
     <div className="mb-6 p-4 bg-yellow-500/5 text-yellow-500 rounded-xl w-fit group-hover:bg-yellow-500 group-hover:text-slate-950 transition-colors">
       {icon}
     </div>
-    <h3 className="text-2xl font-black uppercase italic mb-4 text-white">{title}</h3>
-    <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+    <h3 className="text-2xl font-black uppercase italic mb-4 text-slate-900 dark:text-white">{title}</h3>
+    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{desc}</p>
   </Link>
 );
 

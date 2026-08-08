@@ -13,10 +13,9 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { ROLE_HIERARCHY, EVENT_TYPES, STAFF_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
   Send,
-  Calendar,
   Bell,
   CheckCircle,
   ArrowLeft,
@@ -32,21 +31,14 @@ import Footer from '../components/Footer';
 
 const AdminOrders = () => {
   const { userData, role } = useAuth();
-  const [mode, setMode] = useState('order'); 
   const [status, setStatus] = useState({ loading: false, success: false });
   const [recentItems, setRecentItems] = useState([]);
-  
+
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
   const [errorMessage, setErrorMessage] = useState(null);
 
   const [orderText, setOrderText] = useState('');
   const [selectedTargets, setSelectedTargets] = useState([]);
-  const [eventData, setEventData] = useState({
-    title: '',
-    date: '',
-    location: '',
-    type: 'Inspection'
-  });
 
   const targetOptions = [
     `${userData?.company} Company`,
@@ -60,16 +52,11 @@ const AdminOrders = () => {
 
   useEffect(() => {
     if (!userData?.company) return;
-    const collectionName = mode === 'order' ? "orders" : "events";
     const userLevel = ROLE_HIERARCHY[role] || 0;
 
-    // Staff+ get full battalion visibility (they need the whole audit trail).
-    // Below that, orders are scoped to what this user was actually targeted
-    // by, same list MyDuties.jsx uses - a Company Commander shouldn't see
-    // "Staff"/"Top 4"-only orders or another company's orders. Events stay
-    // unfiltered: they're already fully public on the unauthenticated
-    // /events calendar, so there's no scoping to enforce here.
-    const q = collectionName === 'orders' && userLevel < STAFF_LEVEL
+    // Staff+ see the full audit trail. Below that, scope to orders the user
+    // was actually targeted by — same logic as MyDuties.jsx.
+    const q = userLevel < STAFF_LEVEL
       ? query(
           collection(db, "orders"),
           where("targets", "array-contains-any", [
@@ -81,13 +68,13 @@ const AdminOrders = () => {
           ].filter(Boolean)),
           orderBy("timestamp", "desc")
         )
-      : query(collection(db, collectionName), orderBy("timestamp", "desc"));
+      : query(collection(db, "orders"), orderBy("timestamp", "desc"));
 
     const unsub = onSnapshot(q, (snapshot) => {
       setRecentItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
     });
     return () => unsub();
-  }, [mode, role, userData?.company, userData?.position]);
+  }, [role, userData?.company, userData?.position]);
 
   const toggleTarget = (target) => {
     setSelectedTargets(prev => 
@@ -123,7 +110,7 @@ const AdminOrders = () => {
 
   const confirmDelete = async () => {
     try {
-      await deleteDoc(doc(db, mode === 'order' ? "orders" : "events", deleteConfirm.id));
+      await deleteDoc(doc(db, "orders", deleteConfirm.id));
       setDeleteConfirm({ show: false, id: null });
     } catch {
       showError("Sync Error: Deletion failed.");
@@ -133,13 +120,12 @@ const AdminOrders = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedTargets.length === 0) return showError("Operational Error: Select at least one target.");
-    if (mode === 'order' && !orderText.trim()) return showError("Operational Error: Order content cannot be empty.");
+    if (!orderText.trim()) return showError("Operational Error: Order content cannot be empty.");
 
     setStatus({ loading: true, success: false });
 
     try {
-      const collectionName = mode === 'order' ? "orders" : "events";
-      const payload = mode === 'order' ? {
+      await addDoc(collection(db, "orders"), {
         content: orderText,
         targets: selectedTargets,
         issuer: `${userData?.rank} ${userData?.fullName || userData?.name}`,
@@ -147,18 +133,8 @@ const AdminOrders = () => {
         company: userData?.company || "Battalion",
         timestamp: serverTimestamp(),
         active: true
-      } : {
-        ...eventData,
-        targets: selectedTargets,
-        issuer: `${userData?.rank} ${userData?.fullName || userData?.name}`,
-        issuerRole: role,
-        company: userData?.company || "Battalion",
-        timestamp: serverTimestamp()
-      };
-
-      await addDoc(collection(db, collectionName), payload);
+      });
       setOrderText('');
-      setEventData({ title: '', date: '', location: '', type: 'Inspection' });
       setSelectedTargets([]);
       setStatus({ loading: false, success: true });
       setTimeout(() => setStatus({ loading: false, success: false }), 3000);
@@ -192,22 +168,16 @@ const AdminOrders = () => {
         <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="w-full md:w-auto text-center md:text-left">
             <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
-              Orders <span className="text-yellow-500">& Events</span>
+              Issue <span className="text-yellow-500">Orders</span>
             </h1>
             <p className="text-blue-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
               Authorized Personnel | {userData?.company || "Battalion"}
             </p>
           </div>
 
-          <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">
-            <button type="button" onClick={() => setMode('order')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'order' ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
-              <Bell size={14} /> Issue Order
-            </button>
-            <button type="button" onClick={() => setMode('event')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${mode === 'event' ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}>
-              <Calendar size={14} /> Create Event
-            </button>
+          <div className="flex items-center gap-3">
+            <Bell size={16} className="text-yellow-500" />
+            <span className="text-[10px] font-black text-blue-400 dark:text-slate-500 uppercase tracking-widest">Issue Order</span>
           </div>
         </header>
 
@@ -222,8 +192,8 @@ const AdminOrders = () => {
                 {targetOptions.map((t) => (
                   <button key={t} type="button" onClick={() => toggleTarget(t)}
                     className={`px-3 py-3.5 rounded-2xl text-[9px] font-bold uppercase transition-all border-2 flex items-center justify-between ${
-                      selectedTargets.includes(t) 
-                        ? 'bg-blue-50/50 border-yellow-500 text-yellow-500 dark:bg-yellow-500/10' 
+                      selectedTargets.includes(t)
+                        ? 'bg-blue-50/50 border-yellow-500 text-yellow-500 dark:bg-yellow-500/10'
                         : 'bg-white dark:bg-slate-950 border-blue-50 dark:border-white/5 text-slate-400 hover:border-blue-100'
                     }`}
                   >
@@ -234,44 +204,12 @@ const AdminOrders = () => {
               </div>
             </div>
 
-            {mode === 'order' ? (
-              <textarea 
-                value={orderText} 
-                onChange={(e) => setOrderText(e.target.value)}
-                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all min-h-[160px] placeholder:text-blue-200 font-medium shadow-inner"
-                placeholder="Enter battalion orders for broadcast..." 
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
-                  placeholder="Event Title" 
-                  value={eventData.title} 
-                  onChange={(e) => setEventData({...eventData, title: e.target.value})} 
-                />
-                <input 
-                  type="date"
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-400 text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all shadow-inner" 
-                  value={eventData.date} 
-                  onChange={(e) => setEventData({...eventData, date: e.target.value})} 
-                />
-                <input 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none placeholder:text-blue-200 transition-all shadow-inner" 
-                  placeholder="Location" 
-                  value={eventData.location} 
-                  onChange={(e) => setEventData({...eventData, location: e.target.value})} 
-                />
-                <select 
-                  className="bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all shadow-inner" 
-                  value={eventData.type} 
-                  onChange={(e) => setEventData({...eventData, type: e.target.value})}
-                >
-                  {EVENT_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <textarea
+              value={orderText}
+              onChange={(e) => setOrderText(e.target.value)}
+              className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all min-h-[160px] placeholder:text-blue-200 font-medium shadow-inner"
+              placeholder="Enter battalion orders for broadcast..."
+            />
 
             <button 
               disabled={status.loading} 
@@ -301,7 +239,7 @@ const AdminOrders = () => {
               <div key={item.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-6 rounded-[2rem] flex justify-between items-center group transition-all hover:border-yellow-500/30 shadow-sm">
                 <div className="max-w-[80%] pl-4 border-l-[3px] border-yellow-500 rounded-sm">
                   <p className="text-sm text-slate-800 dark:text-slate-200 font-bold mb-1.5 leading-tight">
-                    {mode === 'order' ? item.content : item.title}
+                    {item.content}
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
                     <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Targets: {item.targets?.join(', ')}</span>

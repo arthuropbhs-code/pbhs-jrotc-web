@@ -7,6 +7,8 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
 
 // --- DYNAMIC RANK SYMBOL ENGINE (CLEAN & SPACED) ---
+// bg-black is intentional here: rank insignia are always displayed on a black
+// military-style backing board regardless of the page's light/dark mode.
 const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
   const isOfficer = type === 'officer' || type === 'officer-disk';
   const containerClass = "relative w-16 h-32 bg-black border border-white/10 rounded-md flex flex-col items-center py-4 overflow-hidden shadow-2xl";
@@ -17,9 +19,9 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
       <div className={containerClass}>
         <div className="flex flex-col gap-3 items-center justify-center h-full">
           {[...Array(count)].map((_, i) => (
-            <div 
-              key={i} 
-              className={isDisk 
+            <div
+              key={i}
+              className={isDisk
                 ? "w-4 h-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.3)] border border-slate-400"
                 : "w-5 h-5 rotate-45 bg-gradient-to-br from-slate-100 to-slate-300 shadow-[0_0_8px_rgba(255,255,255,0.3)] border border-slate-400"
               }
@@ -38,14 +40,14 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
       <div className="flex flex-col h-full w-full items-center justify-between px-1 scale-[0.9]">
         <div className="flex flex-col gap-1 w-full items-center">
           {[...Array(up)].map((_, i) => (
-            <div 
-              key={i} 
-              className="w-12 h-3 bg-yellow-500 shadow-sm" 
-              style={{ clipPath: 'polygon(50% 0%, 100% 100%, 85% 100%, 50% 25%, 15% 100%, 0% 100%)' }} 
+            <div
+              key={i}
+              className="w-12 h-3 bg-yellow-500 shadow-sm"
+              style={{ clipPath: 'polygon(50% 0%, 100% 100%, 85% 100%, 50% 25%, 15% 100%, 0% 100%)' }}
             />
           ))}
         </div>
-        
+
         <div className="relative flex items-center justify-center h-12 w-full">
           {hasWreath && (
             <div className="absolute w-12 h-12 border-4 border-double border-yellow-500/60 rounded-full flex items-center justify-center">
@@ -67,7 +69,7 @@ const RankSymbol = ({ type, count, hasWreath, hasStar, hasDiamond }) => {
 };
 
 const Section = ({ title, icon: Icon, children, color = "yellow" }) => (
-  <div className="bg-slate-900/80 border border-white/5 p-8 rounded-3xl hover:border-yellow-500/20 transition-all shadow-xl">
+  <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/5 p-8 rounded-3xl hover:border-yellow-500/20 transition-all shadow-sm dark:shadow-xl">
     <div className="flex items-center gap-4 mb-6">
       <div className={`p-3 bg-${color}-500/10 rounded-2xl text-${color}-500`}>
         <Icon size={28} />
@@ -78,9 +80,11 @@ const Section = ({ title, icon: Icon, children, color = "yellow" }) => (
   </div>
 );
 
+// The rank card background stays dark (bg-black/40) regardless of page theme —
+// it's representing a physical insignia board, which is always black.
 const RankItem = ({ name, abbr, description, symbolProps }) => (
-  <div className="flex flex-col items-center bg-black/40 p-4 rounded-xl border border-white/5 group hover:border-yellow-500/50 transition-colors">
-    <div className="w-full h-44 mb-3 bg-white/5 rounded-lg flex items-center justify-center p-2 text-center overflow-hidden">
+  <div className="flex flex-col items-center bg-slate-800/20 dark:bg-black/40 p-4 rounded-xl border border-slate-200 dark:border-white/5 group hover:border-yellow-500/50 transition-colors">
+    <div className="w-full h-44 mb-3 bg-slate-200 dark:bg-white/5 rounded-lg flex items-center justify-center p-2 text-center overflow-hidden">
       <RankSymbol {...symbolProps} />
     </div>
     <span className="text-[10px] font-black uppercase text-center leading-tight tracking-tighter mb-1 text-slate-500">{description}</span>
@@ -159,9 +163,9 @@ const CadetInfo = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pt-24 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pt-24 pb-20 px-6 font-sans">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* HERO HEADER */}
         <Reveal className="text-center mb-16">
           <h1 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter mb-4">
@@ -180,16 +184,16 @@ const CadetInfo = () => {
             <h3 className="text-xs font-black uppercase mb-1 opacity-70 tracking-widest">The Mission</h3>
             <p className="text-xl font-black uppercase italic leading-tight">{content.missionText}</p>
           </div>
-          <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 rounded-3xl">
             <h3 className="text-xs font-black uppercase mb-2 text-yellow-500 tracking-widest">Definitions</h3>
             <div className="space-y-1 text-sm font-bold uppercase italic">
               <p><span className="text-slate-500 not-italic mr-2 text-[10px]">JROTC:</span> {content.jrotcDefinition}</p>
               <p><span className="text-slate-500 not-italic mr-2 text-[10px]">LET:</span> {content.letDefinition}</p>
             </div>
           </div>
-          <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 rounded-3xl">
             <h3 className="text-xs font-black uppercase mb-2 text-yellow-500 tracking-widest">Leadership</h3>
-            <p className="text-[11px] leading-relaxed text-slate-400 font-medium">
+            <p className="text-[11px] leading-relaxed text-slate-500 font-medium">
               {content.leadershipDefinition}
             </p>
           </div>
@@ -204,9 +208,9 @@ const CadetInfo = () => {
               <div className="space-y-10">
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-6 flex items-center gap-2">
-                    <div className="h-px flex-1 bg-white/10"></div>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
                     Officer Ranks
-                    <div className="h-px flex-1 bg-white/10"></div>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                     {officerRanks.map(r => (
@@ -217,9 +221,9 @@ const CadetInfo = () => {
 
                 <div>
                   <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-6 flex items-center gap-2">
-                    <div className="h-px flex-1 bg-white/10"></div>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
                     Enlisted Ranks
-                    <div className="h-px flex-1 bg-white/10"></div>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                     {enlistedRanks.map(r => (
@@ -234,7 +238,7 @@ const CadetInfo = () => {
             {/* THE CREED */}
             <Reveal delay={0.1}>
             <Section title="The Cadet Creed" icon={Shield} color="yellow">
-              <p className="text-sm leading-relaxed italic text-slate-300 whitespace-pre-line border-l-2 border-yellow-500/50 pl-6 py-2">
+              <p className="text-sm leading-relaxed italic text-slate-600 dark:text-slate-300 whitespace-pre-line border-l-2 border-yellow-500/50 pl-6 py-2">
                 {content.cadetCreed}
               </p>
             </Section>
@@ -245,9 +249,9 @@ const CadetInfo = () => {
             <Section title="11 Principles of Leadership" icon={Scale} color="blue">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {content.principles.map((p, i) => (
-                  <div key={i} className="flex gap-3 text-[11px] bg-black/40 p-3 rounded-xl border border-white/5 group hover:border-blue-500/30 transition-colors">
+                  <div key={i} className="flex gap-3 text-[11px] bg-slate-100 dark:bg-black/40 p-3 rounded-xl border border-slate-200 dark:border-white/5 group hover:border-blue-500/30 transition-colors">
                     <span className="text-blue-500 font-black">{i + 1}</span>
-                    <span className="text-slate-300 group-hover:text-white transition-colors">{p}</span>
+                    <span className="text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{p}</span>
                   </div>
                 ))}
               </div>
@@ -269,7 +273,7 @@ const CadetInfo = () => {
                     { role: "XO", name: commandStaff.xo },
                     { role: "CSM", name: commandStaff.csm }
                   ].map((leader) => (
-                    <div key={leader.role} className="bg-black/40 p-3 rounded-xl border border-white/5 flex justify-between items-center group hover:border-yellow-500/30 transition-all">
+                    <div key={leader.role} className="bg-slate-100 dark:bg-black/40 p-3 rounded-xl border border-slate-200 dark:border-white/5 flex justify-between items-center group hover:border-yellow-500/30 transition-all">
                       <span className="text-slate-500 not-italic text-[9px] group-hover:text-yellow-500">{leader.role}</span>
                       <span>{leader.name}</span>
                     </div>
@@ -287,9 +291,9 @@ const CadetInfo = () => {
                   <div key={item.l} className="group">
                     <div className="flex items-center gap-3">
                       <span className="text-xl font-black text-yellow-500 group-hover:scale-110 transition-transform">{item.l}</span>
-                      <span className="font-bold text-xs text-white uppercase tracking-wider">{item.v}</span>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">{item.v}</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 ml-6 group-hover:text-slate-300 transition-colors">{item.d}</p>
+                    <p className="text-[10px] text-slate-500 ml-6 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">{item.d}</p>
                   </div>
                 ))}
               </div>
@@ -300,11 +304,11 @@ const CadetInfo = () => {
             <Reveal delay={0.15}>
             <Section title="Instructors" icon={Target} color="yellow">
               <div className="space-y-2">
-                <div className="p-4 rounded-xl border border-white/5 bg-black/20 flex items-center justify-between group hover:bg-black/40 transition-all">
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-black/20 flex items-center justify-between group hover:bg-slate-200 dark:hover:bg-black/40 transition-all">
                   <span className="text-[10px] text-yellow-500 font-black">SAI</span>
                   <p className="font-black uppercase italic text-sm">{instructors.sai}</p>
                 </div>
-                <div className="p-4 rounded-xl border border-white/5 bg-black/20 flex items-center justify-between group hover:bg-black/40 transition-all">
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-black/20 flex items-center justify-between group hover:bg-slate-200 dark:hover:bg-black/40 transition-all">
                   <span className="text-[10px] text-yellow-500 font-black">AI</span>
                   <p className="font-black uppercase italic text-sm">{instructors.ai}</p>
                 </div>

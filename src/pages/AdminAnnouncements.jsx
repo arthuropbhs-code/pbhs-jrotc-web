@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { Megaphone, Trash2, Send, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Megaphone, Trash2, Send, CheckCircle, ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, EVENT_TYPES } from '../constants';
@@ -19,6 +20,13 @@ const AdminAnnouncements = () => {
   const [teams, setTeams] = useState([]);
 
   const userPower = ROLE_HIERARCHY[role] || 1;
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, issuerLevel }
+  const [toast, setToast] = useState(null);
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const unsubscribe = onSnapshot(query(collection(db, "specialTeams"), orderBy("name", "asc")), (snap) => {
@@ -80,16 +88,30 @@ const AdminAnnouncements = () => {
       setText('');
       setSent(true);
       setTimeout(() => setSent(false), 3000);
-    } catch (err) { console.error("Broadcast Error:", err); }
+    } catch (err) {
+      console.error("Broadcast Error:", err);
+      showToast('error', 'Broadcast failed. Try again.');
+    }
   };
 
-  const handleDelete = async (id, itemLevel) => {
-    if (userPower < itemLevel) {
-      alert("Priority Restriction: You cannot delete a broadcast from a superior officer.");
+  const requestDelete = (id, issuerLevel) => {
+    if (userPower < issuerLevel) {
+      showToast('error', 'Priority Restriction: Cannot delete a broadcast from a superior officer.');
       return;
     }
-    if (window.confirm("Delete this announcement?")) {
-      await deleteDoc(doc(db, "announcements", id));
+    setDeleteConfirm({ id, issuerLevel });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await deleteDoc(doc(db, "announcements", deleteConfirm.id));
+      setDeleteConfirm(null);
+      showToast('success', 'Broadcast removed.');
+    } catch (err) {
+      console.error("Delete error:", err);
+      setDeleteConfirm(null);
+      showToast('error', 'Delete failed — check Firestore rules.');
     }
   };
 
@@ -182,7 +204,7 @@ const AdminAnnouncements = () => {
                        <span className="text-[8px] text-slate-400 dark:text-slate-500 font-black px-1 rounded bg-slate-200 dark:bg-white/10">LVL {item.issuerLevel}</span>
                     </div>
                   </div>
-                  <button title="Delete announcement" onClick={() => handleDelete(item.id, item.issuerLevel)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-2 transition-colors">
+                  <button title="Delete announcement" onClick={() => requestDelete(item.id, item.issuerLevel)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-2 transition-colors">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -195,6 +217,36 @@ const AdminAnnouncements = () => {
         </div>
       </div>
       <Footer />
+
+      {/* DELETE CONFIRM */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl">
+            <Trash2 size={40} className="text-red-500 mx-auto mb-6" />
+            <h3 className="text-xl font-black uppercase italic mb-3 text-slate-900 dark:text-white">Delete Broadcast?</h3>
+            <p className="text-slate-500 text-xs mb-8 leading-relaxed">This announcement will be permanently removed.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleDelete} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest bg-slate-100 dark:bg-white/5">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+            className={`fixed bottom-8 right-8 px-8 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-3 shadow-2xl z-[200] ${
+              toast.type === 'success' ? 'bg-yellow-500 text-slate-950' : 'bg-red-600 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -59,7 +59,7 @@ const Announcements = () => {
   }, [userData?.officerTeams, userPower]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pt-24 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pt-24 pb-20 px-6 font-sans">
       <div className="max-w-5xl mx-auto">
 
         {/* HEADER */}
@@ -70,7 +70,7 @@ const Announcements = () => {
           <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-4">
             Battalion <span className="text-yellow-500">Announcements</span>
           </h1>
-          <p className="text-slate-400 max-w-xl mx-auto text-xs uppercase tracking-[0.2em] font-bold">
+          <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto text-xs uppercase tracking-[0.2em] font-bold">
             Stay informed on upcoming events and official updates.
           </p>
         </Reveal>
@@ -84,9 +84,9 @@ const Announcements = () => {
           </div>
         ) : announcements.length === 0 ? (
           /* EMPTY STATE */
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-12 text-center max-w-xl mx-auto">
-            <AlertCircle className="text-slate-600 mx-auto mb-4" size={40} />
-            <h3 className="text-sm font-black uppercase tracking-wider text-slate-300 mb-1">No Active Notices</h3>
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-12 text-center max-w-xl mx-auto">
+            <AlertCircle className="text-slate-400 dark:text-slate-600 mx-auto mb-4" size={40} />
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">No Active Notices</h3>
             <p className="text-xs text-slate-500 font-medium">Check back later for newly published battalion updates.</p>
           </div>
         ) : (
@@ -95,26 +95,26 @@ const Announcements = () => {
             {announcements.map((post, idx) => (
               <Reveal key={post.id} delay={idx * 0.05}>
               <article
-                className="bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden hover:border-yellow-500/20 transition-all duration-300 shadow-2xl p-8"
+                className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden hover:border-yellow-500/20 transition-all duration-300 shadow-sm dark:shadow-2xl p-8"
               >
                 {/* META BADGES */}
-                <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[10px] font-black uppercase tracking-wider text-slate-400 mb-4">
+                <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
                   {post.eventType && (
                     <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-500 px-2.5 py-1 rounded-md border border-yellow-500/20">
                       <Tag size={12} />
                       <span>{post.eventType}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                  <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
                     <Calendar size={12} className="text-yellow-500" />
                     <span>{post.timestamp?.toDate().toLocaleDateString() || "Recent"}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                  <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
                     <User size={12} className="text-yellow-500" />
                     <span>By: {post.issuer || 'Battalion Staff'}</span>
                   </div>
                   {post.expiresAt && (
-                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
                       <Clock size={12} className="text-yellow-500" />
                       <span>Ends: {new Date(post.expiresAt).toLocaleDateString()}</span>
                     </div>
@@ -122,7 +122,7 @@ const Announcements = () => {
                 </div>
 
                 {/* CONTENT BODY */}
-                <div className="text-sm leading-relaxed text-slate-300 prose prose-invert max-w-none whitespace-pre-wrap font-medium">
+                <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 prose dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
                   {post.content}
                 </div>
               </article>

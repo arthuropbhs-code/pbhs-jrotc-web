@@ -1,9 +1,11 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { multiFactor } from 'firebase/auth';
 import { useAuth } from './hooks/useAuth';
 import { useIdleLogout } from './hooks/useIdleLogout';
 import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
 import { canAccessRoute } from './lib/authz';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // --- COMPONENTS ---
 // Navbar/Footer stay eager: they render on almost every route, so splitting
@@ -44,12 +46,14 @@ const AdminDocuments = lazy(() => import('./pages/AdminDocuments'));
 const AdminCamps = lazy(() => import('./pages/AdminCamps'));
 const AdminStats = lazy(() => import('./pages/AdminStats'));
 const AdminCompanies = lazy(() => import('./pages/AdminCompanies'));
+const AdminPhotos = lazy(() => import('./pages/AdminPhotos'));
 const MyProfile = lazy(() => import('./pages/MyProfile'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const WinningColors = lazy(() => import('./pages/WinningColors'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const HowToJoin = lazy(() => import('./pages/HowToJoin'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -59,6 +63,7 @@ const RouteFallback = () => (
 
 const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   const { user, role, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -75,6 +80,17 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   // STAFF_LEVEL. Top command can always override, same as everywhere else.
   if (!canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel: ADMIN_LEVEL })) {
     return <Navigate to="/admin/dashboard" />;
+  }
+
+  // MFA gate: battalion staff (level 70+) must have 2FA enrolled before
+  // accessing any protected page. Skip /admin/profile itself so they can
+  // actually enroll without hitting an infinite redirect loop.
+  if (
+    userLevel >= STAFF_LEVEL &&
+    location.pathname !== '/admin/profile' &&
+    multiFactor(user).enrolledFactors.length === 0
+  ) {
+    return <Navigate to="/admin/profile?mfa=required" replace />;
   }
 
   return children;
@@ -132,6 +148,7 @@ const AppContent = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
+          <Route path="/how-to-join" element={<HowToJoin />} />
 
           {/* --- PROTECTED ADMIN ROUTES (wrapped in AdminLayout for persistent sidebar) --- */}
           {/* AdminLayout is a pathless layout route that renders <AdminSidebar /> +
@@ -209,6 +226,15 @@ const AppContent = () => {
             />
 
             <Route
+              path="/admin/photos"
+              element={
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                  <AdminPhotos />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/admin/camps"
               element={
                 <ProtectedRoute minLevel={STAFF_LEVEL}>
@@ -261,10 +287,12 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <Router>
-      <div className="bg-slate-950 min-h-screen font-sans text-white">
-        <AppContent />
-      </div>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <div className="bg-slate-50 dark:bg-slate-950 min-h-screen font-sans text-slate-900 dark:text-white">
+          <AppContent />
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }

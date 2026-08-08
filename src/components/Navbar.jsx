@@ -107,7 +107,7 @@ const Navbar = () => {
                               bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
                 {vis['cadet-info'] && !isActive('/cadet-info') && (
                   <Link to="/cadet-info" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">
-                    General Info
+                    Cadet Info
                   </Link>
                 )}
                 {vis['promotion-board'] && !isActive('/promotion-board') && (
@@ -155,7 +155,7 @@ const Navbar = () => {
             )}
 
             {vis.leadership && <NavLink to="/leadership" currentPath={currentPath}>Leadership</NavLink>}
-            {vis.teams && <NavLink to="/teams" currentPath={currentPath}>Teams</NavLink>}
+            {vis.teams && <NavLink to="/teams" currentPath={currentPath}>Special Teams</NavLink>}
           </div>
         </div>
 
@@ -183,13 +183,13 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 hover:bg-yellow-500 hover:text-slate-950 transition-all duration-300 border border-yellow-500/40 px-4 py-2 rounded-full"
               >
-                Admin
+                Log In
               </Link>
             )
           )}
 
           {/* Hamburger Action Button */}
-          <button 
+          <button
             onClick={() => setIsOpen(!isOpen)}
             className="p-1 text-slate-600 dark:text-slate-300 hover:text-yellow-500 transition-colors md:hidden focus:outline-none"
             aria-label="Toggle Menu"
@@ -224,7 +224,7 @@ const Navbar = () => {
                 </button>
                 {mobileCadetOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
-                    {vis['cadet-info'] && <MobileNavLink to="/cadet-info" currentPath={currentPath} onNavigate={closeMenu} indent>General Info</MobileNavLink>}
+                    {vis['cadet-info'] && <MobileNavLink to="/cadet-info" currentPath={currentPath} onNavigate={closeMenu} indent>Cadet Info</MobileNavLink>}
                     {vis['promotion-board'] && <MobileNavLink to="/promotion-board" currentPath={currentPath} onNavigate={closeMenu} indent>Promotion Board</MobileNavLink>}
                     {vis['winning-colors'] && <MobileNavLink to="/cadet-info/winning-colors" currentPath={currentPath} onNavigate={closeMenu} indent>Winning Colors</MobileNavLink>}
                     {vis.documents && <MobileNavLink to="/documents" currentPath={currentPath} onNavigate={closeMenu} indent>Documents & Regs</MobileNavLink>}
@@ -254,7 +254,7 @@ const Navbar = () => {
               )}
 
               {vis.leadership && <MobileNavLink to="/leadership" currentPath={currentPath} onNavigate={closeMenu}>Leadership</MobileNavLink>}
-              {vis.teams && <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Teams</MobileNavLink>}
+              {vis.teams && <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Special Teams</MobileNavLink>}
 
               <div className="pt-4 mt-2 border-t border-white/5">
                 {user ? (
@@ -262,7 +262,7 @@ const Navbar = () => {
                     {userData?.fullName || 'Command Dashboard'}
                   </MobileNavLink>
                 ) : (
-                  <MobileNavLink to="/admin" currentPath={currentPath} onNavigate={closeMenu}>Admin</MobileNavLink>
+                  <MobileNavLink to="/admin" currentPath={currentPath} onNavigate={closeMenu}>Log In</MobileNavLink>
                 )}
               </div>
             </div>

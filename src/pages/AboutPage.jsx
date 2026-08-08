@@ -134,7 +134,7 @@ const AboutPage = () => {
           </Reveal>
           <Reveal delay={0.15}>
             <Link
-              to="/cadet-info"
+              to="/how-to-join"
               className="bg-slate-950 text-white px-8 py-5 rounded-2xl font-black uppercase text-sm flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
             >
               Learn How to Join <ChevronRight size={18} />

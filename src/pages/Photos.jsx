@@ -26,17 +26,17 @@ const Photos = () => {
   const albums = photosContent.albums;
 
   return (
-    <div className="min-h-screen bg-slate-950 pt-32 pb-20 px-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-32 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
-        
+
         <Reveal>
         <header className="mb-16 text-left border-l-4 border-[oklch(79.5%_0.184_86.047)] pl-8">
           <div className="flex items-center gap-3 mb-2">
             <FolderOpen className="text-[oklch(79.5%_0.184_86.047)]" size={24} />
             <span className="text-[10px] font-black text-[oklch(79.5%_0.184_86.047)] uppercase tracking-[0.3em]">Official Archives</span>
           </div>
-          <h1 className="text-6xl font-black text-white uppercase italic tracking-tighter leading-none">
-            Photo <span className="text-slate-500">Gallery</span>
+          <h1 className="text-6xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
+            Photo <span className="text-slate-400 dark:text-slate-500">Gallery</span>
           </h1>
         </header>
         </Reveal>
@@ -50,19 +50,19 @@ const Photos = () => {
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ y: -10 }}
-              className="group relative bg-slate-900 rounded-3xl overflow-hidden border border-white/5 block shadow-2xl transition-all duration-300 hover:border-[oklch(79.5%_0.184_86.047)]/30"
+              className="group relative bg-slate-200 dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-white/5 block shadow-lg dark:shadow-2xl transition-all duration-300 hover:border-[oklch(79.5%_0.184_86.047)]/30"
             >
               {/* Cover Image Container */}
-              <div className="aspect-[4/5] overflow-hidden bg-slate-800 flex items-center justify-center">
+              <div className="aspect-[4/5] overflow-hidden bg-slate-300 dark:bg-slate-800 flex items-center justify-center">
                 {album.coverImage ? (
-                  <img 
-                    src={album.coverImage} 
-                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
+                  <img
+                    src={album.coverImage}
+                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                     alt={album.title}
                     onError={(e) => { e.target.src = "https://via.placeholder.com/400x500?text=Image+Missing"; }}
                   />
                 ) : (
-                  <ImageIcon size={48} className="text-slate-700" />
+                  <ImageIcon size={48} className="text-slate-400 dark:text-slate-700" />
                 )}
               </div>
 
@@ -76,7 +76,7 @@ const Photos = () => {
                    <span className="text-[10px] font-black text-[oklch(79.5%_0.184_86.047)] uppercase tracking-widest">{album.count}</span>
                 </div>
                 <h3 className="text-3xl font-black text-white uppercase italic mb-6 tracking-tight">{album.title}</h3>
-                
+
                 <div className="inline-flex items-center gap-3 text-[10px] font-black text-white uppercase tracking-widest bg-white/5 backdrop-blur-md border border-white/10 px-5 py-3 rounded-xl group-hover:bg-[oklch(79.5%_0.184_86.047)] group-hover:text-slate-950 transition-all duration-300">
                   View External Album <ExternalLink size={14} />
                 </div>

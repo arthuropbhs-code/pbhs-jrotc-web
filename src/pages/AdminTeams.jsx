@@ -18,7 +18,8 @@ const AdminTeams = () => {
   const [teams, setTeams] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  const [showStatus, setShowStatus] = useState(null); 
+  const [showStatus, setShowStatus] = useState(null);
+  const [statusMsg, setStatusMsg] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
 
   const [formData, setFormData] = useState({
@@ -87,9 +88,10 @@ const AdminTeams = () => {
   const teamSpecificRole = userInTeam?.teamRole || 'Team Member';
   const canEditMainFields = isPowerUser || teamSpecificRole === "Commander" || teamSpecificRole === "Co-Commander";
 
-  const triggerStatus = (type) => {
+  const triggerStatus = (type, msg = '') => {
     setShowStatus(type);
-    setTimeout(() => setShowStatus(null), 3000);
+    setStatusMsg(msg);
+    setTimeout(() => { setShowStatus(null); setStatusMsg(''); }, 4000);
   };
 
   const handleUpdateDossier = async (e) => {
@@ -163,7 +165,7 @@ const AdminTeams = () => {
       setFormData(prev => ({ ...prev, photo: data.secure_url }));
     } catch (err) {
       console.error("Team photo upload failed:", err);
-      triggerStatus('error');
+      triggerStatus('error', err.message || 'Upload failed');
     } finally {
       setUploadingPhoto(false);
     }
@@ -202,7 +204,7 @@ const AdminTeams = () => {
         }`}>
           {showStatus === 'success' ? <CheckCircle2 size={18} /> : <ShieldAlert size={18} />}
           <p className="text-[10px] font-black uppercase tracking-widest">
-            {showStatus === 'success' ? 'System Synced' : 'Transmission Failure'}
+            {showStatus === 'success' ? 'System Synced' : (statusMsg || 'Upload Failed')}
           </p>
         </div>
       )}

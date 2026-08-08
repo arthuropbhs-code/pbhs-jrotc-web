@@ -128,7 +128,7 @@ const AdminStats = () => {
   const maxItem = Math.max(1, ...Object.values(byItem));
 
   // --- CAMP ATTENDANCE ---
-  const totalAttendanceRecords = camps.reduce((sum, c) => sum + (c.attendees?.length || 0), 0);
+  const totalAttendanceRecords = camps.reduce((sum, c) => sum + (c.attendeeCount ?? c.attendees?.length ?? 0), 0);
   const mostRecentCamp = [...camps].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
 
   return (
@@ -304,7 +304,7 @@ const AdminStats = () => {
               <div className="border-t border-slate-100 dark:border-white/5 pt-4">
                 <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1">Most Recent</p>
                 <p className="text-sm font-bold text-slate-900 dark:text-white">{mostRecentCamp.name} &middot; {mostRecentCamp.date}</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mt-1">{mostRecentCamp.attendees?.length || 0} attendees</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mt-1">{mostRecentCamp.attendeeCount ?? mostRecentCamp.attendees?.length ?? 0} attendees</p>
               </div>
             ) : (
               <p className="text-slate-400 dark:text-slate-600 text-xs italic">No camps logged yet.</p>

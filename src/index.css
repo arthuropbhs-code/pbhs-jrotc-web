@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind v4: override the built-in dark variant to use class-based detection
+   instead of @media (prefers-color-scheme: dark). This wires dark: utilities
+   to activate when an ancestor element carries the "dark" class — matching the
+   ThemeProvider in ThemeContext.jsx which toggles that class on <html>. */
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
     /* Changed to transparent so the component controls the background */
@@ -12,12 +18,15 @@
   }
 }
 
-/* Ensure the root allows for full height colors */
+/* Root height — component tree controls the actual background color */
 :root {
   min-height: 100vh;
-  /* Default to dark if no classes are present, but allows override */
-  background-color: #020617;
 }
+
+/* Dark background default (html has no class before JS loads = dark flash prevention) */
+html { background-color: #020617; }
+/* Light mode override — only when ThemeProvider sets the light preference */
+html:not(.dark) { background-color: #f8fafc; }
 
 /* Site-wide keyboard focus indicator (WCAG 2.4.7). Plenty of interactive
    elements here (nav links especially) had no focus style at all - a mouse

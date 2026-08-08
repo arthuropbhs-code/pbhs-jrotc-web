@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Send, ClipboardList, ArrowLeft, Clock, Trash2 } from 'lucide-react';
+import { Send, ClipboardList, ArrowLeft, Clock, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import Footer from '../components/Footer';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TaskManagement = () => {
   const { userData, role } = useAuth();
@@ -15,6 +16,13 @@ const TaskManagement = () => {
   const [recentTasks, setRecentTasks] = useState([]);
 
   const canDelete = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // task id pending deletion
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', msg }
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const q = query(collection(db, "tasks"), orderBy("timestamp", "desc"), limit(10));
@@ -39,22 +47,25 @@ const TaskManagement = () => {
         timestamp: serverTimestamp(),
       });
       setTask('');
-      alert(`Orders published to all ${targetPos}s`);
+      showToast('success', `Task deployed to all ${targetPos}s`);
     } catch (err) {
       console.error("Error deploying task:", err);
-      alert("Failed to deploy task. Check console.");
+      showToast('error', 'Failed to deploy task.');
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleDeleteTask = async (id) => {
-    if (!window.confirm("Delete this task?")) return;
+  const handleDeleteTask = async () => {
+    if (!deleteConfirm) return;
     try {
-      await deleteDoc(doc(db, "tasks", id));
+      await deleteDoc(doc(db, "tasks", deleteConfirm));
+      setDeleteConfirm(null);
+      showToast('success', 'Task removed.');
     } catch (err) {
       console.error("Error deleting task:", err);
-      alert("Failed to delete task. Check console.");
+      setDeleteConfirm(null);
+      showToast('error', 'Delete failed — check Firestore rules.');
     }
   };
 
@@ -131,7 +142,7 @@ const TaskManagement = () => {
                     </p>
                   </div>
                   {canDelete && (
-                    <button title="Delete task" onClick={() => handleDeleteTask(t.id)} className="text-slate-600 hover:text-red-500 transition-colors flex-shrink-0">
+                    <button title="Delete task" onClick={() => setDeleteConfirm(t.id)} className="text-slate-600 hover:text-red-500 transition-colors flex-shrink-0">
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -142,6 +153,36 @@ const TaskManagement = () => {
         </div>
       </div>
       <Footer />
+
+      {/* DELETE CONFIRM */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <div className="bg-slate-900 border border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl">
+            <Trash2 size={40} className="text-red-500 mx-auto mb-6" />
+            <h3 className="text-xl font-black uppercase italic mb-3 text-white">Delete Task?</h3>
+            <p className="text-slate-400 text-xs mb-8 leading-relaxed">This task will be permanently removed.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleDeleteTask} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-white transition-all uppercase text-[10px] tracking-widest bg-white/5">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+            className={`fixed bottom-8 right-8 px-8 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-3 shadow-2xl z-[200] ${
+              toast.type === 'success' ? 'bg-yellow-500 text-slate-950' : 'bg-red-600 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
