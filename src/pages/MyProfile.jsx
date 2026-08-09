@@ -54,7 +54,8 @@ const MyProfile = () => {
   const [mfaFactor, setMfaFactor] = useState(null);
   // 'idle' | 'entering-phone' | 'entering-code'
   const [mfaStep, setMfaStep] = useState('idle');
-  const [mfaPhone, setMfaPhone] = useState('');
+  const [mfaPhone, setMfaPhone] = useState('');    // Firebase format: +1XXXXXXXXXX
+  const [phoneDisplay, setPhoneDisplay] = useState(''); // formatted display: (XXX) XXX-XXXX
   const [mfaCode, setMfaCode] = useState('');
   const [mfaVerificationId, setMfaVerificationId] = useState('');
   const [mfaStatus, setMfaStatus] = useState(null); // null | 'sending' | 'verifying' | 'success' | error string
@@ -208,6 +209,23 @@ const MyProfile = () => {
   // ── MFA enrollment ───────────────────────────────────────────────────────
 
   // Step 1 — send SMS to the supplied phone number.
+  // Formats a raw phone input into (XXX) XXX-XXXX and derives the Firebase
+  // +1XXXXXXXXXX format in parallel. Strips the leading country code if the
+  // user pastes in a +1 or 1-prefixed number (11 digits).
+  const handlePhoneInput = (e) => {
+    let digits = e.target.value.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+
+    let display = '';
+    if (digits.length > 0) display = '(' + digits.slice(0, 3);
+    if (digits.length > 3) display += ') ' + digits.slice(3, 6);
+    if (digits.length > 6) display += '-' + digits.slice(6, 10);
+
+    setPhoneDisplay(display);
+    setMfaPhone(digits.length === 10 ? `+1${digits}` : '');
+  };
+
   const handleSendEnrollCode = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -267,6 +285,7 @@ const MyProfile = () => {
       setMfaStep('idle');
       setMfaCode('');
       setMfaPhone('');
+      setPhoneDisplay('');
       setMfaStatus('success');
 
       // Fire-and-forget confirmation email — don't block the UI on it.
@@ -529,19 +548,22 @@ const MyProfile = () => {
                 <input
                   type="tel"
                   required
-                  placeholder="+1 (555) 000-0000"
-                  value={mfaPhone}
-                  onChange={(e) => setMfaPhone(e.target.value)}
+                  placeholder="(555) 000-0000"
+                  value={phoneDisplay}
+                  onChange={handlePhoneInput}
                   className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm font-bold focus:border-yellow-500 outline-none transition-all"
                   autoFocus
                 />
               </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold -mt-2">
+                US number — +1 country code added automatically
+              </p>
               <div className="flex gap-3">
                 {/* Only show cancel if not in required-enrollment flow */}
                 {!mfaRequired && (
                   <button
                     type="button"
-                    onClick={() => { setMfaStep('idle'); setMfaStatus(null); setMfaPhone(''); }}
+                    onClick={() => { setMfaStep('idle'); setMfaStatus(null); setMfaPhone(''); setPhoneDisplay(''); }}
                     className="flex-1 py-3 rounded-xl font-black uppercase text-xs bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
                   >
                     Cancel
