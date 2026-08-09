@@ -260,8 +260,8 @@ const AdminWelcome = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-      {/* Invisible reCAPTCHA mount point — always in the DOM so RecaptchaVerifier can find it */}
-      <div id="welcome-recaptcha-container" />
+      {/* reCAPTCHA mount point — kept off-screen so injected content never flashes visibly */}
+      <div id="welcome-recaptcha-container" style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: 0, height: 0, overflow: 'hidden' }} />
 
       {/* Wordmark */}
       <div className="mb-8 text-center">

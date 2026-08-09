@@ -83,3 +83,12 @@ html:not(.dark) { background-color: #f8fafc; }
 ::-webkit-scrollbar-thumb:hover {
   background-color: #ca8a04;
 }
+
+/* Hide the floating reCAPTCHA badge injected by Firebase MFA enrollment.
+   The invisible verifier is still fully functional — this only removes the
+   visible badge that briefly animates in during phone verification. */
+.grecaptcha-badge {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
