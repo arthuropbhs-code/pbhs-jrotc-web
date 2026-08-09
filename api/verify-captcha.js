@@ -26,12 +26,13 @@ export default async function handler(req, res) {
     const { token } = req.body || {};
     if (!token) return res.status(400).json({ error: 'Missing CAPTCHA token' });
 
-    const apiKey = process.env.RECAPTCHA_API_KEY;
+    // Accept either name — the key was historically stored as RECAPTCHA_SECRET_KEY in Vercel.
+    const apiKey = process.env.RECAPTCHA_API_KEY || process.env.RECAPTCHA_SECRET_KEY;
     if (!apiKey) {
       // Key not configured — log loudly but fail open rather than 500ing.
       // The signup form is already gated by a secret code + admin approval;
       // a missing key shouldn't lock everyone out of account creation.
-      console.error('RECAPTCHA_API_KEY env var is not set. Skipping score check.');
+      console.error('Neither RECAPTCHA_API_KEY nor RECAPTCHA_SECRET_KEY is set. Skipping score check.');
       return res.status(200).json({ success: true, score: null, skipped: true });
     }
 
