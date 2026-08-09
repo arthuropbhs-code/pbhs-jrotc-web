@@ -10,6 +10,7 @@ import {
   FileText, ArrowLeft, Plus, Trash2, X, Loader2, CheckCircle2, UploadCloud, Download, File
 } from 'lucide-react';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
@@ -151,7 +152,7 @@ const AdminDocuments = () => {
               <ArrowLeft size={14} /> Back to Command
             </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <FileText className="text-yellow-600 dark:text-yellow-500" /> Documents & Regulations
+              <FileText className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Documents & Regulations" trigger="mount" />
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
               Published files appear on the public /documents page

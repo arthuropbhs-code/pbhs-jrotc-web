@@ -14,6 +14,7 @@ import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useCompanies } from '../hooks/useCompanies';
+import ScrambleText from '../components/ScrambleText';
 
 // COMPANIES is now built from useCompanies() inside the component.
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
@@ -168,7 +169,7 @@ const AdminLeadership = () => {
               <ArrowLeft size={14} /> Back to Command
             </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Users className="text-yellow-600 dark:text-yellow-500" /> Battalion Leadership
+              <Users className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Battalion Leadership" trigger="mount" />
             </h1>
           </div>
         </div>

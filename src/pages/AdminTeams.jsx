@@ -11,6 +11,7 @@ import {
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import ScrambleText from '../components/ScrambleText';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
@@ -217,7 +218,7 @@ const AdminTeams = () => {
             </Link>
             <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter flex items-center gap-4">
               <ShieldAlert className="text-yellow-600 dark:text-yellow-500" size={36} />
-              Manage <span className="text-yellow-600 dark:text-yellow-500">Teams</span>
+              <ScrambleText text="Manage " trigger="mount" /><span className="text-yellow-600 dark:text-yellow-500"><ScrambleText text="Teams" trigger="mount" /></span>
             </h1>
           </div>
           

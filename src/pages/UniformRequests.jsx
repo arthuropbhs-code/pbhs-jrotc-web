@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 
 const UniformRequests = () => {
   const { companiesWithBattalion: COMPANIES } = useCompanies();
@@ -282,7 +283,7 @@ const UniformRequests = () => {
             <ArrowLeft size={14} /> Back to Command
           </Link>
           <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Package className="text-yellow-500" /> Uniform Items
+            <Package className="text-yellow-500" /> <ScrambleText text="Uniform Items" trigger="mount" />
           </h1>
         </div>
 

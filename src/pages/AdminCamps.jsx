@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 
 const initialCampForm = { name: '', date: '', location: '', notes: '', attendeeCount: '', attendeeNotes: '' };
 
@@ -100,7 +101,7 @@ const AdminCamps = () => {
               <ArrowLeft size={14} /> Back to Command
             </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Tent className="text-yellow-600 dark:text-yellow-500" /> Camp Attendance
+              <Tent className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Camp Attendance" trigger="mount" />
             </h1>
           </div>
           <button onClick={openAdd} className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all">

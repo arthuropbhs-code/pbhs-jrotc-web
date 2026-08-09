@@ -17,6 +17,7 @@ import {
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
+import ScrambleText from '../components/ScrambleText';
 
 const DEFAULT_COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"];
 const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
@@ -208,7 +209,7 @@ const AdminCompanies = () => {
           <div>
             <h1 className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               <Building2 size={20} className="text-yellow-500" />
-              Customization
+              <ScrambleText text="Customization" trigger="mount" />
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-widest mt-0.5">
               Company names · Document categories · Page visibility

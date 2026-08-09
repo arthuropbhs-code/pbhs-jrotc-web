@@ -30,6 +30,10 @@ const AdminLogin = () => {
   // Persisted across retries so we can call .clear() before creating a new
   // verifier — Firebase throws if a second instance targets the same DOM node.
   const recaptchaVerifierRef = useRef(null);
+  // smsTrigger: increment to retry the SMS send without resetting mfaResolver.
+  // smsFailed: true while the last send attempt ended in error (shows retry button).
+  const [smsTrigger, setSmsTrigger] = useState(0);
+  const [smsFailed, setSmsFailed] = useState(false);
 
   // useAuth force-signs-out a suspended account and leaves this flag behind
   // so the login page can explain why, instead of silently landing here.
@@ -75,21 +79,44 @@ const AdminLogin = () => {
     }
   };
 
+  // Reset failure flag whenever a brand-new MFA session starts.
+  useEffect(() => { setSmsFailed(false); setError(''); }, [mfaResolver]);
+
   // Send the SMS challenge only after mfaResolver is set AND React has committed
   // the new DOM — that's when #login-recaptcha-container actually exists.
+  // smsTrigger is incremented by the "Retry SMS" button to re-fire without
+  // discarding the live mfaResolver session.
   useEffect(() => {
     if (!mfaResolver) return;
     let cancelled = false;
 
     const sendChallenge = async () => {
       setMfaSending(true);
+      setSmsFailed(false);
       try {
         if (recaptchaVerifierRef.current) {
           recaptchaVerifierRef.current.clear();
           recaptchaVerifierRef.current = null;
         }
-        const recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha-container', { size: 'invisible' });
+        // Guard against a React concurrent-mode race where the container div
+        // hasn't committed yet (should not normally happen with [mfaResolver]
+        // dep, but this makes the failure explicit instead of a cryptic SDK crash).
+        if (!document.getElementById('login-recaptcha-container')) {
+          throw Object.assign(new Error('reCAPTCHA container not in DOM'), { code: 'internal/container-missing' });
+        }
+        const recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha-container', {
+          size: 'invisible',
+          'expired-callback': () => {
+            // reCAPTCHA token expired before verifyPhoneNumber resolved
+            if (!cancelled) { setSmsFailed(true); setError('Security check timed out — tap Retry SMS.'); }
+          },
+        });
         recaptchaVerifierRef.current = recaptchaVerifier;
+
+        // Explicit render() is required in some Firebase SDK versions before
+        // verifyPhoneNumber will accept the verifier.
+        await recaptchaVerifier.render();
+
         const phoneAuthProvider = new PhoneAuthProvider(auth);
         const verificationId = await phoneAuthProvider.verifyPhoneNumber(
           { multiFactorHint: mfaResolver.hints[0], session: mfaResolver.session },
@@ -97,10 +124,26 @@ const AdminLogin = () => {
         );
         if (!cancelled) setMfaVerificationId(verificationId);
       } catch (mfaErr) {
-        console.error('MFA send error:', mfaErr);
+        console.error('MFA send error:', mfaErr.code, mfaErr);
         if (!cancelled) {
-          setError('Failed to send verification code. Try again.');
-          setMfaResolver(null);
+          const code = mfaErr?.code || '';
+          let msg;
+          if (code === 'auth/captcha-check-failed') {
+            msg = 'Security check failed — disable ad blockers / VPNs and retry, or switch browsers.';
+          } else if (code === 'auth/quota-exceeded') {
+            msg = 'SMS quota exceeded. Wait a few minutes then tap Retry SMS.';
+          } else if (code === 'auth/too-many-requests') {
+            msg = 'Too many attempts — wait a few minutes then tap Retry SMS.';
+          } else if (code === 'auth/invalid-phone-number') {
+            msg = 'Enrolled phone number is invalid. Contact battalion staff.';
+          } else if (code === 'auth/network-request-failed') {
+            msg = 'Network error sending SMS. Check your connection then tap Retry SMS.';
+          } else {
+            msg = `Failed to send verification code (${code || 'unknown'}). Tap Retry SMS or go back.`;
+          }
+          setError(msg);
+          setSmsFailed(true);
+          // Do NOT reset mfaResolver — the session is still valid for retries.
         }
       } finally {
         if (!cancelled) setMfaSending(false);
@@ -109,7 +152,7 @@ const AdminLogin = () => {
 
     sendChallenge();
     return () => { cancelled = true; };
-  }, [mfaResolver]);
+  }, [mfaResolver, smsTrigger]); // eslint-disable-line
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -260,7 +303,7 @@ const AdminLogin = () => {
                   <Smartphone size={28} className="text-yellow-500" />
                 </div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center">
-                  {mfaSending ? 'Sending verification code…' : 'Code sent to your enrolled phone.'}
+                  {mfaSending ? 'Sending verification code…' : smsFailed ? 'Delivery failed — see error above.' : 'Code sent to your enrolled phone.'}
                 </p>
               </div>
 
@@ -287,9 +330,20 @@ const AdminLogin = () => {
                 {loading ? <Loader2 className="animate-spin" size={18} /> : 'Verify Identity'}
               </button>
 
+              {smsFailed && (
+                <button
+                  type="button"
+                  onClick={() => { setError(''); setSmsTrigger(t => t + 1); }}
+                  disabled={mfaSending}
+                  className="w-full py-3 bg-yellow-500/10 text-yellow-500 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
+                >
+                  ↺ Retry SMS
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={() => { setMfaResolver(null); setMfaCode(''); setError(''); }}
+                onClick={() => { setMfaResolver(null); setMfaCode(''); setError(''); setSmsFailed(false); }}
                 className="w-full py-3 text-slate-400 dark:text-slate-600 font-black uppercase text-[10px] tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
               >
                 ← Back to Login

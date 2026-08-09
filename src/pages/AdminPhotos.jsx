@@ -20,6 +20,7 @@ import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { DEFAULT_PHOTOS } from '../data/defaultPageContent';
+import ScrambleText from '../components/ScrambleText';
 
 const emptyAlbum = () => ({
   id: Date.now(),
@@ -147,7 +148,7 @@ const AdminPhotos = () => {
               <ArrowLeft size={14} /> Back to Command
             </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Image className="text-yellow-600 dark:text-yellow-500" /> Photo Gallery
+              <Image className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Photo Gallery" trigger="mount" />
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
               Albums appear on the public /photos page · Drag to reorder

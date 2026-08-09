@@ -27,6 +27,7 @@ import {
   Target
 } from 'lucide-react';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 
 const AdminOrders = () => {
   const { userData, role } = useAuth();
@@ -175,7 +176,7 @@ const AdminOrders = () => {
         <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="w-full md:w-auto text-center md:text-left">
             <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
-              Issue <span className="text-yellow-500">Orders</span>
+              <ScrambleText text="Issue " trigger="mount" /><span className="text-yellow-500"><ScrambleText text="Orders" trigger="mount" /></span>
             </h1>
             <p className="text-blue-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
               Authorized Personnel | {userData?.company || "Battalion"}

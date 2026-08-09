@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import ScrambleText from '../components/ScrambleText';
 
 const TABS = [
   { id: 'home',           label: 'Home' },
@@ -253,7 +254,7 @@ const AdminContent = () => {
             <ArrowLeft size={14} /> Back to Command
           </Link>
           <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <FileText className="text-yellow-600 dark:text-yellow-500" /> Site Content
+            <FileText className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Site Content" trigger="mount" />
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
             Edits publish live immediately

@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, EVENT_TYPES } from '../constants';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 
 const AdminAnnouncements = () => {
   const { userData, role } = useAuth();
@@ -124,7 +125,7 @@ const AdminAnnouncements = () => {
             <ArrowLeft size={14} /> Back to Command
           </Link>
           <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Megaphone className="text-yellow-500" /> Global Broadcast
+            <Megaphone className="text-yellow-500" /> <ScrambleText text="Global Broadcast" trigger="mount" />
           </h1>
         </div>
 

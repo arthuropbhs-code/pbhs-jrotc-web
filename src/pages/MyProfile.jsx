@@ -16,6 +16,7 @@ import Footer from '../components/Footer';
 import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff } from 'lucide-react';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useThemeContext } from '../contexts/ThemeContext';
+import ScrambleText from '../components/ScrambleText';
 
 const formatCooldown = (seconds) => {
   if (seconds < 60) return `${seconds}s`;
@@ -355,7 +356,7 @@ const MyProfile = () => {
             <input type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} disabled={uploadingPortrait} />
           </label>
           <div>
-            <h1 className="text-3xl font-black uppercase italic tracking-tighter">My Profile</h1>
+            <h1 className="text-3xl font-black uppercase italic tracking-tighter"><ScrambleText text="My Profile" trigger="mount" /></h1>
             {portraitError && (
               <p className="text-red-500 text-[10px] font-bold mt-1 max-w-xs">{portraitError}</p>
             )}

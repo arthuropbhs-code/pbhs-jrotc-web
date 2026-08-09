@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
+import ScrambleText from '../components/ScrambleText';
+import Typewriter from '../components/Typewriter';
 
 const TaskManagement = () => {
   const { userData, role } = useAuth();
@@ -122,9 +124,9 @@ const TaskManagement = () => {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <ClipboardList className="text-yellow-500" size={24} />
-              <h2 className="text-2xl font-black uppercase italic tracking-tighter">Task Management</h2>
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter"><ScrambleText text="Task Management" trigger="mount" /></h2>
             </div>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Battalion Command Channel</p>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest"><Typewriter text="Battalion Command Channel" speed={45} /></p>
           </header>
 
           <form onSubmit={handleAssign} className="space-y-6">

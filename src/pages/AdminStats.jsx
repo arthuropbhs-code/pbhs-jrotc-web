@@ -9,6 +9,7 @@ import {
   TrendingUp, CheckCircle2, Clock
 } from 'lucide-react';
 import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
 
 const RANK_ORDER = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
 const LET_ORDER = ["LET 1", "LET 2", "LET 3", "LET 4"];
@@ -140,7 +141,7 @@ const AdminStats = () => {
             <ArrowLeft size={14} /> Back to Command
           </Link>
           <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <BarChart3 className="text-yellow-600 dark:text-yellow-500" /> Battalion Stats
+            <BarChart3 className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Battalion Stats" trigger="mount" />
           </h1>
         </div>
 
