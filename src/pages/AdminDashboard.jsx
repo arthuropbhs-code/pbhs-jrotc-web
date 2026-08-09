@@ -36,7 +36,8 @@ const AdminDashboard = () => {
     }, (error) => console.error("Events Sync Error:", error));
 
     const unsubRequests = onSnapshot(collection(db, "uniform_requests"), (snapshot) => {
-      const pending = snapshot.docs.filter(d => d.data().status !== 'Completed').length;
+      // Count requests still needing staff action (Pending = awaiting S4 approval).
+      const pending = snapshot.docs.filter(d => d.data().status === 'Pending').length;
       setRequestCount(pending);
     });
 

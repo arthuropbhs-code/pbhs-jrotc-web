@@ -8,7 +8,7 @@ import {
   ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
   UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks, UploadCloud, ImageOff
 } from 'lucide-react';
-import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
@@ -33,7 +33,7 @@ const AdminTeams = () => {
   const [personnel, setPersonnel] = useState([]);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
-  const isPowerUser = userLevel >= ADMIN_LEVEL;
+  const isPowerUser = userLevel >= STAFF_LEVEL;
   const userEmail = user?.email?.toLowerCase().trim();
 
   // Computed before the effects below since one of them depends on

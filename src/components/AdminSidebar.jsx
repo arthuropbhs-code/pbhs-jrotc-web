@@ -126,15 +126,14 @@ const AdminSidebar = () => {
           <>
             {/* ── GROUP 1: OPERATIONS ─────────────── */}
             {groupLabel('Operations')}
-            {navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
-            {navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
+            {isStaffOrS4 && navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
+            {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
             {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
             {isStaffOrS4 && navLink('/admin/users',     <UserCog size={18} />, 'Personnel')}
-            {isStaffOrS4 && navLink('/admin/teams',
-              isTopFour ? <Users size={18} /> : <Lock size={16} />, 'Teams')}
+            {isStaffOrS4 && navLink('/admin/teams', <Users size={18} />, 'Teams')}
             {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
@@ -144,7 +143,7 @@ const AdminSidebar = () => {
             {groupLabel('Analytics')}
             {isStaffOrS4 && navLink('/admin/camps', <Tent size={18} />,     'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
-            {isTopFour   && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
+            {(isTopFour || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
         )}
 

@@ -42,12 +42,14 @@ const UniformRequests = () => {
   const userRole = userProfile?.role || 'cadet';
   const userLevel = ROLE_HIERARCHY[userRole] || 1;
 
-  // Roles that can APPROVE (mark issued): S4 logistics, XO, BC, CSM.
-  // Note: BC/CSM outrank XO so they're included even though the request
-  // said "S4 and XO" — omitting senior command would block them from
-  // managing logistics which is clearly not the intent.
+  // Roles that can APPROVE requests (Pending → Approved): S4 logistics, XO, BC, CSM.
+  // Note: BC/CSM outrank XO so they're included even though the request said "S4 and XO" —
+  // omitting senior command would block them from managing logistics which is clearly not intent.
   const APPROVE_ROLES = ['s4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'];
   const canApprove = APPROVE_ROLES.includes(userRole);
+
+  // MARK AS ISSUED (Approved → Issued): only the person who submitted the request.
+  // Checked per-request inline (req.requestedByUid === auth.currentUser?.uid).
 
   // Roles that can REQUEST (submit a new issuance): S4 assistants + approvers.
   const REQUEST_ROLES = ['company_s4_assistant', ...APPROVE_ROLES];
@@ -137,20 +139,20 @@ const UniformRequests = () => {
   };
 
   // --- ACTIONS ---
-  const handleToggleStatus = async (req) => {
+
+  // Stage 1 → 2: S4/XO/BC/CSM approve a pending request.
+  // Sends email to the requester so they know their item was approved.
+  const handleApprove = async (req) => {
     if (!canApprove) {
       showNotify("Access Denied: Only S-4, XO, or Command can approve requests.", "error");
       return;
     }
-    const newStatus = req.status === 'Pending' ? 'Completed' : 'Pending';
-    await updateDoc(doc(db, "uniform_requests", req.id), { status: newStatus });
-    showNotify(`Request marked as ${newStatus}`);
+    if (req.status !== 'Pending') return;
+    await updateDoc(doc(db, "uniform_requests", req.id), { status: 'Approved' });
+    showNotify("Request marked as Approved");
 
-    // Only fires going Pending -> Completed, and only when the request came
-    // from an S4 Assistant (requestedByEmail is only set on that path) -
-    // best-effort so a failed email doesn't undo the status change that
-    // already succeeded above.
-    if (newStatus === 'Completed' && req.requestedByEmail) {
+    // Best-effort notification — a failed email doesn't undo the status change.
+    if (req.requestedByEmail) {
       try {
         const idToken = await auth.currentUser.getIdToken();
         await fetch('/api/admin-update-account', {
@@ -166,9 +168,20 @@ const UniformRequests = () => {
           })
         });
       } catch (err) {
-        console.error('Uniform-issued notification failed:', err);
+        console.error('Uniform-approved notification failed:', err);
       }
     }
+  };
+
+  // Stage 2 → 3: the person who submitted the request confirms they received the item.
+  const handleMarkIssued = async (req) => {
+    if (req.requestedByUid !== auth.currentUser?.uid) {
+      showNotify("Only the person who submitted this request can mark it as received.", "error");
+      return;
+    }
+    if (req.status !== 'Approved') return;
+    await updateDoc(doc(db, "uniform_requests", req.id), { status: 'Issued' });
+    showNotify("Item marked as Received!");
   };
 
   const handleDelete = async (id) => {
@@ -195,8 +208,9 @@ const UniformRequests = () => {
         issuedBy: finalIssuedBy,
         status: 'Pending',
         timestamp: serverTimestamp(),
-        // Set for anyone who isn't an approver — they need to be notified
-        // when S4/XO marks the request as issued.
+        // uid used to gate the "Mark as Issued" button (only the submitter can confirm receipt).
+        requestedByUid: auth.currentUser?.uid || null,
+        // Email used to notify non-approvers when S4/XO approves their request.
         requestedByEmail: !canApprove ? (userProfile?.email || null) : null
       });
       setShowModal(false);
@@ -292,7 +306,7 @@ const UniformRequests = () => {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto mb-6 flex bg-slate-900/50 p-1 rounded-xl w-fit border border-white/5">
-        {['Pending', 'Completed'].map((s) => (
+        {['Pending', 'Approved', 'Issued'].map((s) => (
           <button key={s} onClick={() => setFilter(s)} className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${filter === s ? 'bg-yellow-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
             {s}
           </button>
@@ -303,7 +317,7 @@ const UniformRequests = () => {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredRequests.map((req) => (
           <div key={req.id} className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all hover:border-white/10">
-            <div className={`absolute top-0 left-0 w-1 h-full ${req.status === 'Pending' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+            <div className={`absolute top-0 left-0 w-1 h-full ${req.status === 'Pending' ? 'bg-yellow-500' : req.status === 'Approved' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-black text-lg uppercase tracking-tighter">{req.cadetName}</h3>
@@ -323,20 +337,42 @@ const UniformRequests = () => {
               </div>
             </div>
 
-            {canApprove ? (
-              <button
-                onClick={() => handleToggleStatus(req)}
-                className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all ${
-                  req.status === 'Pending' ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400' : 'bg-green-500/10 text-green-500'
-                }`}
-              >
-                {req.status === 'Pending' ? <><Clock size={14} /> Approve & Mark Issued</> : <><CheckCircle2 size={14} /> Completed</>}
-              </button>
-            ) : (
-              <div className={`w-full py-3 rounded-xl font-black uppercase text-[10px] text-center border border-white/5 ${req.status === 'Pending' ? 'text-yellow-500/40' : 'text-green-500'}`}>
-                {req.status === 'Pending' ? "Awaiting S-4 Approval" : "Item Issued"}
-              </div>
-            )}
+            {(() => {
+              const isRequester = req.requestedByUid === auth.currentUser?.uid;
+              if (canApprove && req.status === 'Pending') {
+                return (
+                  <button onClick={() => handleApprove(req)} className="w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 transition-all">
+                    <Clock size={14} /> Mark as Approved
+                  </button>
+                );
+              }
+              if (isRequester && req.status === 'Approved') {
+                return (
+                  <button onClick={() => handleMarkIssued(req)} className="w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/20 transition-all">
+                    <CheckCircle2 size={14} /> Mark as Received
+                  </button>
+                );
+              }
+              if (req.status === 'Issued') {
+                return (
+                  <div className="w-full py-3 rounded-xl font-black uppercase text-[10px] text-center text-green-500 flex items-center justify-center gap-2">
+                    <CheckCircle2 size={14} /> Item Received
+                  </div>
+                );
+              }
+              if (req.status === 'Approved') {
+                return (
+                  <div className="w-full py-3 rounded-xl font-black uppercase text-[10px] text-center border border-white/5 text-blue-400">
+                    Approved — Awaiting Receipt
+                  </div>
+                );
+              }
+              return (
+                <div className="w-full py-3 rounded-xl font-black uppercase text-[10px] text-center border border-white/5 text-yellow-500/40">
+                  Awaiting S-4 Approval
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>

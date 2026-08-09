@@ -172,7 +172,7 @@ const AppContent = () => {
             <Route
               path="/admin/assign-tasks"
               element={
-                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
                   <TaskManagement />
                 </ProtectedRoute>
               }
@@ -180,7 +180,7 @@ const AppContent = () => {
             <Route
               path="/admin/orders"
               element={
-                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
                   <AdminOrders />
                 </ProtectedRoute>
               }
@@ -273,11 +273,11 @@ const AppContent = () => {
             {/* No minLevel here: every signed-in user manages their own profile */}
             <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
-            {/* SAI/AI only: configure battalion company names */}
+            {/* S6 Technology + ADMIN_LEVEL (80+) override: configure battalion company names */}
             <Route
               path="/admin/companies"
               element={
-                <ProtectedRoute minLevel={ADMIN_LEVEL}>
+                <ProtectedRoute allowedRoles={['s6_technology']}>
                   <AdminCompanies />
                 </ProtectedRoute>
               }
