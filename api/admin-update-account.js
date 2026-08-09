@@ -463,6 +463,15 @@ export default async function handler(req, res) {
       const targetEmail = await getUserField(accessToken, projectId, targetUid, 'email');
       if (!targetEmail) throw new Error('Could not resolve that account\'s email address');
 
+      // Mark the email as verified at approval time. Firebase Auth requires
+      // emailVerified:true before phone MFA enrollment, and these accounts
+      // are already staff-vetted, so the verification is a formality.
+      await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId: targetUid, emailVerified: true }),
+      });
+
       await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
         to_email: targetEmail,
         heading: 'Welcome to the Battalion',

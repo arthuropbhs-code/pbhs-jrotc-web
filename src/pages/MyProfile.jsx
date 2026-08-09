@@ -10,6 +10,7 @@ import {
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
   RecaptchaVerifier,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
@@ -230,8 +231,17 @@ const MyProfile = () => {
       setMfaStep('entering-code');
       setMfaStatus(null);
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') {
-        setMfaStatus('Please sign out and sign back in before enrolling 2FA.');
+      if (err.code === 'auth/unverified-email') {
+        // Firebase requires a verified email before enrolling phone MFA.
+        // Send the verification email automatically and tell the user.
+        try {
+          await sendEmailVerification(user);
+          setMfaStatus('verify-email');
+        } catch {
+          setMfaStatus('Your email must be verified before enabling 2FA. Check your inbox for a verification email.');
+        }
+      } else if (err.code === 'auth/requires-recent-login') {
+        setMfaStatus('Please sign out and sign back in, then try enrolling again.');
       } else {
         setMfaStatus(err.message || 'Failed to send code. Check the number and try again.');
       }
@@ -570,8 +580,24 @@ const MyProfile = () => {
             </form>
           )}
 
+          {/* Email verification required banner */}
+          {mfaStatus === 'verify-email' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 mt-3 space-y-2">
+              <p className="text-xs font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500">Verify your email first</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                A verification link was sent to <span className="text-slate-900 dark:text-white">{user?.email}</span>. Click it, then come back and try enrolling again.
+              </p>
+              <button
+                onClick={async () => { await sendEmailVerification(user); }}
+                className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 hover:underline"
+              >
+                Resend email
+              </button>
+            </div>
+          )}
+
           {/* Status messages */}
-          {mfaStatus && mfaStatus !== 'sending' && mfaStatus !== 'verifying' && mfaStatus !== 'working' && (
+          {mfaStatus && mfaStatus !== 'sending' && mfaStatus !== 'verifying' && mfaStatus !== 'working' && mfaStatus !== 'verify-email' && (
             <p className={`text-[10px] font-bold mt-3 ${mfaStatus === 'success' ? 'text-green-500' : 'text-red-500'}`}>
               {mfaStatus === 'success' ? '✓ Two-factor authentication enabled.' : mfaStatus}
             </p>
