@@ -8,10 +8,11 @@ import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOM
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import {
   FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
-  Eye, EyeOff, LayoutDashboard, Plus, Trash2, Calendar, MapPin, Clock, Edit3, X
+  Eye, EyeOff, LayoutDashboard, Plus, Trash2, Calendar, MapPin, Clock, Edit3, X, UploadCloud, ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 
 const TABS = [
   { id: 'home',           label: 'Home' },
@@ -164,6 +165,22 @@ const AdminContent = () => {
   };
   const addSlide = () => setHomeForm({ ...homeForm, slides: [...homeForm.slides, { url: '', title: '', subtitle: '' }] });
   const removeSlide = (i) => setHomeForm({ ...homeForm, slides: homeForm.slides.filter((_, idx) => idx !== i) });
+
+  // Per-slide upload state: { [index]: boolean }
+  const [slideUploading, setSlideUploading] = useState({});
+
+  const handleSlideUpload = async (i, file) => {
+    if (!file) return;
+    setSlideUploading(prev => ({ ...prev, [i]: true }));
+    try {
+      const { secure_url } = await uploadToCloudinary(file, 'image');
+      updateSlide(i, 'url', secure_url);
+    } catch (err) {
+      showStatus(err.message || 'Upload failed');
+    } finally {
+      setSlideUploading(prev => ({ ...prev, [i]: false }));
+    }
+  };
   const updateQuickAccess = (index, field, value) => {
     const quickAccess = [...homeForm.quickAccess];
     quickAccess[index] = { ...quickAccess[index], [field]: value };
@@ -267,9 +284,6 @@ const AdminContent = () => {
                   <Plus size={14} /> Add Slide
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest -mt-2">
-                Use Cloudinary image URLs or paths under /covers/ (e.g. /covers/Yuletide2025.webp)
-              </p>
               <div className="space-y-4">
                 {homeForm.slides.map((slide, i) => (
                   <div key={i} className="bg-slate-50 dark:bg-black/30 border border-slate-100 dark:border-white/5 p-4 rounded-2xl space-y-3">
@@ -281,11 +295,47 @@ const AdminContent = () => {
                         </button>
                       )}
                     </div>
+
+                    {/* Image upload / preview */}
+                    {slide.url ? (
+                      <div className="relative rounded-xl overflow-hidden h-32 bg-black/30 group">
+                        <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <label className={`cursor-pointer flex items-center gap-1.5 text-[10px] font-black uppercase text-white bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition-all ${slideUploading[i] ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {slideUploading[i] ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
+                            {slideUploading[i] ? 'Uploading…' : 'Replace'}
+                            <input type="file" accept="image/*" className="hidden" onChange={e => handleSlideUpload(i, e.target.files[0])} disabled={!!slideUploading[i]} />
+                          </label>
+                          <button
+                            onClick={() => updateSlide(i, 'url', '')}
+                            className="text-[10px] font-black uppercase text-white bg-red-500/40 hover:bg-red-500/60 px-3 py-2 rounded-lg transition-all"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className={`cursor-pointer border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl flex flex-col items-center justify-center h-28 gap-2 hover:border-yellow-500/50 transition-colors ${slideUploading[i] ? 'opacity-60 pointer-events-none' : ''}`}>
+                        {slideUploading[i] ? (
+                          <>
+                            <Loader2 size={22} className="text-yellow-500 animate-spin" />
+                            <span className="text-[10px] font-black uppercase text-slate-400">Uploading…</span>
+                          </>
+                        ) : (
+                          <>
+                            <UploadCloud size={22} className="text-slate-300 dark:text-slate-600" />
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Upload Slide Image</span>
+                            <span className="text-[9px] text-slate-300 dark:text-slate-600 uppercase">JPG, PNG, WebP — auto-converted</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={e => handleSlideUpload(i, e.target.files[0])} disabled={!!slideUploading[i]} />
+                      </label>
+                    )}
+
                     <div className="grid md:grid-cols-2 gap-3">
                       <input className={inputClass} placeholder="Title (e.g. TORNADO)" value={slide.title} onChange={e => updateSlide(i, 'title', e.target.value)} />
                       <input className={inputClass} placeholder="Subtitle (e.g. BATTALION)" value={slide.subtitle} onChange={e => updateSlide(i, 'subtitle', e.target.value)} />
                     </div>
-                    <input className={inputClass} placeholder="Image URL or /covers/filename.webp" value={slide.url} onChange={e => updateSlide(i, 'url', e.target.value)} />
                   </div>
                 ))}
               </div>
