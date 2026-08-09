@@ -16,6 +16,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_ABOUT } from '../data/defaultPageContent';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+import ScrambleText from '../components/ScrambleText';
+import Typewriter from '../components/Typewriter';
 
 // History/pillar icons are structural (fixed per position), not editable content.
 const HISTORY_ICONS = [History, MapPin, School];
@@ -55,10 +57,10 @@ const AboutPage = () => {
             About <span className="text-yellow-500">JROTC</span>
           </h1>
           <p className="text-slate-500 font-bold uppercase tracking-[0.4em] mt-4 text-xs md:text-sm">
-            Pompano Beach High School JROTC
+            <ScrambleText text="Pompano Beach High School JROTC" trigger="mount" speed={22} />
           </p>
           <p className="text-yellow-500 font-black uppercase tracking-[0.35em] mt-3 text-xs">
-            Above and Beyond
+            <ScrambleText text="Above and Beyond" trigger="mount" speed={30} />
           </p>
         </div>
       </div>
@@ -87,7 +89,7 @@ const AboutPage = () => {
         {/* Triple History Section */}
         <section className="space-y-16">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-black uppercase italic">Historical Context</h2>
+            <h2 className="text-3xl font-black uppercase italic"><ScrambleText text="Historical Context" trigger="inView" /></h2>
             <div className="w-24 h-1 bg-yellow-500 mx-auto mt-4"></div>
           </Reveal>
 
@@ -108,7 +110,7 @@ const AboutPage = () => {
         {/* Core Pillars */}
         <section className="space-y-12">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-black uppercase italic">Program Pillars</h2>
+            <h2 className="text-3xl font-black uppercase italic"><ScrambleText text="Program Pillars" trigger="inView" /></h2>
             <p className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">Skills for life beyond high school</p>
           </Reveal>
           <div className="grid md:grid-cols-4 gap-6">
@@ -145,7 +147,7 @@ const AboutPage = () => {
 
       <footer className="py-20 border-t border-slate-200 dark:border-white/5 text-center bg-white dark:bg-slate-900/20 transition-colors duration-300">
         <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.5em]">
-          Character • Leadership • Academic Excellence
+          <ScrambleText text="Character • Leadership • Academic Excellence" trigger="inView" />
         </p>
       </footer>
     </div>

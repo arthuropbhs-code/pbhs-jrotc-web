@@ -7,6 +7,8 @@ import { ROLE_HIERARCHY } from '../constants';
 import { AnnouncementCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+import ScrambleText from '../components/ScrambleText';
+import Typewriter from '../components/Typewriter';
 
 // Mirrors AdminAnnouncements.jsx's getAvailableTargets() so a viewer only
 // sees announcements actually addressed to them (plus anything sent to "All").
@@ -68,10 +70,10 @@ const Announcements = () => {
             <Megaphone size={32} />
           </div>
           <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-4">
-            Battalion <span className="text-yellow-500">Announcements</span>
+            <ScrambleText text="Battalion " trigger="mount" /><span className="text-yellow-500"><ScrambleText text="Announcements" trigger="mount" /></span>
           </h1>
           <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto text-xs uppercase tracking-[0.2em] font-bold">
-            Stay informed on upcoming events and official updates.
+            <Typewriter text="Stay informed on upcoming events and official updates." speed={35} />
           </p>
         </Reveal>
 

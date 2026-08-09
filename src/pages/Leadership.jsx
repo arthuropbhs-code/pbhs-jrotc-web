@@ -6,6 +6,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { useCompanies } from '../hooks/useCompanies';
 import Reveal from '../components/Reveal';
+import ScrambleText from '../components/ScrambleText';
 
 const Leadership = () => {
   usePageMeta({
@@ -122,7 +123,7 @@ const Leadership = () => {
 
         <Reveal className="mb-16 text-center">
           <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter uppercase italic">
-            Chain of <span className="text-yellow-500">Command</span>
+            <ScrambleText text="Chain of " trigger="mount" /><span className="text-yellow-500"><ScrambleText text="Command" trigger="mount" /></span>
           </h1>
           <div className="h-1 w-24 bg-yellow-500 mx-auto rounded-full" />
         </Reveal>
