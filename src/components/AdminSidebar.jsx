@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
+import ScrambleText from './ScrambleText';
 
 const AdminSidebar = () => {
   const { userData, role, loading } = useAuth();
@@ -82,7 +83,9 @@ const AdminSidebar = () => {
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-blue-100 dark:border-white/5 p-6 flex flex-col fixed h-full z-10 shadow-sm transition-colors duration-300">
       {/* Branding */}
       <div className="mb-8">
-        <h2 className="text-xl font-black uppercase italic tracking-tighter text-yellow-500">Battalion</h2>
+        <h2 className="text-xl font-black uppercase italic tracking-tighter text-yellow-500">
+          <ScrambleText text="Battalion" trigger="hover" speed={25} />
+        </h2>
         <p className="text-[10px] text-blue-400 dark:text-slate-500 uppercase font-bold tracking-[0.2em]">Admin Dashboard</p>
       </div>
 

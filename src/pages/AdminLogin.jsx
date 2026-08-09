@@ -10,6 +10,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone } from 'lucide-react';
 import SmoothInput from '../components/SmoothInput';
+import Typewriter from '../components/Typewriter';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { usePageMeta } from '../hooks/usePageMeta';
 
@@ -187,7 +188,7 @@ const AdminLogin = () => {
               Command <span className="text-yellow-500">Login</span>
             </h1>
             <p className="text-[10px] text-blue-600 dark:text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">
-              Personnel Authorization Required
+              <Typewriter text="Personnel Authorization Required" speed={40} />
             </p>
           </div>
 
@@ -301,7 +302,7 @@ const AdminLogin = () => {
         </div>
         
         <p className="mt-8 text-center text-[9px] font-bold text-blue-200 dark:text-slate-600 uppercase tracking-widest">
-          Authorized Cadets Only
+          <Typewriter text="Authorized Cadets Only" speed={55} delay={1400} cursor={false} />
         </p>
       </div>
     </div>

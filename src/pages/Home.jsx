@@ -7,6 +7,7 @@ import { collection, doc, query, orderBy, limit, onSnapshot } from 'firebase/fir
 import { BulletinCardSkeleton, TopThreeCardSkeleton } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+import ScrambleText from '../components/ScrambleText';
 import { DEFAULT_HOME } from '../data/defaultPageContent';
 
 // Army Values with full descriptions from official JROTC reference content.
@@ -154,12 +155,12 @@ const Home = () => {
         </AnimatePresence>
         
         <div className="relative z-10 text-center px-6">
-          <motion.span 
+          <motion.span
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-yellow-500 font-bold tracking-[0.4em] uppercase text-xs md:text-sm mb-6 block"
           >
-            Pompano Beach High School JROTC
+            <ScrambleText text="Pompano Beach High School JROTC" trigger="mount" speed={22} />
           </motion.span>
           
           {/* Reserves height for the title block so switching slides doesn't
@@ -265,7 +266,9 @@ const Home = () => {
       {/* --- ARMY VALUES --- */}
       <section className="py-24 bg-white dark:bg-slate-900 text-slate-950 dark:text-white">
         <Reveal className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 dark:text-slate-400 uppercase mb-4">The Seven Army Values</h2>
+          <h2 className="text-[10px] font-black tracking-[0.5em] text-slate-600 dark:text-slate-400 uppercase mb-4">
+            <ScrambleText text="The Seven Army Values" trigger="inView" />
+          </h2>
           <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-12">Select a value to expand</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             {ARMY_VALUES.map((val, i) => (
@@ -325,7 +328,9 @@ const Home = () => {
       <section className="py-24 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-white/5 overflow-hidden">
         <Reveal className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">Battalion Command</h2>
+            <h2 className="text-[10px] font-black tracking-[0.5em] text-yellow-500 uppercase mb-4">
+              <ScrambleText text="Battalion Command" trigger="inView" />
+            </h2>
             <h3 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Meet the Top 3</h3>
           </div>
           {/* Same reasoning as Battalion Bulletins above: skeleton cards
