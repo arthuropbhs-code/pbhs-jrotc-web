@@ -56,8 +56,9 @@ const UniformRequests = () => {
   // S4 Assistant specifically (affects form labels + email notification path)
   const isS4Assistant = userRole === 'company_s4_assistant';
 
-  // General Staff observer (S1-S7 excluding S4) — can view all records
-  const isStaffObserver = userLevel === STAFF_LEVEL && userRole !== 's4_logistics';
+  // Anyone at admin level or above (sergeant_major, BC, XO, CSM, SAI, AI) —
+  // can view all records even if not in APPROVE_ROLES explicitly.
+  const isHighCommand = userLevel >= ADMIN_LEVEL;
 
   // Company Leadership (CC through 1SG) — can view their company's records
   const isCompanyLeadership = userLevel >= 45 && userLevel <= 55;
@@ -90,23 +91,27 @@ const UniformRequests = () => {
     if (!userProfile) return;
 
     let q;
-    if (canApprove || isStaffObserver) {
+    if (canApprove || isHighCommand) {
+      // S4 logistics, battalion XO/BC/CSM, sergeant major, SAI/AI — see everything
       q = query(collection(db, "uniform_requests"), orderBy("timestamp", "desc"));
     } else if (isS4Assistant || isCompanyLeadership) {
+      // Company S4 assistant or company CC/XO/1SG — scoped to their company
       q = query(collection(db, "uniform_requests"), where("company", "==", userProfile.company));
     } else {
-      q = query(collection(db, "uniform_requests"), where("cadetName", "==", userProfile.fullName));
+      // Should never reach here due to route gate; return nothing defensively
+      setRequests([]);
+      return;
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (isS4Assistant || isCompanyLeadership || (!canApprove && !isStaffObserver)) {
+      if (isS4Assistant || isCompanyLeadership) {
         reqs.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
       }
       setRequests(reqs);
     });
     return () => unsubscribe();
-  }, [userProfile, canApprove, isStaffObserver, isS4Assistant, isCompanyLeadership]);
+  }, [userProfile, canApprove, isHighCommand, isS4Assistant, isCompanyLeadership]);
 
   // --- DATA CONFIGURATION ---
   const OFFICIAL_RIBBONS = ["Medal for Heroism (Ribbon)", "Superior Cadet Award (Ribbon)", "N-1-1 Distinguished Cadet", "N-1-2 Academic Excellence", "N-1-3 Academic Achievement", "N-1-4 Perfect Attendance", "N-1-5 Student Governement", "N-1-6 LET Service", "N-1-7 Superior Instructor", "N-1-8 CPR First Aid", "N-1-9 Distinguished Cadet", "N-1-10 Honor Cadet", "N-3-1 Dai/Sai Leadership", "N-3-2 Personal Appearance", "N-3-3 Proficiency", "N-3-4 Drill Team", "N-3-5 Orienteering", "N-3-6 Color | Honor Guard", "N-3-7 Rifle Marksmanship", "N-3-8 Adventure Training", "N-3-9 Commendation", "N-3-10 Good Conduct", "N-3-11 JCLC Participation", "N-3-12 Championship Drill", "N-3-13 Raider Team", "N-3-14 Recondo / Rappelling", "N-3-15 Meritorious Actions", "N-2-1 Varsity Athletics", "N-2-2 Physical Fitness", "N-2-3 JROTC Athletics", "N-2-4 Junior Varsity Athletics", "N-2-5 Athletic Service", "N-4-1 Parade", "N-4-2 Recruiting", "N-4-3 School Support", "N-4-4 Community Service", "N-4-5 Confidence Course", "N-4-6 Service Learning", "N-4-7 Excellent Staff Performance", "Company Commander of the Quarter", "Company XO of the Quarter", "100 Flags", "Funeral Detail"];

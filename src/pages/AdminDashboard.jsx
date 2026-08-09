@@ -55,7 +55,6 @@ const AdminDashboard = () => {
   const cadetOnboardingItems = [
     { id: 'profile', label: 'Complete your profile', description: 'Add your rank, position, and company so staff can find you.', link: '/admin/profile', linkText: 'My Profile' },
     { id: 'cadet-info', label: 'Review Cadet Info', description: 'Rank structure, LET levels, and what to expect this year.', link: '/cadet-info', linkText: 'View' },
-    { id: 'uniform', label: 'Check your uniform items', description: 'See what has been issued to you and request anything missing.', link: '/uniform-requests', linkText: 'View' },
     { id: 'documents', label: 'Read documents & regulations', description: 'Battalion policies, forms, and required reading.', link: '/documents', linkText: 'View' },
   ];
 

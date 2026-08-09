@@ -52,6 +52,10 @@ const AdminSidebar = () => {
   const isTopFour    = userLevel >= ADMIN_LEVEL;
   const isStaffOrS4  = userLevel >= STAFF_LEVEL;
 
+  // Roles allowed to access Uniform Items (mirrors App.jsx allowedRoles + adminLevel override)
+  const UNIFORM_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
+  const canSeeUniforms = UNIFORM_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
   const isActive = (path) => location.pathname === path;
 
   const navLink = (to, icon, label, extra = '') => (
@@ -144,26 +148,28 @@ const AdminSidebar = () => {
           </>
         )}
 
-        {/* ── ALWAYS-VISIBLE BOTTOM LINKS ─────── */}
-        <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
-          <Link
-            to="/uniform-requests"
-            className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
-              isActive('/uniform-requests')
-                ? 'bg-yellow-500 text-slate-950'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Shirt size={18} /> Uniform Items
-            </div>
-            {requestCount > 0 && (
-              <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
-                {requestCount}
-              </span>
-            )}
-          </Link>
-        </div>
+        {/* ── UNIFORM ITEMS — gated to S4 assistants, company command, battalion command ── */}
+        {canSeeUniforms && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+            <Link
+              to="/uniform-requests"
+              className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
+                isActive('/uniform-requests')
+                  ? 'bg-yellow-500 text-slate-950'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Shirt size={18} /> Uniform Items
+              </div>
+              {requestCount > 0 && (
+                <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
+                  {requestCount}
+                </span>
+              )}
+            </Link>
+          </div>
+        )}
       </nav>
 
       <button

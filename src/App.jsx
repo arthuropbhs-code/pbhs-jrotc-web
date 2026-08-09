@@ -185,8 +185,14 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
-            {/* No minLevel here: any signed-in cadet needs to see their own uniform request status */}
-            <Route path="/uniform-requests" element={<ProtectedRoute><UniformRequests /></ProtectedRoute>} />
+            {/* Gated: S4 assistants, company command (CC/XO/1SG), S4 logistics,
+                and battalion command (adminLevel override). All lower tiers are
+                redirected — cadets, squad/platoon leadership don't have access. */}
+            <Route path="/uniform-requests" element={
+              <ProtectedRoute allowedRoles={['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics']}>
+                <UniformRequests />
+              </ProtectedRoute>
+            } />
 
             {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
             <Route
