@@ -36,7 +36,8 @@ export default async function handler(req, res) {
     const data = await verifyRes.json();
 
     if (!data.success) {
-      return res.status(400).json({ error: 'CAPTCHA verification failed' });
+      console.error('reCAPTCHA rejected token. Error codes:', data['error-codes']);
+      return res.status(400).json({ error: 'CAPTCHA verification failed', codes: data['error-codes'] });
     }
 
     return res.status(200).json({ success: true });

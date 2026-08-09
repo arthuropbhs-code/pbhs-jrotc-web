@@ -151,6 +151,8 @@ const SignUp = () => {
         body: JSON.stringify({ token: captchaToken })
       });
       if (!captchaRes.ok) {
+        const captchaErr = await captchaRes.json().catch(() => ({}));
+        console.error('CAPTCHA failed — Google error codes:', captchaErr.codes);
         window.grecaptcha?.reset(recaptchaWidgetIdRef.current);
         setError("CAPTCHA VERIFICATION FAILED. TRY AGAIN.");
         setLoading(false);
