@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import SmoothInput from '../components/SmoothInput';
 import { useCompanies } from '../hooks/useCompanies';
 import { auth, db } from '../firebase';
@@ -34,10 +34,11 @@ const FULL_NAME_PATTERN = /^[A-Za-z'-]+(?:\s+[A-Za-z'-]+)*,\s*[A-Za-z'-]+(?:\s+[
 // Firebase's own minimum is just 6 characters with no complexity requirement.
 const isStrongPassword = (pw) => pw.length >= 8 && /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
 
-// Site keys are meant to be public (they're embedded in every reCAPTCHA
-// page); the secret key that actually verifies tokens lives server-side
-// only, in api/verify-captcha.js.
-const RECAPTCHA_SITE_KEY = '6LdrsG8tAAAAACBhWISbSEBFGp012DSPT87auHy9';
+// Site key is public by design — it's embedded in the page source.
+// The Google Cloud API key that verifies tokens lives server-side only
+// in api/verify-captcha.js. Enterprise score-based: no checkbox shown,
+// runs invisibly in the background and returns a 0–1 human likelihood score.
+const RECAPTCHA_SITE_KEY = '6Ld3tXwtAAAAAP7tu9bJa3fpwpju6LLDe9T2ujWO';
 
 const SignUp = () => {
   usePageMeta({ title: 'Create Cadet Account' });
@@ -60,29 +61,27 @@ const SignUp = () => {
   const [linkData, setLinkData] = useState(null);
   const navigate = useNavigate();
 
-  // Explicit render, not the implicit .g-recaptcha auto-scan: the script
-  // only scans the DOM once, right after it loads - since this page is
-  // reached via client-side routing (not a full page load), the widget div
-  // wouldn't exist yet at scan time and would never get an iframe.
-  const recaptchaContainerRef = useRef(null);
-  const recaptchaWidgetIdRef = useRef(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const tryRender = () => {
-      if (cancelled || recaptchaWidgetIdRef.current !== null) return;
-      if (window.grecaptcha?.render && recaptchaContainerRef.current) {
-        recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          theme: 'dark'
-        });
-      } else {
-        setTimeout(tryRender, 150);
+  // Obtains a reCAPTCHA Enterprise token silently (no checkbox shown).
+  // enterprise.ready() ensures the script has fully initialised before
+  // execute() is called; the resulting token is verified server-side.
+  const getEnterpriseToken = () =>
+    new Promise((resolve, reject) => {
+      if (!window.grecaptcha?.enterprise) {
+        reject(new Error('reCAPTCHA not loaded'));
+        return;
       }
-    };
-    tryRender();
-    return () => { cancelled = true; };
-  }, []);
+      window.grecaptcha.enterprise.ready(async () => {
+        try {
+          const token = await window.grecaptcha.enterprise.execute(
+            RECAPTCHA_SITE_KEY,
+            { action: 'SIGNUP' }
+          );
+          resolve(token);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
 
   // SHA-256 of the real code - kept as a hash so the plaintext code isn't
   // sitting in the shipped JS bundle. This raises the bar (no longer a
@@ -133,13 +132,16 @@ const SignUp = () => {
       return;
     }
 
-    const captchaToken = window.grecaptcha?.getResponse(recaptchaWidgetIdRef.current);
-    if (!captchaToken) {
-      setError("COMPLETE THE CAPTCHA BEFORE SUBMITTING.");
+    setLoading(true);
+
+    let captchaToken;
+    try {
+      captchaToken = await getEnterpriseToken();
+    } catch {
+      setError("CAPTCHA CHECK FAILED. PLEASE REFRESH AND TRY AGAIN.");
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
     const targetEmail = formData.email.trim().toLowerCase();
 
     try {
@@ -153,8 +155,7 @@ const SignUp = () => {
       });
       if (!captchaRes.ok) {
         const captchaErr = await captchaRes.json().catch(() => ({}));
-        console.error('CAPTCHA failed — Google error codes:', captchaErr.codes);
-        window.grecaptcha?.reset(recaptchaWidgetIdRef.current);
+        console.error('CAPTCHA failed — detail:', captchaErr);
         setError("CAPTCHA VERIFICATION FAILED. TRY AGAIN.");
         setLoading(false);
         return;
@@ -181,7 +182,6 @@ const SignUp = () => {
         await finalizeAccountCreation(user);
       }
     } catch (err) {
-      window.grecaptcha?.reset(recaptchaWidgetIdRef.current);
       setError(err.code === 'auth/email-already-in-use' ? "EMAIL ALREADY REGISTERED." : err.message.toUpperCase());
       setLoading(false);
     }
@@ -342,10 +342,6 @@ const SignUp = () => {
               <ShieldCheck className="absolute left-3 top-3 text-yellow-500" size={18} />
               <SmoothInput type="text" placeholder="BATTALION SECRET CODE" required className="w-full bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none text-yellow-500 font-black" onChange={(e) => setFormData({...formData, secretCode: e.target.value})} />
             </div>
-          </div>
-
-          <div className="mt-6 flex justify-center">
-            <div ref={recaptchaContainerRef} />
           </div>
 
           <button type="submit" disabled={loading} className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-4 rounded-xl mt-6 hover:bg-yellow-400 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
