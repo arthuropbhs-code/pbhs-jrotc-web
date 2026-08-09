@@ -129,6 +129,31 @@ const AdminWelcome = () => {
     }
   };
 
+  const handleForceVerify = async () => {
+    setEmailStatus('sending');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin-update-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ type: 'force-verify-email', targetUid: user.uid }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('force-verify-email failed:', res.status, err);
+        setEmailStatus('send-error');
+        return;
+      }
+      // Reload so the client sees emailVerified: true, then advance
+      await user.reload();
+      setStep('phone');
+      setEmailStatus(null);
+    } catch (err) {
+      console.error('force-verify-email network error:', err);
+      setEmailStatus('send-error');
+    }
+  };
+
   const handleResendEmail = async () => {
     setEmailStatus('sending');
     try {
@@ -289,9 +314,17 @@ const AdminWelcome = () => {
               </p>
             )}
             {emailStatus === 'rate-limited' && (
-              <p className="text-[10px] font-bold text-yellow-500 text-center">
-                Too many attempts — wait a few minutes, then use the resend button.
-              </p>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-yellow-500 text-center">
+                  Firebase has rate-limited this email address. Use the button below to verify instantly instead.
+                </p>
+                <button
+                  onClick={handleForceVerify}
+                  className="w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-all"
+                >
+                  <CheckCircle size={12} /> Verify Without Email
+                </button>
+              </div>
             )}
 
             <button

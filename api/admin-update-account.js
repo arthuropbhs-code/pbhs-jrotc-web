@@ -517,6 +517,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
+    if (type === 'force-verify-email') {
+      // Self-service escape hatch for when Firebase rate-limits accounts:sendOobCode.
+      // Uses the admin service-account token to flip emailVerified directly on the
+      // caller's own account — no email needed, no rate-limit exposure.
+      // Self-only: targetUid must equal callerUid (enforced below).
+      if (targetUid !== callerUid) {
+        return res.status(403).json({ error: 'force-verify-email is self-service only.' });
+      }
+      const updateRes = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: callerUid, emailVerified: true }),
+        }
+      );
+      if (!updateRes.ok) {
+        const err = await updateRes.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'Failed to force-verify email');
+      }
+      return res.status(200).json({ success: true });
+    }
+
     if (type === 'send-verify-email') {
       // Self-service only — a cadet requesting verification of their own email
       // address before enrolling phone MFA. We generate the OOB link server-side
