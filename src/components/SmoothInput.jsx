@@ -54,6 +54,8 @@ const SmoothInput = React.forwardRef(function SmoothInput(
     }
     span.style.font          = `${s.fontStyle} ${s.fontWeight} ${fontSize} ${s.fontFamily}`;
     span.style.letterSpacing = s.letterSpacing;
+    span.style.textTransform = s.textTransform;
+    span.style.wordSpacing   = s.wordSpacing;
   };
 
   const measurePrefixWidth = (text) => {
