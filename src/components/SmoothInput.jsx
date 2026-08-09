@@ -78,8 +78,11 @@ const SmoothInput = React.forwardRef(function SmoothInput(
   };
 
   const updateCaret = (target) => {
-    const ss  = target.selectionStart ?? 0;
-    const se  = target.selectionEnd   ?? 0;
+    // email / number / date etc. return null for selectionStart — those types
+    // don't allow cursor positioning mid-value, so the caret is always at the end.
+    const supportsSelection = target.selectionStart !== null;
+    const ss  = supportsSelection ? target.selectionStart : target.value.length;
+    const se  = supportsSelection ? target.selectionEnd   : target.value.length;
     const sel = ss !== se;
     const idx = ss === se ? ss : (target.selectionDirection === 'backward' ? ss : se);
     const isPass = target.type === 'password';
