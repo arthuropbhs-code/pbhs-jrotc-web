@@ -7,6 +7,8 @@ import {
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
   RecaptchaVerifier,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
@@ -62,6 +64,13 @@ const AdminWelcome = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaVerificationId, setMfaVerificationId] = useState('');
   const [mfaStatus, setMfaStatus] = useState(null); // null | 'sending' | 'verifying' | error string
+  // Reauthentication — Firebase requires a recent login before MFA enrollment.
+  // If the email-verification step took >5 min the session is considered stale;
+  // we catch auth/requires-recent-login and prompt for password before retrying.
+  const [needsReauth, setNeedsReauth] = useState(false);
+  const [reauthPassword, setReauthPassword] = useState('');
+  const [reauthError, setReauthError] = useState(null);
+  const [reauthStatus, setReauthStatus] = useState(null); // null | 'loading'
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const mfaMandatory = userLevel >= STAFF_LEVEL;
@@ -195,8 +204,9 @@ const AdminWelcome = () => {
     setMfaPhone(firebase);
   };
 
-  const handleSendCode = async (e) => {
-    e.preventDefault();
+  // Core send-code logic — called both from the form submit and after
+  // a successful reauthentication so we don't duplicate the reCAPTCHA setup.
+  const doSendCode = async () => {
     setMfaStatus('sending');
     try {
       const session = await multiFactor(user).getSession();
@@ -212,7 +222,42 @@ const AdminWelcome = () => {
       setMfaStep('entering-code');
       setMfaStatus(null);
     } catch (err) {
-      setMfaStatus(err.message || 'Failed to send code. Try again.');
+      // Firebase requires a recent sign-in before enrolling MFA. The email-
+      // verification step can take long enough to expire that window — ask the
+      // user to re-enter their password so we can reauthenticate silently.
+      if (err.code === 'auth/requires-recent-login') {
+        setNeedsReauth(true);
+        setMfaStatus(null);
+      } else {
+        setMfaStatus(err.message || 'Failed to send code. Try again.');
+      }
+    }
+  };
+
+  const handleSendCode = async (e) => {
+    e.preventDefault();
+    await doSendCode();
+  };
+
+  const handleReauth = async (e) => {
+    e.preventDefault();
+    setReauthError(null);
+    setReauthStatus('loading');
+    try {
+      const credential = EmailAuthProvider.credential(user.email, reauthPassword);
+      await reauthenticateWithCredential(user, credential);
+      setNeedsReauth(false);
+      setReauthPassword('');
+      setReauthStatus(null);
+      // Session is fresh — retry sending the code automatically.
+      await doSendCode();
+    } catch (err) {
+      setReauthStatus(null);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setReauthError('Incorrect password. Try again.');
+      } else {
+        setReauthError(err.message || 'Re-authentication failed. Try again.');
+      }
     }
   };
 
@@ -378,8 +423,42 @@ const AdminWelcome = () => {
               </div>
             )}
 
+            {/* Reauthentication prompt — shown when Firebase's recent-login window
+                has expired during the email-verification step. */}
+            {needsReauth && (
+              <form onSubmit={handleReauth} className="space-y-4">
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-0.5">Session expired</p>
+                  <p className="text-xs text-slate-400 font-medium">Re-enter your password to continue setting up 2FA.</p>
+                </div>
+                <div className="relative">
+                  <SmoothInput
+                    type="password"
+                    required
+                    autoFocus
+                    placeholder="Password"
+                    value={reauthPassword}
+                    onChange={(e) => setReauthPassword(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm font-bold text-white focus:border-yellow-500 outline-none transition-all"
+                  />
+                </div>
+                {reauthError && (
+                  <p className="text-[10px] font-bold text-red-400">{reauthError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={reauthStatus === 'loading' || !reauthPassword}
+                  className="w-full py-3.5 rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50 transition-all"
+                >
+                  {reauthStatus === 'loading'
+                    ? <><Loader2 className="animate-spin" size={14} /> Verifying…</>
+                    : <><ArrowRight size={14} /> Continue</>}
+                </button>
+              </form>
+            )}
+
             {/* Phone entry */}
-            {mfaStep === 'entering-phone' && (
+            {!needsReauth && mfaStep === 'entering-phone' && (
               <form onSubmit={handleSendCode} className="space-y-4">
                 <div className="relative">
                   <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
