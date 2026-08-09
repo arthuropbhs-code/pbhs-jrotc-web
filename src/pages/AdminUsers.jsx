@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
   UserCog, Search, ArrowLeft, CheckCircle2,
-  Loader2, UserPlus, UserMinus, User, X, Edit3, KeyRound, Ban, Trash2
+  Loader2, UserPlus, User, X, Edit3, KeyRound, Ban, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
@@ -263,43 +263,22 @@ const AdminUsers = () => {
     }
   };
 
-  // Quick delete from the roster row. Manual (isManual: true) records have
-  // no Firebase Auth account, so deleting the Firestore doc is sufficient.
-  // Real accounts must go through the API so both Auth and Firestore are
-  // cleaned up — the inline deleteDoc() was the bug leaving Auth ghosts.
-  const handleQuickDelete = async (record) => {
-    if (!window.confirm(`Delete ${record.fullName || 'this record'}? This cannot be undone.`)) return;
-    try {
-      if (record.isManual) {
-        // Pre-created roster entry — no Auth account exists.
-        await deleteDoc(doc(db, 'users', record.id));
-      } else {
-        // Real account — must delete Auth user via the server endpoint.
-        const idToken = await user.getIdToken();
-        const res = await fetch('/api/admin-update-account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ type: 'delete-account', targetUid: record.id }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to delete account');
-        // Close the edit panel if it was showing this record.
-        if (editingRecord?.id === record.id) setEditingRecord(null);
-      }
-    } catch (err) {
-      alert('Delete failed: ' + err.message);
-    }
-  };
-
-  // Permanently deletes the account (Firebase Auth user + Firestore
-  // record) - irreversible, hence the typed confirmation instead of a
-  // plain window.confirm.
+  // Permanently deletes a record. Manual (isManual: true) entries have no
+  // Firebase Auth account, so a Firestore deleteDoc is all that's needed.
+  // Real accounts go through the API endpoint which removes both Auth and
+  // Firestore together — preventing the ghost-account bug from before.
   const handleDeleteAccount = async () => {
     if (!editingRecord) return;
-    const typed = window.prompt(`This permanently deletes ${editingRecord.fullName || 'this account'}. Type DELETE to confirm.`);
-    if (typed !== 'DELETE') return;
+    if (!window.confirm(`Permanently delete ${editingRecord.fullName || 'this account'}? This cannot be undone.`)) return;
     setDeleteAccountStatus('working');
     try {
+      if (editingRecord.isManual) {
+        await deleteDoc(doc(db, 'users', editingRecord.id));
+        setEditingRecord(null);
+        showStatus('Record Deleted');
+        return;
+      }
+
       const idToken = await user.getIdToken();
       const res = await fetch('/api/admin-update-account', {
         method: 'POST',
@@ -435,11 +414,6 @@ const AdminUsers = () => {
                     <button title="Edit personnel record" onClick={() => { setEditingRecord(p); setFormData(p); setLoginEmail(p.email || ''); setLoginEmailStatus(null); setResetPasswordStatus(null); setSuspendStatus(null); setDeleteAccountStatus(null); }} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-yellow-500 hover:text-slate-950 transition-all text-slate-500">
                       <Edit3 size={18} />
                     </button>
-                    {(p.isManual || isBattalionStaff) && (
-                        <button title="Delete this record" onClick={() => handleQuickDelete(p)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
-                            <UserMinus size={18} />
-                        </button>
-                    )}
                 </div>
              </div>
           ))}
