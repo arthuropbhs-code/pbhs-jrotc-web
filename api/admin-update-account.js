@@ -188,45 +188,116 @@ async function findShadowRecord(accessToken, projectId, email) {
   };
 }
 
-// Mirrors src/utils/emailjs.js's constants/templates, but sent server-side
-// instead of from the browser. A password-reset link is a live account-
-// takeover credential - returning it in the API response so the client
-// could hand it to EmailJS meant it briefly existed in the requester's
-// browser (devtools/network tab, extensions, browser history) even for the
-// admin-resets-someone-else flow. Sending it from here means it never
-// leaves the server. EmailJS's Public Key is designed for use from any
-// origin (that's the point of "public"), so calling its REST endpoint
-// server-side works identically to the browser SDK.
-const EMAILJS_SERVICE_ID = 'service_80dmyxg';
-const RESET_PASSWORD_TEMPLATE_ID = 'template_716dlh3';
-const ACCOUNT_NOTIFICATION_TEMPLATE_ID = 'template_3owdwgb';
-const EMAILJS_PUBLIC_KEY = '5HbZ07R5aInTJAzNw';
+// All transactional emails are sent via Resend (https://resend.com).
+// RESEND_API_KEY must be set in Vercel env vars.
+// The sending domain (pbhsjrotc.com) must be verified in the Resend dashboard
+// so DKIM/SPF pass and emails don't land in spam.
+//
+// Password-reset and email-verification links are generated server-side with
+// returnOobLink:true so the raw credential never reaches the client's browser
+// (devtools / network tab / extensions). Sending from here means the link
+// lives only in the Resend delivery pipeline — never in the requester's session.
 
-async function emailjsSend(templateId, templateParams) {
-  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+async function resendSend(toEmail, subject, html) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('RESEND_API_KEY is not set in this environment.');
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
-      service_id: EMAILJS_SERVICE_ID,
-      template_id: templateId,
-      user_id: EMAILJS_PUBLIC_KEY,
-      template_params: templateParams,
+      from: 'PBHS JROTC <noreply@pbhsjrotc.com>',
+      to: [toEmail],
+      subject,
+      html,
     }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`EmailJS send failed: ${text}`);
+    throw new Error(`Resend send failed: ${text}`);
   }
 }
 
+// Wraps heading/banner/message/cta/footnote into a full HTML email document
+// styled to match the app's dark-navy/yellow brand. All components are already
+// valid HTML; this just adds the outer scaffold (doctype, body background,
+// header strip, footer) that were previously supplied by the email template.
+function buildEmailHtml({ heading, banner = '', message = '', cta = '', footnote = '' }) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${heading}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; max-width:560px;">
+          <tr>
+            <td style="background-color:#0f172a; border-radius:16px 16px 0 0; padding:24px 32px; text-align:center;">
+              <p style="margin:0; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:#eab308;">PBHS JROTC</p>
+              <p style="margin:4px 0 0; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:#64748b;">Tornado Battalion · Command Portal</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff; padding:32px;">
+              <h1 style="margin:0 0 24px; font-size:20px; font-weight:900; color:#0f172a; letter-spacing:-0.3px;">${heading}</h1>
+              ${banner}
+              ${message}
+              ${cta}
+              ${footnote ? `<p style="margin:24px 0 0; font-size:11px; line-height:1.6; color:#94a3b8;">${footnote}</p>` : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f8fafc; border-top:1px solid #e2e8f0; border-radius:0 0 16px 16px; padding:20px 32px; text-align:center;">
+              <p style="margin:0; font-size:10px; color:#94a3b8;">Pompano Beach High School JROTC · 600 NE 13th Ave, Pompano Beach, FL 33060</p>
+              <p style="margin:4px 0 0; font-size:10px; color:#94a3b8;">This is an automated message from the Command Portal. Please do not reply to this email.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// Convenience: build + send a notification email in one call.
+const sendNotification = (toEmail, heading, banner, message, cta, footnote) =>
+  resendSend(toEmail, heading, buildEmailHtml({ heading, banner, message, cta, footnote }));
+
 const sendResetPasswordEmail = (toEmail, resetLink) =>
-  emailjsSend(RESET_PASSWORD_TEMPLATE_ID, { to_email: toEmail, reset_link: resetLink });
+  resendSend(
+    toEmail,
+    'Reset Your Password',
+    buildEmailHtml({
+      heading: 'Reset Your Password',
+      banner: SECURITY_BANNER,
+      message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Click the button below to set a new password for your Command Portal account. This link expires in <strong style="color:#0f172a;">1 hour</strong> and can only be used once.</p>`,
+      cta: `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+    <tr>
+      <td style="border-radius:14px; background-color:#eab308;">
+        <a href="${resetLink}" target="_blank"
+           style="display:inline-block; padding:16px 32px; font-size:13px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#0f172a; text-decoration:none; border-radius:14px;">
+          Reset Password
+        </a>
+      </td>
+    </tr>
+  </table>`,
+      footnote: `If you didn't request a password reset, you can safely ignore this email — your account remains unchanged.`,
+    })
+  );
 
 const CTA_BUTTON = `
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
     <tr>
       <td style="border-radius:14px; background-color:#eab308;">
-        <a href="https://pbhsjrotc.vercel.app/admin" target="_blank"
+        <a href="https://pbhsjrotc.com/admin" target="_blank"
            style="display:inline-block; padding:16px 32px; font-size:13px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#0f172a; text-decoration:none; border-radius:14px;">
           Go to Command Portal
         </a>
@@ -270,24 +341,24 @@ const MFA_ENROLLED_BANNER = `
   </table>`;
 
 const sendEmailChangedNewAddress = (newEmail) =>
-  emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-    to_email: newEmail,
-    heading: 'Login Email Updated',
-    message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">This confirms that the Command Portal account you now sign in with uses <strong style="color:#0f172a;">${newEmail}</strong> as its login email.</p>`,
-    banner: '',
-    cta: CTA_BUTTON,
-    footnote: NOTIFY_FOOTNOTE,
-  });
+  sendNotification(
+    newEmail,
+    'Login Email Updated',
+    '',
+    `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">This confirms that the Command Portal account you now sign in with uses <strong style="color:#0f172a;">${newEmail}</strong> as its login email.</p>`,
+    CTA_BUTTON,
+    NOTIFY_FOOTNOTE,
+  );
 
 const sendEmailChangedOldAddress = (oldEmail, newEmail) =>
-  emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-    to_email: oldEmail,
-    heading: 'Login Email Changed',
-    message: `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">The Command Portal account that used to sign in with this inbox (<strong style="color:#0f172a;">${oldEmail}</strong>) has had its login email changed to <strong style="color:#0f172a;">${newEmail}</strong>. This inbox will no longer receive account emails.</p>`,
-    banner: SECURITY_BANNER,
-    cta: '',
-    footnote: 'If you made this change yourself (for example, handing the account off to a successor), no action is needed. ' + NOTIFY_FOOTNOTE,
-  });
+  sendNotification(
+    oldEmail,
+    'Login Email Changed',
+    SECURITY_BANNER,
+    `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">The Command Portal account that used to sign in with this inbox (<strong style="color:#0f172a;">${oldEmail}</strong>) has had its login email changed to <strong style="color:#0f172a;">${newEmail}</strong>. This inbox will no longer receive account emails.</p>`,
+    '',
+    'If you made this change yourself (for example, handing the account off to a successor), no action is needed. ' + NOTIFY_FOOTNOTE,
+  );
 
 export default async function handler(req, res) {
   try {
@@ -429,18 +500,14 @@ export default async function handler(req, res) {
       // Best-effort - a failed confirmation email shouldn't turn an
       // otherwise-successful signup into an error for the user.
       try {
-        await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-          to_email: callerEmail,
-          heading: shadow ? 'Welcome to the Battalion' : 'Request Received',
-          message: shadow
-            ? `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account has been linked to your existing personnel record and you're ready to go. Sign in to see your duties, uniform status, and battalion announcements.</p>`
-            : `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account request for <strong style="color:#0f172a;">${callerEmail}</strong> has been submitted. Battalion staff will review it and assign your rank and position - you'll get another email once that's done.</p>`,
-          banner: '',
-          cta: shadow ? CTA_BUTTON : '',
-          footnote: shadow
-            ? `Questions about your rank or position? Contact your battalion's S1.`
-            : `If you didn't request this account, contact your battalion's S1.`,
-        });
+        const signupHeading = shadow ? 'Welcome to the Battalion' : 'Request Received';
+        const signupMessage = shadow
+          ? `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account has been linked to your existing personnel record and you're ready to go. Sign in to see your duties, uniform status, and battalion announcements.</p>`
+          : `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account request for <strong style="color:#0f172a;">${callerEmail}</strong> has been submitted. Battalion staff will review it and assign your rank and position - you'll get another email once that's done.</p>`;
+        const signupFootnote = shadow
+          ? `Questions about your rank or position? Contact your battalion's S1.`
+          : `If you didn't request this account, contact your battalion's S1.`;
+        await sendNotification(callerEmail, signupHeading, '', signupMessage, shadow ? CTA_BUTTON : '', signupFootnote);
       } catch (notifyErr) {
         console.error('Signup confirmation email failed:', notifyErr);
       }
@@ -466,14 +533,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'toEmail, cadetName, and item are required' });
       }
 
-      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-        to_email: toEmail,
-        heading: 'Uniform Request Fulfilled',
-        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your request to issue <strong style="color:#0f172a;">${item}${detail ? ` (${detail})` : ''}</strong> to <strong style="color:#0f172a;">${cadetName}</strong> has been marked as issued by S-4.</p>`,
-        banner: '',
-        cta: CTA_BUTTON,
-        footnote: `Questions about this issuance? Contact your battalion's S-4.`,
-      });
+      await sendNotification(
+        toEmail,
+        'Uniform Request Fulfilled',
+        '',
+        `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your request to issue <strong style="color:#0f172a;">${item}${detail ? ` (${detail})` : ''}</strong> to <strong style="color:#0f172a;">${cadetName}</strong> has been marked as issued by S-4.</p>`,
+        CTA_BUTTON,
+        `Questions about this issuance? Contact your battalion's S-4.`,
+      );
 
       return res.status(200).json({ success: true });
     }
@@ -499,20 +566,19 @@ export default async function handler(req, res) {
         }
       );
 
-      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-        to_email: targetEmail,
-        heading: 'Welcome to the Battalion',
-        message: `
-          <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+      await sendNotification(
+        targetEmail,
+        'Welcome to the Battalion',
+        '',
+        `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
             Your Command Portal account has been approved and your rank and position have been assigned. You're almost ready to go.
           </p>
           <p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">
             Sign in and you'll be walked through a quick two-step setup — verifying your email and securing your account with two-factor authentication. It only takes a minute.
           </p>`,
-        banner: '',
-        cta: CTA_BUTTON,
-        footnote: `Questions about your rank or position? Contact your battalion's S1.`,
-      });
+        CTA_BUTTON,
+        `Questions about your rank or position? Contact your battalion's S1.`,
+      );
 
       return res.status(200).json({ success: true });
     }
@@ -544,7 +610,7 @@ export default async function handler(req, res) {
       // Self-service only — a cadet requesting verification of their own email
       // address before enrolling phone MFA. We generate the OOB link server-side
       // (returnOobLink:true) so Firebase never sends its own plain email; we
-      // then deliver a fully branded one via EmailJS. Identical approach to
+      // then deliver a fully branded one via Resend. Identical approach to
       // the reset-password handler — the link URL never reaches the client.
       const oobRes = await fetch(
         `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:sendOobCode`,
@@ -563,19 +629,17 @@ export default async function handler(req, res) {
         throw new Error(code || 'Failed to generate a verification link');
       }
 
-      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-        to_email: callerEmail,
-        heading: 'Verify Your Email Address',
-        banner: EMAIL_VERIFY_BANNER,
-        message: `
-          <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+      await sendNotification(
+        callerEmail,
+        'Verify Your Email Address',
+        EMAIL_VERIFY_BANNER,
+        `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
             Before you can enable two-step verification on your Command Portal account, we need to confirm this email address belongs to you. Click the button below — the link expires in <strong style="color:#0f172a;">24 hours</strong>.
           </p>
           <p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">
             Once verified, head back to your profile and click <strong style="color:#0f172a;">Enroll Now</strong> to finish setting up 2FA.
           </p>`,
-        cta: `
-          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
             <tr>
               <td style="border-radius:14px; background-color:#2563eb;">
                 <a href="${oobData.oobLink}" target="_blank"
@@ -585,8 +649,8 @@ export default async function handler(req, res) {
               </td>
             </tr>
           </table>`,
-        footnote: `If you didn't request this, you can safely ignore this email — your account remains unchanged.`,
-      });
+        `If you didn't request this, you can safely ignore this email — your account remains unchanged.`,
+      );
 
       return res.status(200).json({ success: true });
     }
@@ -596,12 +660,11 @@ export default async function handler(req, res) {
       // maskedPhone is Firebase's own partially-redacted display string (e.g. +*******0561);
       // the real number never leaves Firebase, and we don't need it here.
       try {
-        await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
-          to_email: callerEmail,
-          heading: 'Two-Step Verification Enabled',
-          banner: MFA_ENROLLED_BANNER,
-          message: `
-            <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+        await sendNotification(
+          callerEmail,
+          'Two-Step Verification Enabled',
+          MFA_ENROLLED_BANNER,
+          `<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
               Two-step verification is now active on your Command Portal account. Every login now requires both your password <em>and</em> a one-time code sent to your phone — so even if your password is ever compromised, your account stays locked down.
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px; width:100%;">
@@ -612,9 +675,9 @@ export default async function handler(req, res) {
                 </td>
               </tr>
             </table>`,
-          cta: CTA_BUTTON,
-          footnote: `If you didn't enable this yourself, contact your battalion's S1 immediately — your account may be compromised.`,
-        });
+          CTA_BUTTON,
+          `If you didn't enable this yourself, contact your battalion's S1 immediately — your account may be compromised.`,
+        );
       } catch (notifyErr) {
         console.error('MFA-enrolled notification failed:', notifyErr);
       }
