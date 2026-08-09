@@ -11,6 +11,7 @@ import {
 import { doc, updateDoc } from 'firebase/firestore';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import { Mail, Smartphone, CheckCircle, Loader2, ShieldCheck, RefreshCw, ArrowRight } from 'lucide-react';
+import SmoothInput from '../components/SmoothInput';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -382,7 +383,7 @@ const AdminWelcome = () => {
               <form onSubmit={handleSendCode} className="space-y-4">
                 <div className="relative">
                   <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                  <input
+                  <SmoothInput
                     type="tel"
                     required
                     placeholder="(555) 000-0000"
@@ -428,7 +429,7 @@ const AdminWelcome = () => {
                 <p className="text-[10px] text-slate-400 font-bold">
                   Enter the 6-digit code sent to <span className="text-white">{mfaPhone}</span>.
                 </p>
-                <input
+                <SmoothInput
                   type="text"
                   inputMode="numeric"
                   maxLength={6}

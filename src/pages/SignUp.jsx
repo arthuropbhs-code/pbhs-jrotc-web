@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import SmoothInput from '../components/SmoothInput';
 import { useCompanies } from '../hooks/useCompanies';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
@@ -263,28 +264,28 @@ const SignUp = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative col-span-full">
               <User className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="text" placeholder="FULL NAME (LAST, FIRST)" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all uppercase font-bold text-white" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <SmoothInput type="text" placeholder="FULL NAME (LAST, FIRST)" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all uppercase font-bold text-white" onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
 
             <div className="relative">
               <Mail className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="email" placeholder="EMAIL ADDRESS" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              <SmoothInput type="email" placeholder="EMAIL ADDRESS" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, email: e.target.value})} />
             </div>
 
             <div className="relative">
               <Phone className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="tel" placeholder="PHONE NUMBER" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              <SmoothInput type="tel" placeholder="PHONE NUMBER" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
             </div>
 
             <div className="relative">
               <Lock className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="password" placeholder="PASSWORD" required minLength={8} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              <SmoothInput type="password" placeholder="PASSWORD" required minLength={8} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, password: e.target.value})} />
               <p className="text-slate-600 text-[9px] font-bold uppercase tracking-widest mt-1.5 ml-1">8+ Characters, 1 Letter, 1 Number</p>
             </div>
 
             <div className="relative">
               <KeyRound className="absolute left-3 top-3 text-slate-600" size={18} />
-              <input type="password" placeholder="CONFIRM PASSWORD" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
+              <SmoothInput type="password" placeholder="CONFIRM PASSWORD" required className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none transition-all font-bold text-white" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
             </div>
 
             <div className="relative">
@@ -339,7 +340,7 @@ const SignUp = () => {
 
             <div className="relative col-span-full">
               <ShieldCheck className="absolute left-3 top-3 text-yellow-500" size={18} />
-              <input type="text" placeholder="BATTALION SECRET CODE" required className="w-full bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none text-yellow-500 font-black" onChange={(e) => setFormData({...formData, secretCode: e.target.value})} />
+              <SmoothInput type="text" placeholder="BATTALION SECRET CODE" required className="w-full bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 pl-10 text-sm focus:border-yellow-500 outline-none text-yellow-500 font-black" onChange={(e) => setFormData({...formData, secretCode: e.target.value})} />
             </div>
           </div>
 

@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone } from 'lucide-react';
+import SmoothInput from '../components/SmoothInput';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { usePageMeta } from '../hooks/usePageMeta';
 
@@ -203,7 +204,7 @@ const AdminLogin = () => {
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-200 group-focus-within:text-yellow-500 transition-colors" size={18} />
-                  <input
+                  <SmoothInput
                     type="email"
                     placeholder="CADET EMAIL"
                     className="w-full bg-blue-50/50 dark:bg-black/40 border border-blue-100 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 dark:focus:border-yellow-500 outline-none transition-all placeholder:text-blue-200 dark:placeholder:text-slate-700 font-bold text-slate-900 dark:text-white"
@@ -215,7 +216,7 @@ const AdminLogin = () => {
 
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-200 group-focus-within:text-yellow-500 transition-colors" size={18} />
-                  <input
+                  <SmoothInput
                     type="password"
                     placeholder="PASSWORD"
                     className="w-full bg-blue-50/50 dark:bg-black/40 border border-blue-100 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-yellow-500 dark:focus:border-yellow-500 outline-none transition-all placeholder:text-blue-200 dark:placeholder:text-slate-700 font-bold text-slate-900 dark:text-white"
@@ -263,7 +264,7 @@ const AdminLogin = () => {
               </div>
 
               <div className="relative">
-                <input
+                <SmoothInput
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"

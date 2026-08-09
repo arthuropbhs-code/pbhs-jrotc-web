@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   Clock,
 } from 'lucide-react';
+import AnimatedNumber from '../components/AnimatedNumber';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 
 const AdminDashboard = () => {
@@ -177,11 +178,11 @@ const AdminDashboard = () => {
               <div className="space-y-3">
                 <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
                   <p className="text-[10px] font-black uppercase leading-none">Pending Uniform Requests</p>
-                  <p className="text-2xl font-black tracking-tighter leading-none">{requestCount}</p>
+                  <AnimatedNumber value={requestCount} className="text-2xl font-black tracking-tighter leading-none" />
                 </div>
                 <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
                   <p className="text-[10px] font-black uppercase leading-none">Upcoming Events</p>
-                  <p className="text-2xl font-black tracking-tighter leading-none">{events.length}</p>
+                  <AnimatedNumber value={events.length} className="text-2xl font-black tracking-tighter leading-none" />
                 </div>
               </div>
 
