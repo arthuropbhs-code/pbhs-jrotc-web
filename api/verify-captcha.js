@@ -28,7 +28,11 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.RECAPTCHA_API_KEY;
     if (!apiKey) {
-      throw new Error('RECAPTCHA_API_KEY is not set in this environment.');
+      // Key not configured — log loudly but fail open rather than 500ing.
+      // The signup form is already gated by a secret code + admin approval;
+      // a missing key shouldn't lock everyone out of account creation.
+      console.error('RECAPTCHA_API_KEY env var is not set. Skipping score check.');
+      return res.status(200).json({ success: true, score: null, skipped: true });
     }
 
     const SITE_KEY = '6Ld3tXwtAAAAAP7tu9bJa3fpwpju6LLDe9T2ujWO';
