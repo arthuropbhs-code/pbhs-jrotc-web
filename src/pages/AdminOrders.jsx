@@ -6,7 +6,6 @@ import {
   serverTimestamp,
   query,
   orderBy,
-  where,
   onSnapshot,
   deleteDoc,
   doc
@@ -40,41 +39,49 @@ const AdminOrders = () => {
   const [orderText, setOrderText] = useState('');
   const [selectedTargets, setSelectedTargets] = useState([]);
 
-  const targetOptions = [
-    `${userData?.company} Company`,
+  const userLevel = ROLE_HIERARCHY[role] || 0;
+  const isInstructor = userLevel >= 95;
+
+  // Target audience a user can address, gated by their rank.
+  // Instructors: any audience. Battalion Command + Staff (70–90): staff roles only.
+  // Company leadership is blocked at the route level — no entry here.
+  const TARGET_OPTIONS = isInstructor ? [
+    "All Battalion",
+    "All Staff",
+    "All Company Leadership",
+    "Battalion Commander",
+    "Battalion XO",
+    "Battalion CSM",
+    "Sergeant Major",
+    "S1 - Adjutant",
+    "S2 - Intelligence",
+    "S3 - Operations",
+    "S4 - Logistics",
+    "S5 - Public Affairs",
+    "S6 - Technology",
+    "S7 - Special Projects",
+    "Company Commanders",
+    "Company XOs",
+    "First Sergeants",
+  ] : [
+    "All Staff",
+    "S1 - Adjutant",
+    "S2 - Intelligence",
+    "S3 - Operations",
+    "S4 - Logistics",
+    "S5 - Public Affairs",
+    "S6 - Technology",
+    "S7 - Special Projects",
   ];
 
-  if ((ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL) {
-    if (!targetOptions.includes("All Battalion")) {
-      targetOptions.unshift("All Battalion", "Staff", "Top 4");
-    }
-  }
-
   useEffect(() => {
-    if (!userData?.company) return;
-    const userLevel = ROLE_HIERARCHY[role] || 0;
-
-    // Staff+ see the full audit trail. Below that, scope to orders the user
-    // was actually targeted by — same logic as MyDuties.jsx.
-    const q = userLevel < STAFF_LEVEL
-      ? query(
-          collection(db, "orders"),
-          where("targets", "array-contains-any", [
-            "All Battalion",
-            userData.company,
-            `${userData.company} Company`,
-            userData.position,
-            "All"
-          ].filter(Boolean)),
-          orderBy("timestamp", "desc")
-        )
-      : query(collection(db, "orders"), orderBy("timestamp", "desc"));
-
+    // Route is gated at STAFF_LEVEL so everyone here sees the full audit trail.
+    const q = query(collection(db, "orders"), orderBy("timestamp", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       setRecentItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
     });
     return () => unsub();
-  }, [role, userData?.company, userData?.position]);
+  }, []);
 
   const toggleTarget = (target) => {
     setSelectedTargets(prev => 
@@ -189,7 +196,7 @@ const AdminOrders = () => {
                 <Target size={14} className="text-yellow-500" /> Target Audience
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                {targetOptions.map((t) => (
+                {TARGET_OPTIONS.map((t) => (
                   <button key={t} type="button" onClick={() => toggleTarget(t)}
                     className={`px-3 py-3.5 rounded-2xl text-[9px] font-bold uppercase transition-all border-2 flex items-center justify-between ${
                       selectedTargets.includes(t)

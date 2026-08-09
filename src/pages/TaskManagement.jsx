@@ -4,18 +4,52 @@ import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, 
 import { useAuth } from '../hooks/useAuth';
 import { Send, ClipboardList, ArrowLeft, Clock, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TaskManagement = () => {
   const { userData, role } = useAuth();
   const [task, setTask] = useState('');
-  const [targetPos, setTargetPos] = useState('Company XO');
+  const [targetPos, setTargetPos] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [recentTasks, setRecentTasks] = useState([]);
 
-  const canDelete = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
+  const userLevel = ROLE_HIERARCHY[role] || 0;
+  const canDelete = userLevel >= ADMIN_LEVEL;
+  const isInstructor = userLevel >= 95;
+
+  // What the assigner can target, gated by their own rank.
+  // Instructors: any audience. Battalion Command + Staff (70–90): staff roles only.
+  // Company leadership is blocked at the route level — no entry here.
+  const TARGET_OPTIONS = isInstructor ? [
+    { value: 'All Battalion',          label: 'All Battalion' },
+    { value: 'All Staff',              label: 'All Staff' },
+    { value: 'All Company Leadership', label: 'All Company Leadership' },
+    { value: 'Battalion Commander',    label: 'Battalion Commander' },
+    { value: 'Battalion XO',           label: 'Battalion XO' },
+    { value: 'Battalion CSM',          label: 'Battalion CSM' },
+    { value: 'Sergeant Major',         label: 'Sergeant Major' },
+    { value: 'S1 - Adjutant',          label: 'S1 - Adjutant' },
+    { value: 'S2 - Intelligence',      label: 'S2 - Intelligence' },
+    { value: 'S3 - Operations',        label: 'S3 - Operations' },
+    { value: 'S4 - Logistics',         label: 'S4 - Logistics' },
+    { value: 'S5 - Public Affairs',    label: 'S5 - Public Affairs' },
+    { value: 'S6 - Technology',        label: 'S6 - Technology' },
+    { value: 'S7 - Special Projects',  label: 'S7 - Special Projects' },
+    { value: 'Company Commanders',     label: 'Company Commanders' },
+    { value: 'Company XOs',            label: 'Company XOs' },
+    { value: 'First Sergeants',        label: 'First Sergeants' },
+  ] : [
+    { value: 'All Staff',              label: 'All Staff' },
+    { value: 'S1 - Adjutant',          label: 'S1 - Adjutant' },
+    { value: 'S2 - Intelligence',      label: 'S2 - Intelligence' },
+    { value: 'S3 - Operations',        label: 'S3 - Operations' },
+    { value: 'S4 - Logistics',         label: 'S4 - Logistics' },
+    { value: 'S5 - Public Affairs',    label: 'S5 - Public Affairs' },
+    { value: 'S6 - Technology',        label: 'S6 - Technology' },
+    { value: 'S7 - Special Projects',  label: 'S7 - Special Projects' },
+  ];
   const [deleteConfirm, setDeleteConfirm] = useState(null); // task id pending deletion
   const [toast, setToast] = useState(null); // { type: 'success'|'error', msg }
 
@@ -23,6 +57,14 @@ const TaskManagement = () => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 4000);
   };
+
+  // Set a valid initial target once role loads (useAuth is async).
+  useEffect(() => {
+    if (TARGET_OPTIONS.length > 0) {
+      setTargetPos(prev => prev || TARGET_OPTIONS[0].value);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   useEffect(() => {
     const q = query(collection(db, "tasks"), orderBy("timestamp", "desc"), limit(10));
@@ -88,18 +130,14 @@ const TaskManagement = () => {
           <form onSubmit={handleAssign} className="space-y-6">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Target Personnel</label>
-              <select 
-                value={targetPos} 
+              <select
+                value={targetPos}
                 onChange={(e) => setTargetPos(e.target.value)}
                 className="w-full bg-slate-950 border border-white/10 p-4 rounded-xl text-white focus:border-yellow-500 outline-none transition-all font-bold text-sm"
               >
-                <option value="Company XO">Company XOs</option>
-                <option value="S1 Assistant">S1 Assistants</option>
-                <option value="S2 Assistant">S2 Assistants</option>
-                <option value="S3 Assistant">S3 Assistants</option>
-                <option value="S4 Assistant">S4 Assistants</option>
-                <option value="S5 Assistant">S5 Assistants</option>
-                <option value="Company Commander">Company Commanders</option>
+                {TARGET_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
 
