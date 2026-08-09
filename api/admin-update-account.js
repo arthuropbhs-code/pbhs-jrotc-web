@@ -208,9 +208,7 @@ async function resendSend(toEmail, subject, html) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      // TODO: switch to 'PBHS JROTC <noreply@pbhsjrotc.com>' once pbhsjrotc.com
-      // is verified in the Resend dashboard (Domains → Add → add DKIM/SPF records).
-      from: 'PBHS JROTC <onboarding@resend.dev>',
+      from: 'PBHS JROTC <noreply@pbhsjrotc.com>',
       to: [toEmail],
       subject,
       html,
