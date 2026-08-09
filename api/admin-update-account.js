@@ -532,7 +532,13 @@ export default async function handler(req, res) {
         }
       );
       const oobData = await oobRes.json();
-      if (!oobRes.ok) throw new Error(oobData.error?.message || 'Failed to generate a verification link');
+      if (!oobRes.ok) {
+        const code = oobData.error?.message || '';
+        if (code === 'TOO_MANY_ATTEMPTS_TRY_LATER') {
+          return res.status(429).json({ error: 'TOO_MANY_ATTEMPTS_TRY_LATER' });
+        }
+        throw new Error(code || 'Failed to generate a verification link');
+      }
 
       await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
         to_email: callerEmail,

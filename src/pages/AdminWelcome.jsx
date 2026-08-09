@@ -53,7 +53,7 @@ const AdminWelcome = () => {
 
   // 'loading' | 'email' | 'phone' | 'completing'
   const [step, setStep] = useState('loading');
-  const [emailStatus, setEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'checking' | 'not-yet' | 'resent' | 'send-error'
+  const [emailStatus, setEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'checking' | 'not-yet' | 'resent' | 'send-error' | 'rate-limited'
   const [phoneDisplay, setPhoneDisplay] = useState('');
   const [mfaPhone, setMfaPhone] = useState('');
   const [mfaStep, setMfaStep] = useState('entering-phone'); // 'entering-phone' | 'entering-code'
@@ -93,7 +93,7 @@ const AdminWelcome = () => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           console.error('send-verify-email failed:', res.status, err);
-          setEmailStatus('send-error');
+          setEmailStatus(res.status === 429 ? 'rate-limited' : 'send-error');
         } else {
           setEmailStatus('sent');
         }
@@ -141,7 +141,7 @@ const AdminWelcome = () => {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('resend failed:', res.status, err);
-        setEmailStatus('send-error');
+        setEmailStatus(res.status === 429 ? 'rate-limited' : 'send-error');
       } else {
         setEmailStatus('resent');
         setTimeout(() => setEmailStatus('sent'), 3000);
@@ -286,6 +286,11 @@ const AdminWelcome = () => {
             {emailStatus === 'send-error' && (
               <p className="text-[10px] font-bold text-red-400 text-center">
                 Failed to send verification email. Try the resend button below.
+              </p>
+            )}
+            {emailStatus === 'rate-limited' && (
+              <p className="text-[10px] font-bold text-yellow-500 text-center">
+                Too many attempts — wait a few minutes, then use the resend button.
               </p>
             )}
 
