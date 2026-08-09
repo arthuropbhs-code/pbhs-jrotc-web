@@ -54,6 +54,7 @@ const WinningColors = lazy(() => import('./pages/WinningColors'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const HowToJoin = lazy(() => import('./pages/HowToJoin'));
+const AdminWelcome = lazy(() => import('./pages/AdminWelcome'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -62,7 +63,7 @@ const RouteFallback = () => (
 );
 
 const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
-  const { user, role, loading } = useAuth();
+  const { user, role, userData, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return (
@@ -75,6 +76,14 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
 
+  // Onboarding gate: newly approved accounts must complete email verification
+  // and 2FA setup before accessing any other route. Only triggers on explicit
+  // false (new accounts set this on approval) — absent field = existing account,
+  // treated as complete so no disruption to anyone already using the portal.
+  if (userData?.onboardingComplete === false && location.pathname !== '/admin/welcome') {
+    return <Navigate to="/admin/welcome" replace />;
+  }
+
   // allowedRoles isolates specific roles (e.g. S5/S6) that a level threshold
   // can't express on its own, since they're tied with every other S-role at
   // STAFF_LEVEL. Top command can always override, same as everywhere else.
@@ -82,11 +91,12 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
     return <Navigate to="/admin/dashboard" />;
   }
 
-  // MFA gate: battalion staff (level 70+) must have 2FA enrolled before
-  // accessing any protected page. Skip /admin/profile itself so they can
-  // actually enroll without hitting an infinite redirect loop.
+  // Legacy MFA gate: applies to staff-level accounts that existed before the
+  // onboarding wizard was introduced (no onboardingComplete field). New accounts
+  // handle 2FA through the welcome wizard above and won't hit this.
   if (
     userLevel >= STAFF_LEVEL &&
+    userData?.onboardingComplete !== false &&
     location.pathname !== '/admin/profile' &&
     multiFactor(user).enrolledFactors.length === 0
   ) {
@@ -138,6 +148,8 @@ const AppContent = () => {
           <Route path="/commander/:id" element={<CommanderInfo />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/signup" element={<SignUp />} />
+          {/* Welcome/onboarding wizard — no sidebar, accessible to any signed-in user */}
+          <Route path="/admin/welcome" element={<ProtectedRoute><AdminWelcome /></ProtectedRoute>} />
           <Route path="/about" element={<AboutPage />} />
           {/* Safety-net redirect: Home.jsx hero used "/About" (capital A) which
               React Router v6 treats as a distinct path — this catches any

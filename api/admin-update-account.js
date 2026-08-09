@@ -485,19 +485,30 @@ export default async function handler(req, res) {
       const targetEmail = await getUserField(accessToken, projectId, targetUid, 'email');
       if (!targetEmail) throw new Error('Could not resolve that account\'s email address');
 
-      // Mark the email as verified at approval time. Firebase Auth requires
-      // emailVerified:true before phone MFA enrollment, and these accounts
-      // are already staff-vetted, so the verification is a formality.
-      await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ localId: targetUid, emailVerified: true }),
-      });
+      // Mark the account as needing onboarding — the welcome wizard (email
+      // verify + 2FA setup) runs the first time they sign in after approval.
+      // onboardingComplete: false triggers the ProtectedRoute gate; it flips
+      // to true when the wizard completes. We no longer pre-mark emailVerified
+      // here — the wizard sends a real verification link so they confirm it.
+      await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}?updateMask.fieldPaths=onboardingComplete`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: { onboardingComplete: { booleanValue: false } } }),
+        }
+      );
 
       await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
         to_email: targetEmail,
         heading: 'Welcome to the Battalion',
-        message: `<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">Your Command Portal account has been approved and you're ready to go. Sign in to see your duties, uniform status, and battalion announcements.</p>`,
+        message: `
+          <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+            Your Command Portal account has been approved and your rank and position have been assigned. You're almost ready to go.
+          </p>
+          <p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">
+            Sign in and you'll be walked through a quick two-step setup — verifying your email and securing your account with two-factor authentication. It only takes a minute.
+          </p>`,
         banner: '',
         cta: CTA_BUTTON,
         footnote: `Questions about your rank or position? Contact your battalion's S1.`,
