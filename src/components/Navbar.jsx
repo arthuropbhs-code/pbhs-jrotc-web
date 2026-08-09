@@ -74,18 +74,14 @@ const Navbar = () => {
         <div className="flex items-center gap-10">
           {!isActive('/') ? (
             <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 group">
-              <div className="bg-white rounded-lg p-0.5 group-hover:scale-110 transition-transform shadow-sm dark:shadow-yellow-500/10">
-                <img src="/battalion-logo.png" alt="PBHS JROTC" className="w-7 h-7 object-contain" />
-              </div>
+              <img src="/battalion-logo.png" alt="PBHS JROTC" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform" />
               <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white group-hover:text-yellow-500 transition">
                 Home
               </span>
             </Link>
           ) : (
             <div className="flex items-center gap-3 opacity-40 cursor-default">
-              <div className="bg-white rounded-lg p-0.5 shadow-sm">
-                <img src="/battalion-logo.png" alt="PBHS JROTC" className="w-7 h-7 object-contain" />
-              </div>
+              <img src="/battalion-logo.png" alt="PBHS JROTC" className="w-10 h-10 object-contain" />
               <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-900 dark:text-white">Home</span>
             </div>
           )}

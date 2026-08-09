@@ -81,7 +81,7 @@ const Teams = () => {
         <header className="mb-12">
           <h2 className="text-xs font-black text-yellow-500 tracking-[0.4em] uppercase mb-4"><ScrambleText text="Extracurricular Activites" trigger="mount" speed={20} /></h2>
           <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter font-military">
-            <ScrambleText text="Special " trigger="mount" /><span className="text-yellow-500"><ScrambleText text="Teams" trigger="mount" /></span>
+            <ScrambleText text="Teams" trigger="mount" />
           </h1>
         </header>
         </Reveal>
