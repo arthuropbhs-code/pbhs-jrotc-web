@@ -53,7 +53,7 @@ const AdminWelcome = () => {
 
   // 'loading' | 'email' | 'phone' | 'completing'
   const [step, setStep] = useState('loading');
-  const [emailStatus, setEmailStatus] = useState(null); // null | 'checking' | 'not-yet' | 'resent'
+  const [emailStatus, setEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'checking' | 'not-yet' | 'resent' | 'send-error'
   const [phoneDisplay, setPhoneDisplay] = useState('');
   const [mfaPhone, setMfaPhone] = useState('');
   const [mfaStep, setMfaStep] = useState('entering-phone'); // 'entering-phone' | 'entering-code'
@@ -82,13 +82,26 @@ const AdminWelcome = () => {
   useEffect(() => {
     if (step !== 'email' || emailSentRef.current || !user) return;
     emailSentRef.current = true;
-    user.getIdToken().then((idToken) =>
-      fetch('/api/admin-update-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ type: 'send-verify-email', targetUid: user.uid }),
-      }).catch(console.error)
-    );
+    setEmailStatus('sending');
+    user.getIdToken().then(async (idToken) => {
+      try {
+        const res = await fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ type: 'send-verify-email', targetUid: user.uid }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error('send-verify-email failed:', res.status, err);
+          setEmailStatus('send-error');
+        } else {
+          setEmailStatus('sent');
+        }
+      } catch (err) {
+        console.error('send-verify-email network error:', err);
+        setEmailStatus('send-error');
+      }
+    });
   }, [step, user]);
 
   // ── Finish onboarding ────────────────────────
@@ -117,16 +130,26 @@ const AdminWelcome = () => {
   };
 
   const handleResendEmail = async () => {
+    setEmailStatus('sending');
     try {
       const idToken = await user.getIdToken();
-      await fetch('/api/admin-update-account', {
+      const res = await fetch('/api/admin-update-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ type: 'send-verify-email', targetUid: user.uid }),
       });
-      setEmailStatus('resent');
-      setTimeout(() => setEmailStatus(null), 3000);
-    } catch { /* silent */ }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('resend failed:', res.status, err);
+        setEmailStatus('send-error');
+      } else {
+        setEmailStatus('resent');
+        setTimeout(() => setEmailStatus('sent'), 3000);
+      }
+    } catch (err) {
+      console.error('resend network error:', err);
+      setEmailStatus('send-error');
+    }
   };
 
   // ── Phone step handlers ──────────────────────
@@ -244,6 +267,14 @@ const AdminWelcome = () => {
               </div>
             </div>
 
+            {emailStatus === 'sending' && (
+              <p className="text-[10px] font-bold text-slate-400 text-center flex items-center justify-center gap-1.5">
+                <Loader2 className="animate-spin" size={10} /> Sending verification email…
+              </p>
+            )}
+            {emailStatus === 'sent' && (
+              <p className="text-[10px] font-bold text-green-400 text-center">✓ Verification email sent — check your inbox.</p>
+            )}
             {emailStatus === 'not-yet' && (
               <p className="text-[10px] font-bold text-red-400 text-center">
                 Email not verified yet — check your inbox and click the link first.
@@ -252,10 +283,15 @@ const AdminWelcome = () => {
             {emailStatus === 'resent' && (
               <p className="text-[10px] font-bold text-green-400 text-center">✓ Verification email resent.</p>
             )}
+            {emailStatus === 'send-error' && (
+              <p className="text-[10px] font-bold text-red-400 text-center">
+                Failed to send verification email. Try the resend button below.
+              </p>
+            )}
 
             <button
               onClick={handleCheckVerified}
-              disabled={emailStatus === 'checking'}
+              disabled={emailStatus === 'checking' || emailStatus === 'sending'}
               className="w-full py-3.5 rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-50 transition-all"
             >
               {emailStatus === 'checking'
@@ -265,7 +301,8 @@ const AdminWelcome = () => {
 
             <button
               onClick={handleResendEmail}
-              className="w-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-yellow-500 transition-colors flex items-center justify-center gap-1.5"
+              disabled={emailStatus === 'sending'}
+              className="w-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-yellow-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
             >
               <RefreshCw size={10} /> Resend verification email
             </button>
