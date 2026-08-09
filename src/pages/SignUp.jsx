@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SmoothInput from '../components/SmoothInput';
 import { useCompanies } from '../hooks/useCompanies';
 import { auth, db } from '../firebase';
@@ -42,6 +42,25 @@ const RECAPTCHA_SITE_KEY = '6Ld3tXwtAAAAAP7tu9bJa3fpwpju6LLDe9T2ujWO';
 
 const SignUp = () => {
   usePageMeta({ title: 'Create Cadet Account' });
+
+  // Load the reCAPTCHA Enterprise script lazily so it's only present while the
+  // signup page is mounted. Loading it globally in index.html conflicts with
+  // Firebase's own RecaptchaVerifier (used for MFA SMS on the login page) because
+  // both compete for window.grecaptcha. Lazy-loading here isolates the scopes.
+  useEffect(() => {
+    const SCRIPT_ID = 'recaptcha-enterprise-script';
+    if (document.getElementById(SCRIPT_ID)) return; // already loaded
+    const script = document.createElement('script');
+    script.id   = SCRIPT_ID;
+    script.src  = `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+    // Not cleaned up on unmount intentionally: removing a <script> tag doesn't
+    // un-execute it or clear window.grecaptcha — leave it for the session so that
+    // if the user navigates back to signup the script is already ready. The id
+    // guard above prevents duplicates.
+  }, []);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
