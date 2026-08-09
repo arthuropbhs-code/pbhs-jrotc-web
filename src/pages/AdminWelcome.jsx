@@ -54,6 +54,7 @@ const AdminWelcome = () => {
   // 'loading' | 'email' | 'phone' | 'completing'
   const [step, setStep] = useState('loading');
   const [emailStatus, setEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'checking' | 'not-yet' | 'resent' | 'send-error' | 'rate-limited'
+  const [resendCooldown, setResendCooldown] = useState(0); // seconds remaining before resend is allowed
   const [phoneDisplay, setPhoneDisplay] = useState('');
   const [mfaPhone, setMfaPhone] = useState('');
   const [mfaStep, setMfaStep] = useState('entering-phone'); // 'entering-phone' | 'entering-code'
@@ -78,11 +79,19 @@ const AdminWelcome = () => {
     setStep(alreadyVerified ? 'phone' : 'email');
   }, [user]);
 
+  // ── Resend cooldown ticker ───────────────────
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
   // ── Auto-send verification email once ────────
   useEffect(() => {
     if (step !== 'email' || emailSentRef.current || !user) return;
     emailSentRef.current = true;
     setEmailStatus('sending');
+    setResendCooldown(60); // 60s cooldown after auto-send
     user.getIdToken().then(async (idToken) => {
       try {
         const res = await fetch('/api/admin-update-account', {
@@ -169,6 +178,7 @@ const AdminWelcome = () => {
         setEmailStatus(res.status === 429 ? 'rate-limited' : 'send-error');
       } else {
         setEmailStatus('resent');
+        setResendCooldown(60);
         setTimeout(() => setEmailStatus('sent'), 3000);
       }
     } catch (err) {
@@ -339,10 +349,11 @@ const AdminWelcome = () => {
 
             <button
               onClick={handleResendEmail}
-              disabled={emailStatus === 'sending'}
+              disabled={emailStatus === 'sending' || resendCooldown > 0}
               className="w-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-yellow-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
             >
-              <RefreshCw size={10} /> Resend verification email
+              <RefreshCw size={10} />
+              {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : 'Resend verification email'}
             </button>
           </div>
         )}
