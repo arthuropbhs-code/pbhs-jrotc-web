@@ -247,6 +247,17 @@ const SECURITY_BANNER = `
 
 const NOTIFY_FOOTNOTE = `If you didn't request this change and don't recognize it, contact your battalion's S1 immediately — someone else may have access to your account.`;
 
+const EMAIL_VERIFY_BANNER = `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+    <tr>
+      <td style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 16px;">
+        <p style="margin:0; font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#2563eb;">
+          Action Required
+        </p>
+      </td>
+    </tr>
+  </table>`;
+
 const MFA_ENROLLED_BANNER = `
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
     <tr>
@@ -490,6 +501,51 @@ export default async function handler(req, res) {
         banner: '',
         cta: CTA_BUTTON,
         footnote: `Questions about your rank or position? Contact your battalion's S1.`,
+      });
+
+      return res.status(200).json({ success: true });
+    }
+
+    if (type === 'send-verify-email') {
+      // Self-service only — a cadet requesting verification of their own email
+      // address before enrolling phone MFA. We generate the OOB link server-side
+      // (returnOobLink:true) so Firebase never sends its own plain email; we
+      // then deliver a fully branded one via EmailJS. Identical approach to
+      // the reset-password handler — the link URL never reaches the client.
+      const oobRes = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:sendOobCode`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestType: 'VERIFY_EMAIL', email: callerEmail, returnOobLink: true }),
+        }
+      );
+      const oobData = await oobRes.json();
+      if (!oobRes.ok) throw new Error(oobData.error?.message || 'Failed to generate a verification link');
+
+      await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+        to_email: callerEmail,
+        heading: 'Verify Your Email Address',
+        banner: EMAIL_VERIFY_BANNER,
+        message: `
+          <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+            Before you can enable two-step verification on your Command Portal account, we need to confirm this email address belongs to you. Click the button below — the link expires in <strong style="color:#0f172a;">24 hours</strong>.
+          </p>
+          <p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#475569;">
+            Once verified, head back to your profile and click <strong style="color:#0f172a;">Enroll Now</strong> to finish setting up 2FA.
+          </p>`,
+        cta: `
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+            <tr>
+              <td style="border-radius:14px; background-color:#2563eb;">
+                <a href="${oobData.oobLink}" target="_blank"
+                   style="display:inline-block; padding:16px 32px; font-size:13px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#ffffff; text-decoration:none; border-radius:14px;">
+                  Verify Email Address
+                </a>
+              </td>
+            </tr>
+          </table>`,
+        footnote: `If you didn't request this, you can safely ignore this email — your account remains unchanged.`,
       });
 
       return res.status(200).json({ success: true });

@@ -10,7 +10,6 @@ import {
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
   RecaptchaVerifier,
-  sendEmailVerification,
 } from 'firebase/auth';
 import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
@@ -233,9 +232,15 @@ const MyProfile = () => {
     } catch (err) {
       if (err.code === 'auth/unverified-email') {
         // Firebase requires a verified email before enrolling phone MFA.
-        // Send the verification email automatically and tell the user.
+        // Generate the OOB link server-side and send via our branded EmailJS
+        // template — bypasses Firebase's own plain verification email.
         try {
-          await sendEmailVerification(user);
+          const idToken = await user.getIdToken();
+          await fetch('/api/admin-update-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ type: 'send-verify-email', targetUid: user.uid }),
+          });
           setMfaStatus('verify-email');
         } catch {
           setMfaStatus('Your email must be verified before enabling 2FA. Check your inbox for a verification email.');
@@ -602,7 +607,14 @@ const MyProfile = () => {
                 A verification link was sent to <span className="text-slate-900 dark:text-white">{user?.email}</span>. Click it, then come back and try enrolling again.
               </p>
               <button
-                onClick={async () => { await sendEmailVerification(user); }}
+                onClick={async () => {
+                  const idToken = await user.getIdToken();
+                  await fetch('/api/admin-update-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                    body: JSON.stringify({ type: 'send-verify-email', targetUid: user.uid }),
+                  });
+                }}
                 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 hover:underline"
               >
                 Resend email
