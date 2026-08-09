@@ -247,6 +247,17 @@ const SECURITY_BANNER = `
 
 const NOTIFY_FOOTNOTE = `If you didn't request this change and don't recognize it, contact your battalion's S1 immediately — someone else may have access to your account.`;
 
+const MFA_ENROLLED_BANNER = `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+    <tr>
+      <td style="background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 16px;">
+        <p style="margin:0; font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#16a34a;">
+          ✓ Account Secured
+        </p>
+      </td>
+    </tr>
+  </table>`;
+
 const sendEmailChangedNewAddress = (newEmail) =>
   emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
     to_email: newEmail,
@@ -278,7 +289,7 @@ export default async function handler(req, res) {
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!idToken) return res.status(401).json({ error: 'Missing auth token' });
 
-    const { type = 'update-email', targetUid, newEmail, suspend } = req.body || {};
+    const { type = 'update-email', targetUid, newEmail, suspend, maskedPhone = '' } = req.body || {};
     if (!targetUid) return res.status(400).json({ error: 'targetUid is required' });
     if (type === 'update-email' && !newEmail) {
       return res.status(400).json({ error: 'newEmail is required' });
@@ -481,6 +492,36 @@ export default async function handler(req, res) {
         footnote: `Questions about your rank or position? Contact your battalion's S1.`,
       });
 
+      return res.status(200).json({ success: true });
+    }
+
+    if (type === 'mfa-enrolled') {
+      // Self-service only — the signed-in cadet confirming their own 2FA enrollment.
+      // maskedPhone is Firebase's own partially-redacted display string (e.g. +*******0561);
+      // the real number never leaves Firebase, and we don't need it here.
+      try {
+        await emailjsSend(ACCOUNT_NOTIFICATION_TEMPLATE_ID, {
+          to_email: callerEmail,
+          heading: 'Two-Step Verification Enabled',
+          banner: MFA_ENROLLED_BANNER,
+          message: `
+            <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#475569;">
+              Two-step verification is now active on your Command Portal account. Every login now requires both your password <em>and</em> a one-time code sent to your phone — so even if your password is ever compromised, your account stays locked down.
+            </p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px; width:100%;">
+              <tr>
+                <td style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 16px;">
+                  <p style="margin:0 0 4px; font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#94a3b8;">Phone on file</p>
+                  <p style="margin:0; font-size:14px; font-weight:700; color:#0f172a;">${maskedPhone || 'Phone number on file'}</p>
+                </td>
+              </tr>
+            </table>`,
+          cta: CTA_BUTTON,
+          footnote: `If you didn't enable this yourself, contact your battalion's S1 immediately — your account may be compromised.`,
+        });
+      } catch (notifyErr) {
+        console.error('MFA-enrolled notification failed:', notifyErr);
+      }
       return res.status(200).json({ success: true });
     }
 

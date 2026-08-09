@@ -263,6 +263,20 @@ const MyProfile = () => {
       setMfaCode('');
       setMfaPhone('');
       setMfaStatus('success');
+
+      // Fire-and-forget confirmation email — don't block the UI on it.
+      user.getIdToken().then((idToken) =>
+        fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            type: 'mfa-enrolled',
+            targetUid: user.uid,
+            maskedPhone: enrolled[0]?.phoneNumber ?? '',
+          }),
+        }).catch((err) => console.error('MFA enrollment email failed:', err))
+      );
+
       setTimeout(() => {
         setMfaStatus(null);
         // If they were redirected here because 2FA is required, send them
