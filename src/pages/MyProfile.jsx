@@ -13,7 +13,7 @@ import {
 } from 'firebase/auth';
 import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff, BookOpen, Calendar } from 'lucide-react';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useThemeContext } from '../contexts/ThemeContext';
 import ScrambleText from '../components/ScrambleText';
@@ -47,6 +47,11 @@ const MyProfile = () => {
   const [uploadingPortrait, setUploadingPortrait] = useState(false);
   const [portraitError, setPortraitError] = useState(null);
 
+  // Dossier — bio and availability synced from Firestore userData
+  const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
+  const [dossierSaving, setDossierSaving] = useState(false);
+  const [dossierSaved, setDossierSaved] = useState(false);
+
   // Persisted across retries so we can .clear() before creating a new instance.
   const enrollRecaptchaRef = useRef(null);
 
@@ -75,6 +80,12 @@ const MyProfile = () => {
   }, [userData?.phone]);
 
   useEffect(() => {
+    if (userData) {
+      setDossier({ bio: userData.bio || '', practiceDays: userData.practiceDays || '' });
+    }
+  }, [userData?.bio, userData?.practiceDays]);
+
+  useEffect(() => {
     setLoginEmail(user?.email || '');
   }, [user?.email]);
 
@@ -90,6 +101,21 @@ const MyProfile = () => {
       setMfaFactor(null);
     }
   }, [user]);
+
+  const handleUpdateDossier = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    setDossierSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { ...dossier, updatedAt: new Date() });
+      setDossierSaved(true);
+      setTimeout(() => setDossierSaved(false), 3000);
+    } catch (err) {
+      console.error('Dossier update failed:', err);
+    } finally {
+      setDossierSaving(false);
+    }
+  };
 
   const handlePortraitUpload = async (e) => {
     const file = e.target.files[0];
@@ -397,6 +423,45 @@ const MyProfile = () => {
             Rank, role, and unit assignment are managed by battalion staff. Contact S1 to request a change.
           </p>
         </div>
+
+        {/* PERSONNEL DOSSIER */}
+        <form onSubmit={handleUpdateDossier} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl p-8 shadow-sm dark:shadow-none mb-6 space-y-6">
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Personnel Dossier</h2>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-widest">
+              <BookOpen size={12} /> Command Biography
+            </label>
+            <textarea
+              value={dossier.bio}
+              onChange={(e) => setDossier({ ...dossier, bio: e.target.value })}
+              rows={5}
+              placeholder="Document your leadership history, achievements, and goals..."
+              className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl py-3 px-4 text-sm font-medium resize-none focus:border-yellow-500 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+            />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-widest">
+              <Calendar size={12} /> Availability Window
+            </label>
+            <input
+              type="text"
+              value={dossier.practiceDays}
+              onChange={(e) => setDossier({ ...dossier, practiceDays: e.target.value })}
+              placeholder="e.g. Mon–Fri 1500–1630"
+              className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl py-3 px-4 text-sm font-bold focus:border-yellow-500 outline-none transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={dossierSaving}
+            className={`w-full py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
+              dossierSaved ? 'bg-green-500 text-white' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'
+            }`}
+          >
+            {dossierSaving ? <Loader2 className="animate-spin" size={14} /> : dossierSaved ? <CheckCircle size={14} /> : <Save size={14} />}
+            {dossierSaving ? 'Saving…' : dossierSaved ? 'Saved' : 'Save Dossier'}
+          </button>
+        </form>
 
         {/* SETTINGS */}
         <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl p-8 shadow-sm dark:shadow-none space-y-8">

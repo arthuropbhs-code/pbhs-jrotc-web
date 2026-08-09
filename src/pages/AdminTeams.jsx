@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import {
   Save, Trash2, Edit3, ShieldAlert,
   ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
-  UserCircle, BookOpen, Calendar, Settings2, Target, ListChecks, UploadCloud, ImageOff
+  Target, ListChecks, UploadCloud, ImageOff
 } from 'lucide-react';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
@@ -15,7 +15,6 @@ import ScrambleText from '../components/ScrambleText';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('teams'); 
   const [teams, setTeams] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -28,8 +27,6 @@ const AdminTeams = () => {
     requirements: '', disciplines: '', leadership: [], photo: ''
   });
 
-  const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
-  const [uploading, setUploading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [personnel, setPersonnel] = useState([]);
 
@@ -74,16 +71,6 @@ const AdminTeams = () => {
     }
   }, [authLoading, user, isAuthorized]);
 
-  // Sync Dossier - userData comes from useAuth's async Firestore listener,
-  // not available synchronously at mount, so a lazy useState initializer
-  // can't replace this. Populates the editable form once real data arrives.
-  useEffect(() => {
-    if (userData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDossier({ bio: userData.bio || '', practiceDays: userData.practiceDays || '' });
-    }
-  }, [userData]);
-
   const currentTeam = teams.find(t => t.id === editingId);
   const userInTeam = currentTeam?.leadership?.find(l => l.email?.toLowerCase().trim() === userEmail);
   const teamSpecificRole = userInTeam?.teamRole || 'Team Member';
@@ -93,19 +80,6 @@ const AdminTeams = () => {
     setShowStatus(type);
     setStatusMsg(msg);
     setTimeout(() => { setShowStatus(null); setStatusMsg(''); }, 4000);
-  };
-
-  const handleUpdateDossier = async (e) => {
-    e.preventDefault();
-    setUploading(true);
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        ...dossier,
-        updatedAt: new Date()
-      });
-      triggerStatus('success');
-    } catch { triggerStatus('error'); }
-    setUploading(false);
   };
 
   const handleSaveTeam = async (e) => {
@@ -180,7 +154,6 @@ const AdminTeams = () => {
       disciplines: Array.isArray(team.disciplines) ? team.disciplines.join(', ') : team.disciplines || '',
       leadership: team.leadership || []
     });
-    setActiveTab('teams');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -222,24 +195,9 @@ const AdminTeams = () => {
             </h1>
           </div>
           
-          <div className="flex bg-slate-200/50 dark:bg-white/5 p-1 rounded-2xl border border-slate-200 dark:border-white/5 backdrop-blur-sm">
-            {[
-              { id: 'teams', label: 'Unit Management', icon: Settings2 },
-              { id: 'dossier', label: 'Cadet Dossier', icon: UserCircle }
-            ].map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-white/5'}`}
-              >
-                <tab.icon size={14} /> {tab.label}
-              </button>
-            ))}
-          </div>
         </header>
 
-        {activeTab === 'teams' ? (
-          <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in slide-in-from-bottom-2">
+        <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in slide-in-from-bottom-2">
             <div className="lg:col-span-2 space-y-8">
               <form onSubmit={handleSaveTeam} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-8 md:p-10 rounded-[2.5rem] shadow-xl dark:shadow-none space-y-8">
                 <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-6">
@@ -362,35 +320,6 @@ const AdminTeams = () => {
               </div>
             </div>
           </div>
-        ) : (
-          /* DOSSIER VIEW */
-          <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <form onSubmit={handleUpdateDossier} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 p-10 rounded-[3rem] shadow-xl dark:shadow-none space-y-10 backdrop-blur-xl relative overflow-hidden">
-              <div className="flex items-center gap-8">
-                <div className="w-24 h-24 rounded-[2rem] bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                  <UserCircle className="text-yellow-600 dark:text-yellow-500" size={48} />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black uppercase italic text-slate-900 dark:text-white tracking-tighter mb-1">{userData?.displayName || 'Active Cadet'}</h3>
-                  <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">{role?.replace('_', ' ')}</p>
-                </div>
-              </div>
-              <div className="space-y-8">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-[0.2em]"><BookOpen size={14} /> Command Biography</label>
-                  <textarea value={dossier.bio} onChange={(e) => setDossier({...dossier, bio: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-white/5 p-6 rounded-3xl text-sm h-48 text-slate-900 dark:text-white focus:border-yellow-500/50 outline-none transition-all placeholder:text-slate-300" placeholder="Document your leadership history..." />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2 tracking-[0.2em]"><Calendar size={14} /> Availability Window</label>
-                  <input value={dossier.practiceDays} onChange={(e) => setDossier({...dossier, practiceDays: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-white/5 p-6 rounded-2xl text-sm text-slate-900 dark:text-white focus:border-yellow-500/50 outline-none" placeholder="e.g. Mon-Fri 1500-1630" />
-                </div>
-              </div>
-              <button type="submit" disabled={uploading} className="w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 hover:shadow-yellow-500/20 transition-all flex items-center justify-center gap-4 shadow-xl">
-                {uploading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20}/> Update Command Dossier</>}
-              </button>
-            </form>
-          </div>
-        )}
       </div>
 
       <Footer />
