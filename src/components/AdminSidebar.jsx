@@ -23,7 +23,7 @@ import {
   Megaphone,
   Lock,
   Star,
-  Home,
+  ArrowLeft,
   FileText,
   Tent,
   Building2,
@@ -112,7 +112,7 @@ const AdminSidebar = () => {
           to="/"
           className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-yellow-500 transition-all mb-2 border-b border-blue-100 dark:border-white/5 pb-4"
         >
-          <Home size={18} /> Back to Website
+          <ArrowLeft size={18} /> Back to Home
         </Link>
 
         {navLink('/admin/dashboard', <LayoutDashboard size={18} />, 'Dashboard')}

@@ -17,7 +17,7 @@ export const DEFAULT_VISIBILITY = {
   announcements:     true,
   teams:             true,
   leadership:        true,
-  photos:            false,
+  photos:            true,
   events:            true,
 };
 

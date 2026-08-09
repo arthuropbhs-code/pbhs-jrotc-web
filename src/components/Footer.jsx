@@ -14,7 +14,7 @@ const Footer = () => {
     ],
     battalion: [
       { name: "Leadership", path: "/leadership" },
-      { name: "Special Teams", path: "/teams" },
+      { name: "Teams", path: "/teams" },
       { name: "Announcements", path: "/announcements" },
     ],
   };

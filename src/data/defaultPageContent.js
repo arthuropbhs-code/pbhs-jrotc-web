@@ -214,6 +214,6 @@ export const DEFAULT_HOME = {
   quickAccess: [
     { title: "Cadet Info",    desc: "Regulations, Creed, and Knowledge.", link: "/cadet-info" },
     { title: "Leadership",    desc: "Battalion Staff & Command.",         link: "/leadership" },
-    { title: "Special Teams", desc: "Raiders, Drill, and Color Guard.",  link: "/teams" }
+    { title: "Teams", desc: "Raiders, Drill, and Color Guard.",  link: "/teams" }
   ]
 };

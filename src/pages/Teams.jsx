@@ -14,7 +14,7 @@ import Reveal from '../components/Reveal';
 
 const Teams = () => {
   usePageMeta({
-    title: 'Special Teams',
+    title: 'Teams',
     description: 'Extracurricular battalion teams - Drill, Raiders, Color Guard, and more. See schedules and joining requirements.',
     path: '/teams',
   });

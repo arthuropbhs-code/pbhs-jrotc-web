@@ -155,7 +155,7 @@ const Navbar = () => {
             )}
 
             {vis.leadership && <NavLink to="/leadership" currentPath={currentPath}>Leadership</NavLink>}
-            {vis.teams && <NavLink to="/teams" currentPath={currentPath}>Special Teams</NavLink>}
+            {vis.teams && <NavLink to="/teams" currentPath={currentPath}>Teams</NavLink>}
           </div>
         </div>
 
@@ -254,7 +254,7 @@ const Navbar = () => {
               )}
 
               {vis.leadership && <MobileNavLink to="/leadership" currentPath={currentPath} onNavigate={closeMenu}>Leadership</MobileNavLink>}
-              {vis.teams && <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Special Teams</MobileNavLink>}
+              {vis.teams && <MobileNavLink to="/teams" currentPath={currentPath} onNavigate={closeMenu}>Teams</MobileNavLink>}
 
               <div className="pt-4 mt-2 border-t border-white/5">
                 {user ? (

@@ -42,7 +42,16 @@ const Home = () => {
   // --- HOMEPAGE CONTENT (slides + quick access) ---
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "pageContent", "home"), (snap) => {
-      if (snap.exists()) setHomeContent({ ...DEFAULT_HOME, ...snap.data() });
+      if (snap.exists()) {
+        const data = snap.data();
+        // Normalize legacy "Special Teams" label saved before the rename
+        if (Array.isArray(data.quickAccess)) {
+          data.quickAccess = data.quickAccess.map(c =>
+            c.title === 'Special Teams' ? { ...c, title: 'Teams' } : c
+          );
+        }
+        setHomeContent({ ...DEFAULT_HOME, ...data });
+      }
     });
     return () => unsub();
   }, []);
