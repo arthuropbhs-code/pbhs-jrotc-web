@@ -58,14 +58,48 @@ const SmoothInput = React.forwardRef(function SmoothInput(
     span.style.wordSpacing   = s.wordSpacing;
   };
 
-  const measurePrefixWidth = (text) => {
-    const input = inputRef.current;
-    const span  = measureRef.current;
-    if (!input || !span) return null;
+  // Measure the pixel width of an arbitrary string using the hidden span,
+  // after syncing its font/spacing properties to match the input.
+  const measureText = (text) => {
+    const span = measureRef.current;
+    if (!span) return 0;
     syncMeasureSpan();
     span.textContent = text;
-    const pl = parseFloat(window.getComputedStyle(input).paddingLeft) || 0;
-    return text.length > 0 ? span.offsetWidth + pl : pl - 1;
+    return span.offsetWidth;
+  };
+
+  // Compute the absolute X position of the cursor (in input-content coordinates,
+  // i.e. not scrolled) for the text that precedes the cursor. Handles left-,
+  // center-, and right-aligned inputs so the caret floats with the text.
+  const computeAbsX = (target, prefix) => {
+    const s         = window.getComputedStyle(target);
+    const pl        = parseFloat(s.paddingLeft)  || 0;
+    const pr        = parseFloat(s.paddingRight) || 0;
+    const textAlign = s.textAlign;
+    const prefixPx  = prefix.length > 0 ? measureText(prefix) : 0;
+
+    if (textAlign === 'center') {
+      // Text is centered in the content area (between the paddings). We need
+      // the full-value width to find where the text block starts, then offset
+      // by how much of it sits before the cursor.
+      const isPass   = target.type === 'password';
+      const fullText = isPass ? PASSWORD_CHAR.repeat(target.value.length) : target.value;
+      const totalPx  = measureText(fullText);
+      const contentW = target.clientWidth - pl - pr;
+      const leftEdge = pl + Math.max(0, (contentW - totalPx) / 2);
+      return prefix.length > 0 ? leftEdge + prefixPx : leftEdge - 1;
+    }
+
+    if (textAlign === 'right' || textAlign === 'end') {
+      const isPass   = target.type === 'password';
+      const fullText = isPass ? PASSWORD_CHAR.repeat(target.value.length) : target.value;
+      const totalPx  = measureText(fullText);
+      const leftEdge = target.clientWidth - pr - totalPx;
+      return prefix.length > 0 ? leftEdge + prefixPx : leftEdge - 1;
+    }
+
+    // Default: left-aligned.
+    return prefix.length > 0 ? prefixPx + pl : pl - 1;
   };
 
   const scrollCaretIntoView = (target, absX) => {
@@ -89,8 +123,7 @@ const SmoothInput = React.forwardRef(function SmoothInput(
     const idx = ss === se ? ss : (target.selectionDirection === 'backward' ? ss : se);
     const isPass = target.type === 'password';
     const prefix = isPass ? PASSWORD_CHAR.repeat(idx) : target.value.slice(0, idx);
-    const absX   = measurePrefixWidth(prefix);
-    if (absX === null) return;
+    const absX   = computeAbsX(target, prefix);
     scrollCaretIntoView(target, absX);
     const s   = window.getComputedStyle(target);
     const pl  = parseFloat(s.paddingLeft)  || 0;
