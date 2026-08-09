@@ -73,6 +73,42 @@ const AdminLogin = () => {
     }
   };
 
+  // Send the SMS challenge only after mfaResolver is set AND React has committed
+  // the new DOM — that's when #login-recaptcha-container actually exists.
+  useEffect(() => {
+    if (!mfaResolver) return;
+    let cancelled = false;
+
+    const sendChallenge = async () => {
+      setMfaSending(true);
+      try {
+        if (recaptchaVerifierRef.current) {
+          recaptchaVerifierRef.current.clear();
+          recaptchaVerifierRef.current = null;
+        }
+        const recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha-container', { size: 'invisible' });
+        recaptchaVerifierRef.current = recaptchaVerifier;
+        const phoneAuthProvider = new PhoneAuthProvider(auth);
+        const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+          { multiFactorHint: mfaResolver.hints[0], session: mfaResolver.session },
+          recaptchaVerifier
+        );
+        if (!cancelled) setMfaVerificationId(verificationId);
+      } catch (mfaErr) {
+        console.error('MFA send error:', mfaErr);
+        if (!cancelled) {
+          setError('Failed to send verification code. Try again.');
+          setMfaResolver(null);
+        }
+      } finally {
+        if (!cancelled) setMfaSending(false);
+      }
+    };
+
+    sendChallenge();
+    return () => { cancelled = true; };
+  }, [mfaResolver]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -85,32 +121,11 @@ const AdminLogin = () => {
       navigate('/admin/dashboard');
     } catch (err) {
       if (err.code === 'auth/multi-factor-auth-required') {
-        // Account has 2FA enrolled — trigger the SMS challenge.
+        // Account has 2FA enrolled. Store the resolver and let the useEffect
+        // below send the SMS challenge — that guarantees #login-recaptcha-container
+        // is in the DOM before RecaptchaVerifier tries to mount on it.
         const resolver = getMultiFactorResolver(auth, err);
         setMfaResolver(resolver);
-        setMfaSending(true);
-        try {
-          // Clear any previous verifier before creating a new one — Firebase
-          // errors if a second instance targets the same DOM container node.
-          if (recaptchaVerifierRef.current) {
-            recaptchaVerifierRef.current.clear();
-            recaptchaVerifierRef.current = null;
-          }
-          const recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha-container', { size: 'invisible' });
-          recaptchaVerifierRef.current = recaptchaVerifier;
-          const phoneAuthProvider = new PhoneAuthProvider(auth);
-          const verificationId = await phoneAuthProvider.verifyPhoneNumber(
-            { multiFactorHint: resolver.hints[0], session: resolver.session },
-            recaptchaVerifier
-          );
-          setMfaVerificationId(verificationId);
-        } catch (mfaErr) {
-          console.error('MFA send error:', mfaErr);
-          setError('Failed to send verification code. Try again.');
-          setMfaResolver(null);
-        } finally {
-          setMfaSending(false);
-        }
         setLoading(false);
         return;
       }
