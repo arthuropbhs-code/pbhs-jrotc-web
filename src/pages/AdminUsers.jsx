@@ -11,7 +11,7 @@ import {
   Loader2, UserPlus, User, X, Edit3, KeyRound, Ban, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, JROTC_POSITIONS } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import Footer from '../components/Footer';
 import { RosterRowSkeleton } from '../components/Skeleton';
@@ -79,7 +79,7 @@ const AdminUsers = () => {
   const LET_LEVELS = ["LET 1", "LET 2", "LET 3", "LET 4"];
   const PLATOONS = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
-  const JROTC_POSITIONS = ["Squad Member", "Squad Leader", "Platoon Sergeant", "Platoon Leader", "First Sergeant", "Company XO", "Company Commander", "Battalion Staff (S-1)", "Battalion Staff (S-2)", "Battalion Staff (S-3)", "Battalion Staff (S-4)", "Battalion Staff (S-5)", "Battalion Staff (S-6)", "Battalion XO", "Battalion CSM", "Battalion Commander", "Team Lead"];
+  // JROTC_POSITIONS imported from constants.js — do not duplicate here.
 
   const initialFormState = {
     fullName: '', email: '', company: user?.company || COMPANIES[0] || 'Zulu',

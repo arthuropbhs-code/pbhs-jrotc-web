@@ -87,6 +87,39 @@ export const STAFF_LEVEL = 70;
 export const COMMAND_LEVEL = 45;
 
 export const EVENT_TYPES = [
-  'Inspection', 'Service', 'Drill', 'PT', 'Meeting', 
+  'Inspection', 'Service', 'Drill', 'PT', 'Meeting',
   'Ceremony', 'Raiders', 'JLAB', 'Drones', 'Gameday', 'Private Practice'
+];
+
+// Human-readable position labels for the signup and admin-personnel forms.
+// Listed low → high so the dropdown reads naturally. Import this in both
+// SignUp.jsx and AdminUsers.jsx — do NOT maintain a separate copy in each file.
+export const JROTC_POSITIONS = [
+  'Squad Member',
+  'Squad Leader Assistant',
+  'Squad Leader',
+  'Platoon Sergeant',
+  'Platoon Leader',
+  'Company S1 Assistant',
+  'Company S2 Assistant',
+  'Company S3 Assistant',
+  'Company S4 Assistant',
+  'Company S5 Assistant',
+  'Company S6 Assistant',
+  'Company S7 Assistant',
+  'First Sergeant',
+  'Company XO',
+  'Company Commander',
+  'Battalion Staff (S-1)',
+  'Battalion Staff (S-2)',
+  'Battalion Staff (S-3)',
+  'Battalion Staff (S-4)',
+  'Battalion Staff (S-5)',
+  'Battalion Staff (S-6)',
+  'Battalion Staff (S-7)',
+  'Sergeant Major',
+  'Battalion XO',
+  'Battalion CSM',
+  'Battalion Commander',
+  'Team Lead',
 ];
