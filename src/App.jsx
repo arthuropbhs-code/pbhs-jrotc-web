@@ -55,6 +55,8 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const HowToJoin = lazy(() => import('./pages/HowToJoin'));
 const AdminWelcome = lazy(() => import('./pages/AdminWelcome'));
+const Newsletters = lazy(() => import('./pages/Newsletters'));
+const AdminNewsletters = lazy(() => import('./pages/AdminNewsletters'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -157,6 +159,7 @@ const AppContent = () => {
           <Route path="/About" element={<Navigate to="/about" replace />} />
           <Route path="/events" element={<CalendarPage />} />
           <Route path="/documents" element={<Documents />} />
+          <Route path="/newsletter" element={<Newsletters />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
@@ -248,6 +251,15 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
                   <AdminPhotos />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/newsletters"
+              element={
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                  <AdminNewsletters />
                 </ProtectedRoute>
               }
             />

@@ -15,6 +15,7 @@ export const DEFAULT_VISIBILITY = {
   'winning-colors':  true,
   documents:         true,
   announcements:     true,
+  newsletter:        true,
   teams:             true,
   leadership:        true,
   photos:            true,

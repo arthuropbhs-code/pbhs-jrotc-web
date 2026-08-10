@@ -63,6 +63,7 @@ const AdminDashboard = () => {
   const staffOnboardingItems = [
     { id: 'personnel', label: 'Explore Manage Personnel', description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users', linkText: 'Open' },
     { id: 'broadcast', label: 'Send a Global Broadcast', description: 'See how battalion-wide announcements work.', link: '/admin/announcements', linkText: 'Open' },
+    { id: 'newsletter', label: 'Manage Newsletters', description: 'Publish battalion newsletter issues for cadets to read.', link: '/admin/newsletters', linkText: 'Open' },
     { id: 'leadership', label: 'Review Manage Leadership', description: 'Command staff listing shown on the public site.', link: '/admin/leadership', linkText: 'Open' },
     { id: 'stats', label: 'Check Battalion Stats', description: 'Roster breakdown, uniform logistics, and camp attendance.', link: '/admin/stats', linkText: 'Open' },
   ];

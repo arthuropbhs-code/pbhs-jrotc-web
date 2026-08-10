@@ -130,7 +130,7 @@ const Navbar = () => {
             )}
 
             {/* --- BATTALION DROPDOWN (shows if any sub-item is visible) --- */}
-            {(vis.announcements || vis.photos || vis.events) && (
+            {(vis.announcements || vis.newsletter || vis.photos || vis.events) && (
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer text-slate-500 dark:text-slate-400">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors
@@ -143,6 +143,9 @@ const Navbar = () => {
                               bg-white dark:bg-[#161923] border border-slate-200 dark:border-white/10 shadow-xl">
                 {vis.announcements && !isActive('/announcements') && (
                   <Link to="/announcements" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Announcements</Link>
+                )}
+                {vis.newsletter && !isActive('/newsletter') && (
+                  <Link to="/newsletter" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Newsletter</Link>
                 )}
                 {vis.events && !isActive('/events') && (
                   <Link to="/events" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors">Calendar</Link>
@@ -234,7 +237,7 @@ const Navbar = () => {
               )}
 
               {/* Mobile Battalion Accordion Node */}
-              {(vis.announcements || vis.photos || vis.events) && (
+              {(vis.announcements || vis.newsletter || vis.photos || vis.events) && (
               <div className="py-2 border-b border-white/5">
                 <button
                   onClick={() => setMobileBattalionOpen(!mobileBattalionOpen)}
@@ -246,6 +249,7 @@ const Navbar = () => {
                 {mobileBattalionOpen && (
                   <div className="mt-2 space-y-1 bg-white/5 rounded-xl p-2">
                     {vis.announcements && <MobileNavLink to="/announcements" currentPath={currentPath} onNavigate={closeMenu} indent>Announcements</MobileNavLink>}
+                    {vis.newsletter && <MobileNavLink to="/newsletter" currentPath={currentPath} onNavigate={closeMenu} indent>Newsletter</MobileNavLink>}
                     {vis.events && <MobileNavLink to="/events" currentPath={currentPath} onNavigate={closeMenu} indent>Calendar</MobileNavLink>}
                     {vis.photos && <MobileNavLink to="/photos" currentPath={currentPath} onNavigate={closeMenu} indent>Photo Gallery</MobileNavLink>}
                   </div>
