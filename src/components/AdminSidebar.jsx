@@ -28,6 +28,7 @@ import {
   Tent,
   Building2,
   Image,
+  Newspaper,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
@@ -139,8 +140,9 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/teams', <Users size={18} />, 'Teams')}
             {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',   <Image size={18} />,    'Photo Gallery')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents',   <FileText size={18} />, 'Documents')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
             {groupLabel('Analytics')}
