@@ -55,7 +55,7 @@ const formatTs = (ts) => {
 
 const AdminCadetChallenge = () => {
   const { user, userData, role, loading: authLoading } = useAuth();
-  const companies = useCompanies();
+  const { companies } = useCompanies();
 
   const userLevel   = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
   // Staff (70+) can see all submissions, verify, and delete
