@@ -258,7 +258,7 @@ const AppContent = () => {
             <Route
               path="/admin/newsletters"
               element={
-                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
                   <AdminNewsletters />
                 </ProtectedRoute>
               }

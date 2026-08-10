@@ -141,7 +141,7 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents',   <FileText size={18} />, 'Documents')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
+            {isStaffOrS4 && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}

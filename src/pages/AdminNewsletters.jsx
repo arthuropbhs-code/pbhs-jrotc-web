@@ -6,7 +6,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
-import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
   Newspaper, ArrowLeft, Plus, Trash2, Edit3, X,
   Loader2, CheckCircle2, UploadCloud, Save, Eye, EyeOff,
@@ -33,7 +33,10 @@ const formatDate = (val) => {
 
 const AdminNewsletters = () => {
   const { role, loading: authLoading } = useAuth();
-  const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
+  // Wait until auth+Firestore loading is done before evaluating authorization.
+  // role is null until the Firestore snapshot resolves; evaluating early would
+  // cause isAuthorized = false and fire the redirect on every initial render.
+  const isAuthorized = !authLoading && (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
 
   const [newsletters, setNewsletters] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
