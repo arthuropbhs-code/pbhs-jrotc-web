@@ -1,0 +1,215 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return userDoc().role in [
+        'senior_army_instructor', 'army_instructor',
+        'battalion_commander', 'battalion_xo', 'battalion_csm', 'sergeant_major'
+      ];
+    }
+
+    // Mirrors src/constants.js ROLE_HIERARCHY — keep in sync when the role
+    // table changes.
+    function roleLevel(roleName) {
+      let levels = {
+        'senior_army_instructor': 100, 'army_instructor': 95,
+        'battalion_commander': 90, 'battalion_xo': 85, 'battalion_csm': 85, 'sergeant_major': 80,
+        's1_adjutant': 70, 's2_intelligence': 70, 's3_operations': 70, 's4_logistics': 70,
+        's5_public_affairs': 70, 's6_technology': 70, 's7_special_projects': 70,
+        'company_commander': 55, 'company_xo': 50, 'company_1sg': 45,
+        'company_s1_assistant': 35, 'company_s2_assistant': 35, 'company_s3_assistant': 35,
+        'company_s4_assistant': 35, 'company_s5_assistant': 35, 'company_s6_assistant': 35, 'company_s7_assistant': 35,
+        'platoon_leader': 25, 'platoon_sergeant': 20,
+        'squad_leader': 15, 'squad_leader_assistant': 12,
+        'squad_member': 5, 'cadet': 1
+      };
+      return roleName in levels ? levels[roleName] : 0;
+    }
+
+    function myLevel() {
+      return roleLevel(userDoc().role);
+    }
+
+    // Company 1SG and above — matches COMMAND_LEVEL gate in App.jsx.
+    function isCommandTier() {
+      return myLevel() >= 45;
+    }
+
+    // Mirrors UniformRequests.jsx APPROVE_ROLES exactly.
+    function canApproveUniform() {
+      return userDoc().role in [
+        's4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'
+      ];
+    }
+
+    // Mirrors UniformRequests.jsx REQUEST_ROLES exactly.
+    function canRequestUniform() {
+      return userDoc().role in [
+        'company_s4_assistant',
+        's4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'
+      ];
+    }
+
+    // Mirrors UniformRequests.jsx isStaffObserver exactly.
+    function isStaffObserver() {
+      return myLevel() == 70 && userDoc().role != 's4_logistics';
+    }
+
+    // Mirrors UniformRequests.jsx isCompanyLeadership exactly.
+    function isCompanyLeadershipTier() {
+      return myLevel() >= 45 && myLevel() <= 55;
+    }
+
+    // Mirrors UniformRequests.jsx isS4Assistant exactly.
+    function isS4AssistantTier() {
+      return userDoc().role == 'company_s4_assistant';
+    }
+
+    // --- RULES ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // Self-registration: new signed-in user may create their own profile
+      // doc only as an unapproved plain cadet — never with an elevated role.
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        request.resource.data.role == 'cadet' &&
+        request.resource.data.approved == false;
+
+      allow create, delete: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+           'role', 'company', 'platoon', 'squad', 'rank',
+           'position', 'letLevel', 'email', 'suspended', 'approved'
+         ]))
+      );
+    }
+
+    match /specialTeams/{teamId} {
+      allow read: if true;
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        request.auth.token.email.lower() in resource.data.commanderEmails
+      );
+      allow create, delete: if isSignedIn() && isAdmin();
+    }
+
+    // FIXED: was `allow write: if isAdmin()` (level 80+), which blocked every
+    // S-staff officer (level 70) from broadcasting and from deleting their own
+    // announcements.
+    //   create — staff tier (70+) matches the ProtectedRoute minLevel gate.
+    //   delete — deleter must outrank the issuer; issuerLevel is stored as the
+    //            numeric ROLE_HIERARCHY value, matching the app's guard.
+    match /announcements/{id} {
+      allow read: if true;
+      allow create: if isSignedIn() && myLevel() >= 70;
+      allow delete: if isSignedIn() && myLevel() >= resource.data.issuerLevel;
+    }
+
+    // Public calendar — readable without auth.
+    match /events/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        userDoc().role in ['s5_public_affairs', 's6_technology'] || isAdmin()
+      );
+    }
+
+    // Internal orders feed — not public.
+    match /orders/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isCommandTier() &&
+                    request.resource.data.issuerRole == userDoc().role;
+      allow update, delete: if isSignedIn() &&
+                    myLevel() >= roleLevel(resource.data.issuerRole);
+    }
+
+    // Position-scoped task assignments.
+    match /tasks/{id} {
+      allow read: if isSignedIn() && (
+        isCommandTier() ||
+        resource.data.assignedToPosition == userDoc().position
+      );
+      allow create: if isSignedIn() && isCommandTier();
+      allow update: if isSignedIn() && (
+        isCommandTier() ||
+        resource.data.assignedToPosition == userDoc().position
+      );
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    match /uniform_requests/{id} {
+      allow read: if isSignedIn() && (
+        canApproveUniform() ||
+        isStaffObserver() ||
+        ((isS4AssistantTier() || isCompanyLeadershipTier()) &&
+          resource.data.company == userDoc().company) ||
+        resource.data.cadetName == userDoc().fullName
+      );
+      allow create: if isSignedIn() && canRequestUniform();
+      allow update, delete: if isSignedIn() && canApproveUniform();
+    }
+
+    match /leadership/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    match /instructors/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // pageContent covers all public pages: home, about, cadet-info,
+    // promotion-board, photos, etc.
+    match /pageContent/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        userDoc().role in ['s5_public_affairs', 's6_technology'] || isAdmin()
+      );
+    }
+
+    match /camps/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && myLevel() >= 70;
+    }
+
+    match /documents/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        userDoc().role in ['s5_public_affairs', 's6_technology'] || isAdmin()
+      );
+    }
+
+    match /newsletters/{id} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        userDoc().role in ['s5_public_affairs', 's6_technology'] || isAdmin()
+      );
+    }
+
+    // Admin-configurable settings: company names, document categories,
+    // page visibility toggle (settings/pageVisibility is read pre-auth by
+    // the public nav, so read must be public).
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // Fallback — anything not matched above.
+    match /{path=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
