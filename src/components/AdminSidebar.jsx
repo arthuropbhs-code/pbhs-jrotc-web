@@ -29,6 +29,7 @@ import {
   Building2,
   Image,
   Newspaper,
+  Activity,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
@@ -57,6 +58,10 @@ const AdminSidebar = () => {
   // Roles allowed to access Uniform Items (mirrors App.jsx allowedRoles + adminLevel override)
   const UNIFORM_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
   const canSeeUniforms = UNIFORM_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
+  // Roles allowed to access Cadet Challenge (S1/S3 assistants + command and above)
+  const CHALLENGE_ROLES = ['company_s1_assistant', 'company_s3_assistant'];
+  const canSeeChallenge = CHALLENGE_ROLES.includes(role) || userLevel >= COMMAND_LEVEL;
 
   const isActive = (path) => location.pathname === path;
 
@@ -133,6 +138,7 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
             {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
             {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
+            {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
@@ -150,6 +156,13 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
             {(isTopFour || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
+        )}
+
+        {/* ── CADET CHALLENGE — visible to S1/S3 assistants + command/staff ── */}
+        {canSeeChallenge && !isCommander && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+            {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+          </div>
         )}
 
         {/* ── UNIFORM ITEMS — gated to S4 assistants, company command, battalion command ── */}

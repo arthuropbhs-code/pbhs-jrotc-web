@@ -185,6 +185,24 @@ service cloud.firestore {
       allow write: if isSignedIn() && myLevel() >= 70;
     }
 
+    // Cadet Challenge fitness records.
+    // create — S1/S3 company assistants + company command (45+) may submit paperwork.
+    // read   — submitter can always read their own; company command reads own company;
+    //          staff (70+) can read everything (needed for management view).
+    // update/delete — staff (70+) only (verify, correct, or remove records).
+    match /cadet_challenge/{id} {
+      allow create: if isSignedIn() && (
+        userDoc().role in ['company_s1_assistant', 'company_s3_assistant'] ||
+        myLevel() >= 45
+      );
+      allow read: if isSignedIn() && (
+        resource.data.submittedByUid == request.auth.uid ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        myLevel() >= 70
+      );
+      allow update, delete: if isSignedIn() && myLevel() >= 70;
+    }
+
     match /documents/{id} {
       allow read: if true;
       allow write: if isSignedIn() && (
