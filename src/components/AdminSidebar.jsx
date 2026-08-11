@@ -173,10 +173,13 @@ const AdminSidebar = () => {
           </>
         )}
 
-        {/* ── CADET CHALLENGE — visible to S1/S3 assistants + command/staff ── */}
+        {/* ── CADET CHALLENGE + ROSTER — visible to S1/S3 assistants + command/staff ── */}
         {canSeeChallenge && !isCommander && (
-          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {/* S1 and S3 assistants can view their company's roster read-only */}
+            {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
+              navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 

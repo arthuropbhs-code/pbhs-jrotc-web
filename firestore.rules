@@ -227,11 +227,16 @@ service cloud.firestore {
 
     // Battalion Roster — source of truth for all cadets regardless of portal account.
     // read   — company command (45+) reads own company; staff (70+) reads all.
-    // create/update/delete — same tier gates; company command scoped to own company.
+    //          company_s1_assistant + company_s3_assistant (35) also read own
+    //          company so the Cadet Challenge table can be populated from the
+    //          roster and the S1 assistant can view the roster page read-only.
+    // create/update/delete — company command (45+) or staff (70+) only.
     match /roster/{id} {
       allow read: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company)
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company &&
+          userDoc().role in ['company_s1_assistant', 'company_s3_assistant'])
       );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||

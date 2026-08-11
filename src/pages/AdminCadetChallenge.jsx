@@ -180,19 +180,23 @@ const AdminCadetChallenge = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, selectedCycle, role, myCompany]);
 
-  // Load cadets for company (for table view)
+  // Load cadets for company from the Roster (source of truth for all cadets,
+  // regardless of whether they have a portal account). Using roster instead
+  // of the users collection means every cadet in the company appears in the
+  // table — not just those who have signed up to the portal.
   useEffect(() => {
     if (!myCompany && !canViewAll) return;
     const targetCompany = filterCompany || myCompany;
     if (!targetCompany) { setCadets([]); return; }
 
     const q = query(
-      collection(db, 'users'),
+      collection(db, 'roster'),
       where('company', '==', targetCompany),
-      where('approved', '==', true),
       orderBy('fullName', 'asc'),
     );
     const unsub = onSnapshot(q, snap => {
+      // Use the roster doc ID as `uid` so the rest of the component
+      // (record keying, quick-save, medical toggle) works unchanged.
       setCadets(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
@@ -987,8 +991,8 @@ const TableView = ({ cadets, recordMap, canEdit, isLocked, onEdit, onDelete, onQ
   if (cadets.length === 0) return (
     <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
       <ClipboardList className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
-      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No cadets loaded</p>
-      <p className="text-xs text-slate-400 mt-2">Cadets must have approved accounts in the system.</p>
+      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No cadets in roster</p>
+      <p className="text-xs text-slate-400 mt-2">Add cadets to the Battalion Roster first, then return here.</p>
       <button onClick={onAddManual} className="mt-4 text-yellow-500 text-xs font-black uppercase hover:text-yellow-400">
         + Add manual record
       </button>

@@ -292,12 +292,15 @@ const AppContent = () => {
                 same pattern as /admin/teams. Firestore rules enforce backend boundaries. */}
             <Route path="/admin/cadet-challenge" element={<ProtectedRoute><AdminCadetChallenge /></ProtectedRoute>} />
 
-            {/* Battalion Roster: company command (45+) minimum; internal per-company
-                scoping handled inside the component. Firestore rules gate the reads. */}
+            {/* Battalion Roster: company command (45+) minimum; company_s1_assistant
+                also allowed so they can see their company's roster alongside
+                Cadet Challenge work. Both allowedRoles + minLevel means it's an
+                OR — canAccessRoute handles this combination. Internal per-company
+                scoping and read-only mode handled inside the component. */}
             <Route
               path="/admin/roster"
               element={
-                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                <ProtectedRoute minLevel={COMMAND_LEVEL} allowedRoles={['company_s1_assistant', 'company_s3_assistant']}>
                   <AdminRoster />
                 </ProtectedRoute>
               }

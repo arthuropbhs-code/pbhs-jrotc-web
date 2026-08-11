@@ -81,6 +81,10 @@ const AdminRoster = () => {
   const userLevel     = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
   const canManageAll  = userLevel >= STAFF_LEVEL;
   const canManageOwn  = userLevel >= COMMAND_LEVEL;
+  // S1 and S3 company assistants can view (read-only) their company's roster
+  // so they can cross-reference cadets while entering Cadet Challenge records.
+  const canViewOwn    = ['company_s1_assistant', 'company_s3_assistant'].includes(role);
+  const canEdit       = canManageAll || canManageOwn; // assistants are read-only
   const myCompany     = userData?.company || '';
 
   // default to the user's own company, or first company for staff
@@ -303,7 +307,7 @@ const AdminRoster = () => {
     </div>
   );
 
-  if (!canManageOwn && !canManageAll) return (
+  if (!canManageOwn && !canManageAll && !canViewOwn) return (
     <div className="min-h-screen flex items-center justify-center p-8 text-center">
       <div>
         <UserCircle className="mx-auto text-yellow-500 mb-4" size={40} />
@@ -330,17 +334,24 @@ const AdminRoster = () => {
               All Cadets · With or Without Portal Accounts
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
-          >
-            <Plus size={16} /> Add Cadet
-          </button>
+          {canEdit && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
+            >
+              <Plus size={16} /> Add Cadet
+            </button>
+          )}
+          {canViewOwn && !canEdit && (
+            <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 dark:bg-white/5 px-4 py-2.5 rounded-xl">
+              Read Only
+            </span>
+          )}
         </div>
 
         {/* ── Company tabs ── */}
         <div className="flex gap-1 mb-6 flex-wrap">
-          {(canManageAll ? companies : [myCompany]).map(co => {
+          {(canManageAll ? companies : [myCompany]).filter(Boolean).map(co => {
             const isBn = BATTALION_COMPANIES.includes(co);
             return (
               <button
@@ -506,22 +517,24 @@ const AdminRoster = () => {
                         )}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions — hidden for read-only roles (S1/S3 assistants) */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => openEdit(entry)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                        {canEdit && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openEdit(entry)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
