@@ -309,19 +309,31 @@ const AdminRoster = () => {
 
         {/* ── Company tabs ── */}
         <div className="flex gap-1 mb-6 flex-wrap">
-          {(canManageAll ? companies : [myCompany]).map(co => (
-            <button
-              key={co}
-              onClick={() => setActiveCompany(co)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeCompany === co
-                  ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
-                  : 'bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-yellow-500/30'
-              }`}
-            >
-              {co}
-            </button>
-          ))}
+          {(canManageAll ? companies : [myCompany]).map(co => {
+            const isBn = BATTALION_COMPANIES.includes(co);
+            return (
+              <button
+                key={co}
+                onClick={() => setActiveCompany(co)}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                  activeCompany === co
+                    ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
+                    : 'bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-yellow-500/30'
+                }`}
+              >
+                {co}
+                {isBn && (
+                  <span className={`text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded ${
+                    activeCompany === co
+                      ? 'bg-slate-950/20 text-slate-950'
+                      : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500'
+                  }`}>
+                    HQ
+                  </span>
+                )}
+              </button>
+            );
+          })}
           <span className="ml-auto self-center text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
             {visibleEntries.length} cadet{visibleEntries.length !== 1 ? 's' : ''}
           </span>
