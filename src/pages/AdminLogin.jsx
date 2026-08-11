@@ -10,6 +10,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone, CheckSquare, Square } from 'lucide-react';
 import { trustDevice } from '../hooks/useIdleLogout';
+import { useAuth } from '../hooks/useAuth';
 import SmoothInput from '../components/SmoothInput';
 import Typewriter from '../components/Typewriter';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -22,6 +23,19 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // If the user is already authenticated, send them straight to the dashboard.
+  // This breaks any redirect loop: if something sends an authenticated user back
+  // to /admin (e.g. a momentary auth-state glitch), they bounce right back out.
+  const { user: currentUser, loading: authLoading } = useAuth();
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      // Clear any stale soft-lock so the dashboard doesn't immediately show
+      // the lock screen after a fresh sign-in.
+      sessionStorage.removeItem('sessionLocked');
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [currentUser, authLoading, navigate]);
 
   // MFA challenge state — populated only when the signed-in account has 2FA enrolled.
   const [mfaResolver, setMfaResolver] = useState(null);
@@ -167,6 +181,9 @@ const AdminLogin = () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       await handleProfileMerge(userCredential.user);
+      // Clear any stale soft-lock before entering the admin area so the lock
+      // screen never appears right after a fresh sign-in.
+      sessionStorage.removeItem('sessionLocked');
       navigate('/admin/dashboard');
     } catch (err) {
       if (err.code === 'auth/multi-factor-auth-required') {
@@ -209,6 +226,9 @@ const AdminLogin = () => {
       if (rememberDevice && userCredential.user?.uid) {
         trustDevice(userCredential.user.uid);
       }
+      // Clear any stale soft-lock before entering the admin area so the lock
+      // screen never appears right after a fresh sign-in.
+      sessionStorage.removeItem('sessionLocked');
       navigate('/admin/dashboard');
     } catch (err) {
       setError(

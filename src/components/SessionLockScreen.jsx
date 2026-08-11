@@ -47,7 +47,13 @@ const SessionLockScreen = ({ onUnlock }) => {
         // no SMS needed for a soft-lock re-entry. The session was never invalidated.
         sessionStorage.removeItem('sessionLocked');
         setPassword('');
-        onUnlock();
+        // Only call onUnlock if the Firebase session is still live. If
+        // reauthenticateWithCredential somehow invalidated it (rare SDK edge
+        // case), the session lock is already cleared above and ProtectedRoute
+        // will redirect to /admin automatically — no extra action needed here.
+        if (auth.currentUser) {
+          onUnlock();
+        }
       } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('Incorrect password — try again.');
       } else if (err.code === 'auth/too-many-requests') {
