@@ -225,6 +225,24 @@ service cloud.firestore {
       allow write: if isSignedIn() && isAdmin();
     }
 
+    // Battalion Roster — source of truth for all cadets regardless of portal account.
+    // read   — company command (45+) reads own company; staff (70+) reads all.
+    // create/update/delete — same tier gates; company command scoped to own company.
+    match /roster/{id} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && request.resource.data.company == userDoc().company)
+      );
+      allow update, delete: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
+    }
+
     // Fallback — anything not matched above.
     match /{path=**} {
       allow read, write: if isSignedIn();

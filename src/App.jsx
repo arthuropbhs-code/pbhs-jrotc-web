@@ -58,6 +58,7 @@ const AdminWelcome = lazy(() => import('./pages/AdminWelcome'));
 const Newsletters = lazy(() => import('./pages/Newsletters'));
 const AdminNewsletters = lazy(() => import('./pages/AdminNewsletters'));
 const AdminCadetChallenge = lazy(() => import('./pages/AdminCadetChallenge'));
+const AdminRoster         = lazy(() => import('./pages/AdminRoster'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -287,6 +288,17 @@ const AppContent = () => {
                 no minLevel here — internal access tiers handled inside the component,
                 same pattern as /admin/teams. Firestore rules enforce backend boundaries. */}
             <Route path="/admin/cadet-challenge" element={<ProtectedRoute><AdminCadetChallenge /></ProtectedRoute>} />
+
+            {/* Battalion Roster: company command (45+) minimum; internal per-company
+                scoping handled inside the component. Firestore rules gate the reads. */}
+            <Route
+              path="/admin/roster"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <AdminRoster />
+                </ProtectedRoute>
+              }
+            />
 
             {/* No minLevel here: every signed-in user manages their own profile */}
             <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />

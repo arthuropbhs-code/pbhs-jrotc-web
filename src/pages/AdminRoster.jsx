@@ -1,0 +1,706 @@
+// src/pages/AdminRoster.jsx
+//
+// Battalion Roster — source of truth for every cadet regardless of whether
+// they have a Command Portal account. Each entry can optionally be linked to
+// a user UID (linkedUid) to show a portal-account indicator on the row.
+//
+// Access tiers:
+//   canManageAll  — staff (70+): view/edit any company
+//   canManageOwn  — command (45+): view/edit own company only
+//
+// Cadet Challenge scores are joined client-side by cadetName from the
+// cadet_challenge collection (most-recent record per cadet).
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { db } from '../firebase';
+import {
+  collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, orderBy, where, serverTimestamp,
+} from 'firebase/firestore';
+import { useAuth } from '../hooks/useAuth';
+import { useCompanies } from '../hooks/useCompanies';
+import {
+  ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL,
+  JROTC_RANKS, JROTC_POSITIONS,
+} from '../constants';
+import {
+  Link2, UserCircle, Plus, Edit3, Trash2, X,
+  Loader2, CheckCircle2, Search, ChevronDown,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Footer from '../components/Footer';
+import ScrambleText from '../components/ScrambleText';
+
+// ── constants ─────────────────────────────────────────────────────────────────
+
+const PLATOONS = ['1st Platoon', '2nd Platoon', '3rd Platoon', '4th Platoon', 'HQ'];
+const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad', 'N/A'];
+const LET_LEVELS = ['LET 1', 'LET 2', 'LET 3', 'LET 4'];
+const GENDERS  = ['Male', 'Female', 'Other'];
+
+const EMPTY_FORM = {
+  fullName: '', rank: '', position: '', company: '',
+  platoon: '', squad: '', gender: '', letLevel: '',
+  notes: '', linkedUid: '',
+};
+
+const iCls = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-all';
+const lCls = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1 tracking-widest';
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+const normalize = (s = '') => s.trim().toLowerCase();
+
+// Pull the most-recent challenge record for a cadet by name (case-insensitive)
+const latestChallenge = (cadetName, challengeMap) =>
+  challengeMap[normalize(cadetName)] ?? null;
+
+// ── sub-components ────────────────────────────────────────────────────────────
+
+const ScoreBadge = ({ label, value }) => {
+  if (value == null || value === '' || value === 0) return null;
+  return (
+    <span className="inline-flex flex-col items-center leading-none bg-slate-100 dark:bg-white/5 rounded-lg px-2 py-1 mr-1 mb-1">
+      <span className="text-[8px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">{label}</span>
+      <span className="text-xs font-black text-slate-800 dark:text-slate-200">{value}</span>
+    </span>
+  );
+};
+
+// ── main ──────────────────────────────────────────────────────────────────────
+
+const AdminRoster = () => {
+  const { user, userData, role, loading: authLoading } = useAuth();
+  const { companies } = useCompanies();
+
+  const userLevel     = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
+  const canManageAll  = userLevel >= STAFF_LEVEL;
+  const canManageOwn  = userLevel >= COMMAND_LEVEL;
+  const myCompany     = userData?.company || '';
+
+  // default to the user's own company, or first company for staff
+  const defaultTab = canManageAll ? (companies[0] || '') : myCompany;
+  const [activeCompany, setActiveCompany] = useState('');
+
+  // set the tab once companies + auth are ready
+  useEffect(() => {
+    if (!authLoading && companies.length && !activeCompany) {
+      setActiveCompany(canManageAll ? companies[0] : myCompany);
+    }
+  }, [authLoading, companies, canManageAll, myCompany, activeCompany]);
+
+  const [rosterEntries,    setRosterEntries]    = useState([]);
+  const [challengeRecords, setChallengeRecords] = useState([]);
+  const [portalUsers,      setPortalUsers]      = useState([]);
+  const [dataLoading,      setDataLoading]      = useState(true);
+  const [search,           setSearch]           = useState('');
+
+  const [showModal,   setShowModal]   = useState(false);
+  const [editingId,   setEditingId]   = useState(null);
+  const [form,        setForm]        = useState(EMPTY_FORM);
+  const [saving,      setSaving]      = useState(false);
+  const [deleteConf,  setDeleteConf]  = useState(null);
+  const [toast,       setToast]       = useState(null);
+
+  // ── data subscriptions ────────────────────────────────────────────────────
+
+  // Roster entries — company-scoped or all depending on access
+  useEffect(() => {
+    if (authLoading || !activeCompany) return;
+
+    const q = canManageAll
+      ? query(collection(db, 'roster'), orderBy('fullName', 'asc'))
+      : query(
+          collection(db, 'roster'),
+          where('company', '==', activeCompany),
+          orderBy('fullName', 'asc'),
+        );
+
+    setDataLoading(true);
+    const unsub = onSnapshot(q, (snap) => {
+      setRosterEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setDataLoading(false);
+    }, () => setDataLoading(false));
+
+    return () => unsub();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, activeCompany, canManageAll]);
+
+  // All challenge records (for client-side join)
+  useEffect(() => {
+    if (authLoading) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'cadet_challenge'), orderBy('submittedAt', 'desc')),
+      (snap) => setChallengeRecords(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    );
+    return () => unsub();
+  }, [authLoading]);
+
+  // Portal users (for link picker and account indicator)
+  useEffect(() => {
+    if (authLoading) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'users'), orderBy('fullName', 'asc')),
+      (snap) => setPortalUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
+    );
+    return () => unsub();
+  }, [authLoading]);
+
+  // ── derived data ──────────────────────────────────────────────────────────
+
+  // Map: normalised cadetName → most recent challenge record
+  const challengeMap = useMemo(() => {
+    const map = {};
+    // Records are already sorted newest-first; keep only the first hit per cadet
+    for (const rec of challengeRecords) {
+      const key = normalize(rec.cadetName);
+      if (key && !map[key]) map[key] = rec;
+    }
+    return map;
+  }, [challengeRecords]);
+
+  // Map: uid → user (for linkedUid lookups)
+  const userMap = useMemo(() => {
+    const m = {};
+    for (const u of portalUsers) m[u.uid] = u;
+    return m;
+  }, [portalUsers]);
+
+  // Entries for the active company tab, filtered by search
+  const visibleEntries = useMemo(() => {
+    const base = rosterEntries.filter(e => e.company === activeCompany);
+    if (!search.trim()) return base;
+    const q = normalize(search);
+    return base.filter(e =>
+      normalize(e.fullName).includes(q) ||
+      normalize(e.position).includes(q) ||
+      normalize(e.rank).includes(q) ||
+      normalize(e.platoon).includes(q),
+    );
+  }, [rosterEntries, activeCompany, search]);
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const openCreate = () => {
+    setForm({ ...EMPTY_FORM, company: activeCompany });
+    setEditingId(null);
+    setShowModal(true);
+  };
+
+  const openEdit = (entry) => {
+    setForm({
+      fullName:  entry.fullName  || '',
+      rank:      entry.rank      || '',
+      position:  entry.position  || '',
+      company:   entry.company   || activeCompany,
+      platoon:   entry.platoon   || '',
+      squad:     entry.squad     || '',
+      gender:    entry.gender    || '',
+      letLevel:  entry.letLevel  || '',
+      notes:     entry.notes     || '',
+      linkedUid: entry.linkedUid || '',
+    });
+    setEditingId(entry.id);
+    setShowModal(true);
+  };
+
+  const closeModal = () => { setShowModal(false); setEditingId(null); setForm(EMPTY_FORM); };
+
+  // ── CRUD ─────────────────────────────────────────────────────────────────
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!form.fullName.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        fullName:  form.fullName.trim().toUpperCase(),
+        rank:      form.rank      || null,
+        position:  form.position  || null,
+        company:   form.company   || activeCompany,
+        platoon:   form.platoon   || null,
+        squad:     form.squad     || null,
+        gender:    form.gender    || null,
+        letLevel:  form.letLevel  || null,
+        notes:     form.notes.trim() || null,
+        linkedUid: form.linkedUid || null,
+      };
+      if (editingId) {
+        await updateDoc(doc(db, 'roster', editingId), { ...payload, updatedAt: serverTimestamp() });
+        showToast('Entry updated');
+      } else {
+        await addDoc(collection(db, 'roster'), {
+          ...payload,
+          createdAt:  serverTimestamp(),
+          updatedAt:  serverTimestamp(),
+          createdBy:  user?.uid || '',
+        });
+        showToast('Cadet added');
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Roster save failed:', err);
+      showToast('Save failed — try again');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConf) return;
+    try {
+      await deleteDoc(doc(db, 'roster', deleteConf.id));
+      setDeleteConf(null);
+      showToast('Entry removed');
+    } catch {
+      showToast('Delete failed');
+    }
+  };
+
+  // ── access guard ──────────────────────────────────────────────────────────
+
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="animate-spin text-yellow-500" size={40} />
+    </div>
+  );
+
+  if (!canManageOwn && !canManageAll) return (
+    <div className="min-h-screen flex items-center justify-center p-8 text-center">
+      <div>
+        <UserCircle className="mx-auto text-yellow-500 mb-4" size={40} />
+        <p className="font-black uppercase text-sm text-slate-500">Access Restricted</p>
+        <p className="text-xs text-slate-400 mt-2">Company command and above.</p>
+      </div>
+    </div>
+  );
+
+  // ── render ────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="flex-1 text-slate-900 dark:text-slate-100">
+      <main className="p-6 md:p-10 max-w-7xl">
+
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
+          <div>
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              <ScrambleText text="Battalion " trigger="mount" />
+              <span className="text-yellow-500"><ScrambleText text="Roster" trigger="mount" /></span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
+              All Cadets · With or Without Portal Accounts
+            </p>
+          </div>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
+          >
+            <Plus size={16} /> Add Cadet
+          </button>
+        </div>
+
+        {/* ── Company tabs ── */}
+        <div className="flex gap-1 mb-6 flex-wrap">
+          {(canManageAll ? companies : [myCompany]).map(co => (
+            <button
+              key={co}
+              onClick={() => setActiveCompany(co)}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                activeCompany === co
+                  ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
+                  : 'bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-yellow-500/30'
+              }`}
+            >
+              {co}
+            </button>
+          ))}
+          <span className="ml-auto self-center text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
+            {visibleEntries.length} cadet{visibleEntries.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* ── Search ── */}
+        <div className="relative mb-5">
+          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, rank, or position…"
+            className="w-full max-w-sm pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-yellow-500 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+          />
+        </div>
+
+        {/* ── Roster table ── */}
+        {dataLoading ? (
+          <div className="space-y-2">
+            {[1,2,3,4,5].map(n => (
+              <div key={n} className="h-14 bg-slate-100 dark:bg-slate-900/60 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : visibleEntries.length === 0 ? (
+          <div className="text-center py-24 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+            <UserCircle className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={40} />
+            <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-sm">
+              {search ? 'No cadets match your search' : `No cadets in ${activeCompany} Company yet`}
+            </p>
+            {!search && (
+              <button onClick={openCreate} className="mt-4 text-yellow-500 text-xs font-black uppercase tracking-widest hover:text-yellow-400 transition-colors">
+                + Add first cadet
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-blue-100 dark:border-white/5">
+                  {['Rank','Name','Position','Platoon','Squad','Gender','Challenge Scores',''].map(h => (
+                    <th key={h} className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-4 py-3 whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleEntries.map((entry, idx) => {
+                  const ch  = latestChallenge(entry.fullName, challengeMap);
+                  const acc = entry.linkedUid ? userMap[entry.linkedUid] : null;
+                  const hasAccount = Boolean(entry.linkedUid);
+
+                  return (
+                    <tr
+                      key={entry.id}
+                      className={`border-b border-blue-50 dark:border-white/[0.03] hover:bg-yellow-50/30 dark:hover:bg-yellow-500/5 transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
+                    >
+                      {/* Rank */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-[10px] font-black uppercase text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
+                          {entry.rank || '—'}
+                        </span>
+                      </td>
+
+                      {/* Name + account indicator */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">
+                            {entry.fullName}
+                          </span>
+                          {hasAccount && (
+                            <span
+                              title={acc ? `Portal: ${acc.fullName}` : 'Has portal account'}
+                              className="text-blue-400 dark:text-blue-400 shrink-0"
+                            >
+                              <Link2 size={12} />
+                            </span>
+                          )}
+                        </div>
+                        {entry.letLevel && (
+                          <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">{entry.letLevel}</p>
+                        )}
+                      </td>
+
+                      {/* Position */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-bold">{entry.position || '—'}</span>
+                      </td>
+
+                      {/* Platoon */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.platoon || '—'}</span>
+                      </td>
+
+                      {/* Squad */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.squad || '—'}</span>
+                      </td>
+
+                      {/* Gender */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {entry.gender ? (
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            entry.gender === 'Male'
+                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                              : entry.gender === 'Female'
+                                ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
+                                : 'bg-slate-100 dark:bg-white/5 text-slate-500'
+                          }`}>
+                            {entry.gender === 'Male' ? 'M' : entry.gender === 'Female' ? 'F' : entry.gender}
+                          </span>
+                        ) : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                      </td>
+
+                      {/* Challenge scores */}
+                      <td className="px-4 py-3">
+                        {ch ? (
+                          <div className="flex flex-wrap">
+                            <ScoreBadge label="PU"   value={ch.pushUps} />
+                            <ScoreBadge label="SU"   value={ch.sitUps} />
+                            <ScoreBadge label="Pull" value={ch.pullUps} />
+                            <ScoreBadge label="Mile" value={ch.milePace} />
+                            <ScoreBadge label="Sht"  value={ch.shuttleRun} />
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-300 dark:text-slate-700 font-bold uppercase">No record</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEdit(entry)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <Footer />
+      </main>
+
+      {/* ── Add / Edit Modal ── */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={e => e.target === e.currentTarget && closeModal()}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl"
+            >
+              <div className="p-6 border-b border-blue-100 dark:border-white/5 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <h2 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white">
+                  {editingId ? 'Edit Roster Entry' : 'Add Cadet'}
+                </h2>
+                <button onClick={closeModal} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSave} className="p-6 space-y-4">
+
+                {/* Full Name */}
+                <div>
+                  <label className={lCls}>Full Name * (LAST, FIRST)</label>
+                  <input
+                    required
+                    type="text"
+                    value={form.fullName}
+                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                    placeholder="DOE, JOHN"
+                    className={iCls}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Rank */}
+                  <div>
+                    <label className={lCls}>Rank</label>
+                    <select
+                      value={form.rank}
+                      onChange={e => setForm(f => ({ ...f, rank: e.target.value }))}
+                      className={iCls}
+                    >
+                      <option value="">— Select —</option>
+                      {JROTC_RANKS.map(r => <option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Gender */}
+                  <div>
+                    <label className={lCls}>Gender</label>
+                    <select
+                      value={form.gender}
+                      onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
+                      className={iCls}
+                    >
+                      <option value="">— Select —</option>
+                      {GENDERS.map(g => <option key={g}>{g}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Position */}
+                <div>
+                  <label className={lCls}>Position</label>
+                  <select
+                    value={form.position}
+                    onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
+                    className={iCls}
+                  >
+                    <option value="">— Select —</option>
+                    {JROTC_POSITIONS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Company */}
+                  <div>
+                    <label className={lCls}>Company</label>
+                    <input
+                      type="text"
+                      value={form.company}
+                      readOnly={!canManageAll}
+                      onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
+                      className={`${iCls} ${!canManageAll ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    />
+                  </div>
+
+                  {/* Platoon */}
+                  <div>
+                    <label className={lCls}>Platoon</label>
+                    <select
+                      value={form.platoon}
+                      onChange={e => setForm(f => ({ ...f, platoon: e.target.value }))}
+                      className={iCls}
+                    >
+                      <option value="">— —</option>
+                      {PLATOONS.map(p => <option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Squad */}
+                  <div>
+                    <label className={lCls}>Squad</label>
+                    <select
+                      value={form.squad}
+                      onChange={e => setForm(f => ({ ...f, squad: e.target.value }))}
+                      className={iCls}
+                    >
+                      <option value="">— —</option>
+                      {SQUADS.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* LET Level */}
+                <div>
+                  <label className={lCls}>LET Level</label>
+                  <select
+                    value={form.letLevel}
+                    onChange={e => setForm(f => ({ ...f, letLevel: e.target.value }))}
+                    className={iCls}
+                  >
+                    <option value="">— Select —</option>
+                    {LET_LEVELS.map(l => <option key={l}>{l}</option>)}
+                  </select>
+                </div>
+
+                {/* Link to Portal Account */}
+                <div>
+                  <label className={lCls}>
+                    <span className="flex items-center gap-1"><Link2 size={10} /> Link to Portal Account (optional)</span>
+                  </label>
+                  <select
+                    value={form.linkedUid}
+                    onChange={e => setForm(f => ({ ...f, linkedUid: e.target.value }))}
+                    className={iCls}
+                  >
+                    <option value="">— No account linked —</option>
+                    {portalUsers
+                      .filter(u => u.approved && u.fullName)
+                      .map(u => (
+                        <option key={u.uid} value={u.uid}>
+                          {u.fullName}{u.rank ? ` · ${u.rank}` : ''}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 ml-1">
+                    Linking shows the portal icon (🔗) on their row. The cadet's portal account and roster entry remain separate records.
+                  </p>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className={lCls}>Notes (optional)</label>
+                  <textarea
+                    rows={2}
+                    value={form.notes}
+                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="Any additional notes…"
+                    className={`${iCls} resize-none`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3.5 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-60 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  {saving
+                    ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
+                    : <><CheckCircle2 size={14} /> {editingId ? 'Save Changes' : 'Add to Roster'}</>
+                  }
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete Confirmation ── */}
+      <AnimatePresence>
+        {deleteConf && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 max-w-sm w-full text-center"
+            >
+              <Trash2 className="mx-auto text-red-500 mb-4" size={32} />
+              <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">Remove from Roster?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                This removes <strong>{deleteConf.fullName}</strong> from the battalion roster. Their portal account (if any) is not affected.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConf(null)} className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 font-black text-xs uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                  Cancel
+                </button>
+                <button onClick={handleDelete} className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase transition-all">
+                  Remove
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl shadow-xl z-50"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default AdminRoster;

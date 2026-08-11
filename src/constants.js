@@ -91,6 +91,14 @@ export const EVENT_TYPES = [
   'Ceremony', 'Raiders', 'JLAB', 'Drones', 'Gameday', 'Private Practice'
 ];
 
+// Cadet rank abbreviations — used in AdminUsers, AdminRoster, UniformRequests.
+// Enlisted first (low → high), then officer (low → high).
+export const JROTC_RANKS = [
+  'C/PVT', 'C/PFC', 'C/CPL', 'C/SGT', 'C/SSG',
+  'C/SFC', 'C/MSG', 'C/1SG', 'C/SGM', 'C/CSM',
+  'C/2LT', 'C/1LT', 'C/CPT', 'C/MAJ', 'C/LTC', 'C/COL',
+];
+
 // Human-readable position labels for the signup and admin-personnel forms.
 // Listed low → high so the dropdown reads naturally. Import this in both
 // SignUp.jsx and AdminUsers.jsx — do NOT maintain a separate copy in each file.

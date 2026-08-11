@@ -30,6 +30,7 @@ import {
   Image,
   Newspaper,
   Activity,
+  BookUser,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
@@ -142,6 +143,7 @@ const AdminSidebar = () => {
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
+            {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
             {isStaffOrS4 && navLink('/admin/users',     <UserCog size={18} />, 'Personnel')}
             {isStaffOrS4 && navLink('/admin/teams', <Users size={18} />, 'Teams')}
             {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
