@@ -115,7 +115,8 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
 const AppContent = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  useIdleLogout(!!user);
+  // Pass uid so the hook can check the trusted-device token for this user.
+  useIdleLogout(!!user, user?.uid);
 
   // React Router doesn't reset scroll position on navigation like a full
   // page load would - without this, clicking a link (e.g. in the footer,

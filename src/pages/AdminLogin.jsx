@@ -8,7 +8,8 @@ import {
   RecaptchaVerifier,
 } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone, CheckSquare, Square } from 'lucide-react';
+import { trustDevice } from '../hooks/useIdleLogout';
 import SmoothInput from '../components/SmoothInput';
 import Typewriter from '../components/Typewriter';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -34,6 +35,9 @@ const AdminLogin = () => {
   // smsFailed: true while the last send attempt ended in error (shows retry button).
   const [smsTrigger, setSmsTrigger] = useState(0);
   const [smsFailed, setSmsFailed] = useState(false);
+  // "Remember this device" — if checked after successful MFA, saves a 30-day
+  // trust token in localStorage so idle soft-locks skip the full signout.
+  const [rememberDevice, setRememberDevice] = useState(false);
 
   // useAuth force-signs-out a suspended account and leaves this flag behind
   // so the login page can explain why, instead of silently landing here.
@@ -198,6 +202,13 @@ const AdminLogin = () => {
       const assertion = PhoneMultiFactorGenerator.assertion(cred);
       const userCredential = await mfaResolver.resolveSignIn(assertion);
       await handleProfileMerge(userCredential.user);
+      // If "Remember this device" was checked, store a 30-day trust token so
+      // the idle soft-lock uses a 30-day window instead of 30 minutes.
+      // This means users on trusted devices will never be soft-locked during
+      // normal daily use — no unnecessary SMS verifications.
+      if (rememberDevice && userCredential.user?.uid) {
+        trustDevice(userCredential.user.uid);
+      }
       navigate('/admin/dashboard');
     } catch (err) {
       setError(
@@ -321,6 +332,27 @@ const AdminLogin = () => {
                   autoFocus
                 />
               </div>
+
+              {/* Remember this device — stores a 30-day trust token so the idle
+                  soft-lock window extends from 30 min to 30 days, meaning
+                  returning users on this browser won't trigger a new SMS. */}
+              <label className="flex items-center gap-3 cursor-pointer select-none group">
+                <button
+                  type="button"
+                  onClick={() => setRememberDevice(v => !v)}
+                  className="shrink-0 text-yellow-500 hover:text-yellow-400 transition-colors"
+                  aria-checked={rememberDevice}
+                  role="checkbox"
+                >
+                  {rememberDevice ? <CheckSquare size={18} /> : <Square size={18} className="text-slate-300 dark:text-slate-600 group-hover:text-slate-400" />}
+                </button>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-tight">
+                  Remember this device for 30 days<br />
+                  <span className="text-[10px] font-normal text-slate-400 dark:text-slate-600">
+                    Reduces how often you're asked for a verification code
+                  </span>
+                </span>
+              </label>
 
               <button
                 type="submit"

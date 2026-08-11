@@ -35,6 +35,7 @@ import {
   Laptop,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
+import { clearDeviceTrust } from '../hooks/useIdleLogout';
 import { getInitials } from '../utils/getInitials';
 import ScrambleText from './ScrambleText';
 
@@ -51,7 +52,10 @@ const AdminSidebar = () => {
     return () => unsub();
   }, []);
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => {
+    clearDeviceTrust(); // Clear the trusted-device token on explicit sign-out
+    signOut(auth);
+  };
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isCommander  = userLevel >= COMMAND_LEVEL;
