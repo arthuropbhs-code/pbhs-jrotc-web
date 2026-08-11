@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // PDFs uploaded by admin/staff for newsletters, regulations, handbooks, etc.
+    // Public read so cadets can open them without signing in.
+    // Write requires authentication — the app-level route guard (STAFF_LEVEL)
+    // is the primary gate; storage rules are the safety net.
+    match /documents/{allPaths=**} {
+      allow read:  if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 20 * 1024 * 1024   // 20 MB cap
+                   && request.resource.contentType == 'application/pdf';
+    }
+
+  }
+}

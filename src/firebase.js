@@ -1,12 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 // firebase/analytics is loaded via dynamic import() below instead of a
 // static import here, so its code doesn't ship in the critical-path
 // bundle every page downloads up front - it's non-critical telemetry.
-// firebase/storage isn't imported at all: file uploads in this app go
-// through Cloudinary (see AdminDocuments.jsx), so the Storage SDK was
-// dead weight, shipped and parsed on every page with zero code coverage.
 
 // Using import.meta.env to keep keys secure
 const firebaseConfig = {
@@ -23,6 +21,7 @@ const firebaseConfig = {
 let app;
 let auth;
 let db;
+let storage;
 
 // Gate: analytics never loads until the user has actually accepted cookies
 // via the CookieConsent banner - loading GA unconditionally on every visit
@@ -78,6 +77,7 @@ try {
     // instead of Firebase's default of staying signed in indefinitely.
     setPersistence(auth, browserSessionPersistence);
     db = getFirestore(app);
+    storage = getStorage(app);
 
     if (typeof window !== 'undefined' && localStorage.getItem(CONSENT_KEY) === 'accepted') {
       loadAnalytics();
@@ -90,4 +90,4 @@ try {
 }
 
 // Export services safely so your pages don't crash when opening the site
-export { auth, db };
+export { auth, db, storage };

@@ -14,7 +14,7 @@ import {
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
 import { motion, AnimatePresence } from 'framer-motion';
-import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { uploadPdfToStorage } from '../utils/storageUpload';
 
 const EMPTY_FORM = {
   title: '', issue: '', date: '', summary: '', body: '',
@@ -80,8 +80,8 @@ const AdminNewsletters = () => {
     if (!file) return;
     setUploading(true);
     try {
-      const data = await uploadToCloudinary(file, 'document');
-      setForm(f => ({ ...f, fileUrl: data.secure_url, fileName: file.name }));
+      const data = await uploadPdfToStorage(file, 'newsletters');
+      setForm(f => ({ ...f, fileUrl: data.url, fileName: data.fileName }));
     } catch (err) {
       console.error('PDF upload failed:', err);
       setStatus('error');

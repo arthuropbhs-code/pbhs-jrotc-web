@@ -12,7 +12,7 @@ import {
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
 import { motion, AnimatePresence } from 'framer-motion';
-import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { uploadPdfToStorage } from '../utils/storageUpload';
 
 // Same unsigned-upload pattern as AdminLeadership.jsx's portrait uploads -
 // this app hosts all uploaded files on Cloudinary rather than Firebase
@@ -76,10 +76,10 @@ const AdminDocuments = () => {
     if (!file) return;
     setUploading(true);
     try {
-      const data = await uploadToCloudinary(file, 'document');
+      const data = await uploadPdfToStorage(file, 'regulations');
       setForm(prev => ({
         ...prev,
-        fileUrl: data.secure_url,
+        fileUrl: data.url,
         fileName: data.fileName,
         fileSize: data.bytes,
         title: prev.title || file.name.replace(/\.[^/.]+$/, '')
