@@ -46,9 +46,13 @@ export function useCompanies() {
     return unsub;
   }, []);
 
-  // companiesWithBattalion appends "Battalion" which is always present and
-  // non-configurable (it's a structural unit, not a lettered company).
-  const companiesWithBattalion = [...companies, "Battalion"];
+  // companiesWithBattalion is kept for backward compatibility with callers
+  // that still reference it, but is now identical to `companies`. "Battalion"
+  // is no longer appended as a separate option — Zulu (the first configured
+  // company) serves as the battalion-level company. Existing records with
+  // company:"Battalion" remain valid in Firestore; only new signups and edits
+  // use the Firestore-configured list, where Zulu fills that role.
+  const companiesWithBattalion = companies;
 
   return { companies, companiesWithBattalion, loading };
 }
