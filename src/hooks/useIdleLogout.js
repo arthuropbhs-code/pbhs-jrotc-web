@@ -22,7 +22,13 @@ import { useEffect, useRef } from 'react';
 const IDLE_LIMIT_MS = 30 * 60 * 1000;             // 30 minutes
 
 // Idle period for explicitly trusted devices.
-const TRUSTED_IDLE_LIMIT_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// NOTE: browsers store the setTimeout delay as a 32-bit signed integer
+// (max = 2,147,483,647 ms ≈ 24.8 days). Values larger than that overflow
+// to a *negative* number and fire the callback *immediately* — which is why
+// 30 days (2,592,000,000 ms) caused the lock screen to flash right after
+// sign-in. 7 days is safely inside the limit and still long enough that a
+// trusted device will never be auto-locked during any real-world session.
+const TRUSTED_IDLE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (604,800,000 ms)
 
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
