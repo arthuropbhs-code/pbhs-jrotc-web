@@ -150,25 +150,30 @@ const AdminUsers = () => {
 
         // ── Portal-is-master sync ─────────────────────────────────────────
         // If this user account is the master for a linked roster entry, push
-        // shared fields to that roster doc so both stay in sync.
+        // personal-info fields to that roster doc so both stay in sync.
+        // Company/platoon/squad/secondaryCompany are NOT pushed from portal →
+        // roster: those are organisational assignments managed exclusively in
+        // the roster. Battalion entries (Zulu/Battalion) always have null
+        // platoon/squad regardless of what the portal doc says.
         try {
+          const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
           const rosterSnap = await getDocs(
             query(collection(db, 'roster'), where('linkedUid', '==', editingRecord.id))
           );
           for (const rosterDoc of rosterSnap.docs) {
             if (rosterDoc.data().syncMaster === 'portal') {
+              const existingCompany = rosterDoc.data().company;
+              const isBn = BATTALION_COMPANIES.includes(existingCompany);
               await updateDoc(rosterDoc.ref, {
+                // Personal info — always safe to sync
                 fullName: (formData.fullName || '').trim().toUpperCase() || rosterDoc.data().fullName,
                 rank:     formData.rank     || null,
                 position: formData.position || null,
-                company:  formData.company  || null,
-                platoon:  formData.platoon  || null,
-                squad:    formData.squad    || null,
                 gender:   formData.gender   || null,
                 letLevel: formData.letLevel || null,
-                ...(formData.secondaryCompany !== undefined
-                  ? { secondaryCompany: formData.secondaryCompany || null }
-                  : {}),
+                // Org structure — keep the roster's values; null out platoon/squad
+                // for battalion entries so they don't inherit portal's old values
+                ...(isBn ? { platoon: null, squad: null } : {}),
                 updatedAt: serverTimestamp(),
               });
             }

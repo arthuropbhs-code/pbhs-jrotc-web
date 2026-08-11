@@ -52,7 +52,9 @@ const lCls = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-50
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-const normalize = (s = '') => s.trim().toLowerCase();
+// Handles null/undefined gracefully — Zulu battalion entries store platoon/squad
+// as null, and searching would throw if we called null.trim() directly.
+const normalize = (s) => (s ?? '').trim().toLowerCase();
 
 // Pull the most-recent challenge record for a cadet by name (case-insensitive)
 const latestChallenge = (cadetName, challengeMap) =>
@@ -750,19 +752,20 @@ const AdminRoster = () => {
                         <button
                           type="button"
                           onClick={() => {
+                            // Only pull personal-info fields from the portal.
+                            // Company, platoon, squad, and secondaryCompany are
+                            // organisational assignments managed by the roster —
+                            // pulling them would move the entry to the wrong
+                            // company tab or overwrite battalion-null values.
                             setForm(f => ({
                               ...f,
                               fullName: pu.fullName || f.fullName,
                               rank:     pu.rank     || f.rank,
                               position: pu.position || f.position,
-                              company:  pu.company  || f.company,
-                              platoon:  pu.platoon  || f.platoon,
-                              squad:    pu.squad    || f.squad,
                               gender:   pu.gender   || f.gender,
                               letLevel: pu.letLevel || f.letLevel,
-                              secondaryCompany: pu.secondaryCompany || f.secondaryCompany,
                             }));
-                            showToast('Fields pulled from portal account');
+                            showToast('Personal info pulled from portal account');
                           }}
                           className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:border-yellow-400 hover:text-yellow-500 transition-all"
                         >
