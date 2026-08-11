@@ -194,16 +194,103 @@ const AdminUsers = () => {
           } catch (notifyErr) {
             console.error('Welcome email failed:', notifyErr);
           }
+
+          // ── Auto-add to battalion roster on first approval ────────────────
+          // Check by linkedUid first, then fall back to a name match so we
+          // don't create a duplicate if they were already added manually.
+          try {
+            const [byUid, byName] = await Promise.all([
+              getDocs(query(collection(db, 'roster'), where('linkedUid', '==', editingRecord.id))),
+              getDocs(query(collection(db, 'roster'),
+                where('fullName', '==', (formData.fullName || '').trim().toUpperCase()),
+                where('company',  '==', formData.company || '')
+              )),
+            ]);
+
+            if (byUid.empty && byName.empty) {
+              const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+              const isBn = BATTALION_COMPANIES.includes(formData.company || '');
+              await addDoc(collection(db, 'roster'), {
+                fullName:         (formData.fullName || '').trim().toUpperCase(),
+                rank:             formData.rank      || null,
+                position:         formData.position  || null,
+                company:          formData.company   || null,
+                platoon:          isBn ? null : (formData.platoon || null),
+                squad:            isBn ? null : (formData.squad   || null),
+                gender:           formData.gender    || null,
+                letLevel:         formData.letLevel  || null,
+                notes:            null,
+                linkedUid:        editingRecord.id,
+                syncMaster:       'portal',          // portal account is master
+                secondaryCompany: null,
+                createdAt:        serverTimestamp(),
+                updatedAt:        serverTimestamp(),
+                createdBy:        user?.uid || '',
+              });
+            } else if (byUid.empty && !byName.empty) {
+              // An unlinked roster entry exists with the same name — just link it.
+              await updateDoc(byName.docs[0].ref, {
+                linkedUid:  editingRecord.id,
+                syncMaster: byName.docs[0].data().syncMaster || 'roster',
+                updatedAt:  serverTimestamp(),
+              });
+            }
+          } catch (rosterErr) {
+            // Non-fatal — the portal account was approved; roster sync is best-effort.
+            console.warn('Auto-roster on approval failed:', rosterErr);
+          }
         }
       } else {
-        await addDoc(collection(db, "users"), {
+        // Staff manually added a new user account — also add them to the roster.
+        const newUserRef = await addDoc(collection(db, "users"), {
           ...formData,
           approved: true,
           createdAt: serverTimestamp(),
           createdBy: user.uid
         });
+
+        try {
+          const [byUid, byName] = await Promise.all([
+            getDocs(query(collection(db, 'roster'), where('linkedUid', '==', newUserRef.id))),
+            getDocs(query(collection(db, 'roster'),
+              where('fullName', '==', (formData.fullName || '').trim().toUpperCase()),
+              where('company',  '==', formData.company || '')
+            )),
+          ]);
+
+          if (byUid.empty && byName.empty) {
+            const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+            const isBn = BATTALION_COMPANIES.includes(formData.company || '');
+            await addDoc(collection(db, 'roster'), {
+              fullName:         (formData.fullName || '').trim().toUpperCase(),
+              rank:             formData.rank      || null,
+              position:         formData.position  || null,
+              company:          formData.company   || null,
+              platoon:          isBn ? null : (formData.platoon || null),
+              squad:            isBn ? null : (formData.squad   || null),
+              gender:           formData.gender    || null,
+              letLevel:         formData.letLevel  || null,
+              notes:            null,
+              linkedUid:        newUserRef.id,
+              syncMaster:       'portal',
+              secondaryCompany: null,
+              createdAt:        serverTimestamp(),
+              updatedAt:        serverTimestamp(),
+              createdBy:        user?.uid || '',
+            });
+          } else if (byUid.empty && !byName.empty) {
+            await updateDoc(byName.docs[0].ref, {
+              linkedUid:  newUserRef.id,
+              syncMaster: byName.docs[0].data().syncMaster || 'roster',
+              updatedAt:  serverTimestamp(),
+            });
+          }
+        } catch (rosterErr) {
+          console.warn('Auto-roster on manual add failed:', rosterErr);
+        }
+
         setShowAddModal(false);
-        showStatus("Cadet Added to Roster");
+        showStatus("Cadet Added");
       }
       setFormData(initialFormState);
     } catch {
