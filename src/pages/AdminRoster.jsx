@@ -25,7 +25,7 @@ import {
 } from '../constants';
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
-  Loader2, CheckCircle2, Search, ChevronDown, Eye,
+  Loader2, CheckCircle2, Search, ChevronDown, Eye, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -44,6 +44,7 @@ const EMPTY_FORM = {
   fullName: '', rank: '', position: '', company: '',
   platoon: '', squad: '', gender: '', letLevel: '',
   notes: '', linkedUid: '', secondaryCompany: '',
+  syncMaster: 'roster',
 };
 
 const iCls = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-all';
@@ -204,6 +205,7 @@ const AdminRoster = () => {
       notes:            entry.notes            || '',
       linkedUid:        entry.linkedUid        || '',
       secondaryCompany: entry.secondaryCompany || '',
+      syncMaster:       entry.syncMaster       || 'roster',
     });
     setEditingId(entry.id);
     setShowModal(true);
@@ -231,6 +233,7 @@ const AdminRoster = () => {
         letLevel:         form.letLevel  || null,
         notes:            form.notes.trim() || null,
         linkedUid:        form.linkedUid || null,
+        syncMaster:       form.linkedUid ? (form.syncMaster || 'roster') : null,
       };
       if (editingId) {
         await updateDoc(doc(db, 'roster', editingId), { ...payload, updatedAt: serverTimestamp() });
@@ -244,6 +247,32 @@ const AdminRoster = () => {
         });
         showToast('Cadet added');
       }
+
+      // ── Roster-is-master sync ─────────────────────────────────────────────
+      // When this roster entry is the source of truth and a portal account is
+      // linked, push the shared fields to the users/ doc so the portal profile
+      // stays in sync automatically.
+      if (form.linkedUid && payload.syncMaster === 'roster') {
+        const syncFields = {
+          fullName: payload.fullName,
+          rank:     payload.rank,
+          position: payload.position,
+          company:  payload.company,
+          ...(payload.platoon          !== undefined ? { platoon:          payload.platoon          } : {}),
+          ...(payload.squad            !== undefined ? { squad:            payload.squad            } : {}),
+          ...(payload.secondaryCompany !== undefined ? { secondaryCompany: payload.secondaryCompany } : {}),
+          gender:   payload.gender,
+          letLevel: payload.letLevel,
+          updatedAt: serverTimestamp(),
+        };
+        try {
+          await updateDoc(doc(db, 'users', form.linkedUid), syncFields);
+        } catch (syncErr) {
+          // Non-fatal — roster save succeeded; just log the sync miss
+          console.warn('Roster→portal sync failed:', syncErr);
+        }
+      }
+
       closeModal();
     } catch (err) {
       console.error('Roster save failed:', err);
@@ -675,9 +704,75 @@ const AdminRoster = () => {
                     }
                   </select>
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 ml-1">
-                    Linking shows the portal icon (🔗) on their row. The cadet's portal account and roster entry remain separate records.
+                    Linking shows the portal icon (🔗) on their row.
                   </p>
                 </div>
+
+                {/* Sync Settings — only visible when an account is linked */}
+                {form.linkedUid && (
+                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <RefreshCw size={10} />
+                      Sync Settings
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                      Pick which record is the <strong className="text-slate-600 dark:text-slate-300">master</strong>. When saving, the master overwrites the other automatically.
+                    </p>
+
+                    {/* Master toggle */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'roster',  label: 'Roster is master',  desc: 'Roster → Portal on save' },
+                        { value: 'portal',  label: 'Portal is master',  desc: 'Portal → Roster on save' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, syncMaster: opt.value }))}
+                          className={`text-left px-3 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all ${
+                            form.syncMaster === opt.value
+                              ? 'bg-yellow-500 border-yellow-500 text-slate-950'
+                              : 'border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-yellow-400'
+                          }`}
+                        >
+                          <span className="block">{opt.label}</span>
+                          <span className={`block font-normal normal-case tracking-normal mt-0.5 text-[9px] ${
+                            form.syncMaster === opt.value ? 'text-slate-800' : 'text-slate-400 dark:text-slate-600'
+                          }`}>{opt.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Pull from Portal button */}
+                    {form.syncMaster === 'portal' && userMap[form.linkedUid] && (() => {
+                      const pu = userMap[form.linkedUid];
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm(f => ({
+                              ...f,
+                              fullName: pu.fullName || f.fullName,
+                              rank:     pu.rank     || f.rank,
+                              position: pu.position || f.position,
+                              company:  pu.company  || f.company,
+                              platoon:  pu.platoon  || f.platoon,
+                              squad:    pu.squad    || f.squad,
+                              gender:   pu.gender   || f.gender,
+                              letLevel: pu.letLevel || f.letLevel,
+                              secondaryCompany: pu.secondaryCompany || f.secondaryCompany,
+                            }));
+                            showToast('Fields pulled from portal account');
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:border-yellow-400 hover:text-yellow-500 transition-all"
+                        >
+                          <RefreshCw size={10} />
+                          Pull from Portal Account
+                        </button>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {/* Notes */}
                 <div>

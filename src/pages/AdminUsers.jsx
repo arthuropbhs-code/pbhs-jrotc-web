@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
-  collection, doc, updateDoc, onSnapshot, query,
+  collection, doc, updateDoc, onSnapshot, query, where,
   addDoc, serverTimestamp, deleteDoc, getDocs
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
@@ -147,6 +147,36 @@ const AdminUsers = () => {
         });
         setEditingRecord(null);
         showStatus("Record Updated");
+
+        // ── Portal-is-master sync ─────────────────────────────────────────
+        // If this user account is the master for a linked roster entry, push
+        // shared fields to that roster doc so both stay in sync.
+        try {
+          const rosterSnap = await getDocs(
+            query(collection(db, 'roster'), where('linkedUid', '==', editingRecord.id))
+          );
+          for (const rosterDoc of rosterSnap.docs) {
+            if (rosterDoc.data().syncMaster === 'portal') {
+              await updateDoc(rosterDoc.ref, {
+                fullName: (formData.fullName || '').trim().toUpperCase() || rosterDoc.data().fullName,
+                rank:     formData.rank     || null,
+                position: formData.position || null,
+                company:  formData.company  || null,
+                platoon:  formData.platoon  || null,
+                squad:    formData.squad    || null,
+                gender:   formData.gender   || null,
+                letLevel: formData.letLevel || null,
+                ...(formData.secondaryCompany !== undefined
+                  ? { secondaryCompany: formData.secondaryCompany || null }
+                  : {}),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          }
+        } catch (syncErr) {
+          // Non-fatal — portal save succeeded; just log the sync miss
+          console.warn('Portal→roster sync failed:', syncErr);
+        }
 
         if (wasPendingApproval) {
           try {
