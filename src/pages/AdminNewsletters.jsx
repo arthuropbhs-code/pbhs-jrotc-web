@@ -84,6 +84,8 @@ const AdminNewsletters = () => {
       setForm(f => ({ ...f, fileUrl: data.secure_url, fileName: file.name }));
     } catch (err) {
       console.error('PDF upload failed:', err);
+      setStatus('error');
+      setTimeout(() => setStatus(null), 4000);
     } finally {
       setUploading(false);
     }

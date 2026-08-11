@@ -30,7 +30,11 @@ export async function uploadToCloudinary(file, kind) {
   body.append('file', uploadFile);
   body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-  const endpoint = kind === 'document' ? 'auto' : 'image';
+  // 'raw/upload' accepts any file type (PDFs, docs) without processing.
+  // 'auto/upload' tries to detect image/video/raw but the ml_default
+  // unsigned preset typically only permits image uploads, so PDFs get
+  // rejected. Use raw explicitly for documents.
+  const endpoint = kind === 'document' ? 'raw' : 'image';
 
   const data = await withRetry(async () => {
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${endpoint}/upload`, {
