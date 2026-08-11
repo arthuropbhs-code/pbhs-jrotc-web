@@ -38,10 +38,12 @@ const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad', 'N/A'];
 const LET_LEVELS = ['LET 1', 'LET 2', 'LET 3', 'LET 4'];
 const GENDERS  = ['Male', 'Female', 'Other'];
 
+const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+
 const EMPTY_FORM = {
   fullName: '', rank: '', position: '', company: '',
   platoon: '', squad: '', gender: '', letLevel: '',
-  notes: '', linkedUid: '',
+  notes: '', linkedUid: '', secondaryCompany: '',
 };
 
 const iCls = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-all';
@@ -191,16 +193,17 @@ const AdminRoster = () => {
 
   const openEdit = (entry) => {
     setForm({
-      fullName:  entry.fullName  || '',
-      rank:      entry.rank      || '',
-      position:  entry.position  || '',
-      company:   entry.company   || activeCompany,
-      platoon:   entry.platoon   || '',
-      squad:     entry.squad     || '',
-      gender:    entry.gender    || '',
-      letLevel:  entry.letLevel  || '',
-      notes:     entry.notes     || '',
-      linkedUid: entry.linkedUid || '',
+      fullName:         entry.fullName         || '',
+      rank:             entry.rank             || '',
+      position:         entry.position         || '',
+      company:          entry.company          || activeCompany,
+      platoon:          entry.platoon          || '',
+      squad:            entry.squad            || '',
+      gender:           entry.gender           || '',
+      letLevel:         entry.letLevel         || '',
+      notes:            entry.notes            || '',
+      linkedUid:        entry.linkedUid        || '',
+      secondaryCompany: entry.secondaryCompany || '',
     });
     setEditingId(entry.id);
     setShowModal(true);
@@ -215,17 +218,19 @@ const AdminRoster = () => {
     if (!form.fullName.trim()) return;
     setSaving(true);
     try {
+      const isBn = BATTALION_COMPANIES.includes(form.company || activeCompany);
       const payload = {
-        fullName:  form.fullName.trim().toUpperCase(),
-        rank:      form.rank      || null,
-        position:  form.position  || null,
-        company:   form.company   || activeCompany,
-        platoon:   form.platoon   || null,
-        squad:     form.squad     || null,
-        gender:    form.gender    || null,
-        letLevel:  form.letLevel  || null,
-        notes:     form.notes.trim() || null,
-        linkedUid: form.linkedUid || null,
+        fullName:         form.fullName.trim().toUpperCase(),
+        rank:             form.rank      || null,
+        position:         form.position  || null,
+        company:          form.company   || activeCompany,
+        platoon:          isBn ? null : (form.platoon || null),
+        squad:            isBn ? null : (form.squad   || null),
+        secondaryCompany: isBn ? (form.secondaryCompany || null) : null,
+        gender:           form.gender    || null,
+        letLevel:         form.letLevel  || null,
+        notes:            form.notes.trim() || null,
+        linkedUid:        form.linkedUid || null,
       };
       if (editingId) {
         await updateDoc(doc(db, 'roster', editingId), { ...payload, updatedAt: serverTimestamp() });
@@ -358,11 +363,14 @@ const AdminRoster = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-blue-100 dark:border-white/5">
-                  {['Rank','Name','Position','Platoon','Squad','Gender','Challenge Scores',''].map(h => (
-                    <th key={h} className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-4 py-3 whitespace-nowrap">
+                  {['Rank','Name','Position',
+                    BATTALION_COMPANIES.includes(activeCompany) ? 'Class Period' : 'Platoon',
+                    BATTALION_COMPANIES.includes(activeCompany) ? '' : 'Squad',
+                    'Gender','Challenge Scores',''].map((h, i) => h ? (
+                    <th key={i} className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-4 py-3 whitespace-nowrap">
                       {h}
                     </th>
-                  ))}
+                  ) : <th key={i} />)}
                 </tr>
               </thead>
               <tbody>
@@ -408,14 +416,22 @@ const AdminRoster = () => {
                         <span className="text-xs text-slate-600 dark:text-slate-300 font-bold">{entry.position || '—'}</span>
                       </td>
 
-                      {/* Platoon */}
+                      {/* Platoon — or Class Period for Zulu/Battalion */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.platoon || '—'}</span>
+                        {BATTALION_COMPANIES.includes(entry.company)
+                          ? entry.secondaryCompany
+                            ? <span className="text-xs font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">{entry.secondaryCompany} Co.</span>
+                            : <span className="text-slate-300 dark:text-slate-700 text-xs">—</span>
+                          : <span className="text-xs text-slate-500 dark:text-slate-400">{entry.platoon || '—'}</span>
+                        }
                       </td>
 
-                      {/* Squad */}
+                      {/* Squad — hidden for Zulu/Battalion rows */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.squad || '—'}</span>
+                        {BATTALION_COMPANIES.includes(entry.company)
+                          ? null
+                          : <span className="text-xs text-slate-500 dark:text-slate-400">{entry.squad || '—'}</span>
+                        }
                       </td>
 
                       {/* Gender */}
@@ -553,6 +569,7 @@ const AdminRoster = () => {
                   </select>
                 </div>
 
+                {/* Company row + conditional platoon/squad or secondary company */}
                 <div className="grid grid-cols-3 gap-4">
                   {/* Company */}
                   <div>
@@ -566,31 +583,51 @@ const AdminRoster = () => {
                     />
                   </div>
 
-                  {/* Platoon */}
-                  <div>
-                    <label className={lCls}>Platoon</label>
-                    <select
-                      value={form.platoon}
-                      onChange={e => setForm(f => ({ ...f, platoon: e.target.value }))}
-                      className={iCls}
-                    >
-                      <option value="">— —</option>
-                      {PLATOONS.map(p => <option key={p}>{p}</option>)}
-                    </select>
-                  </div>
+                  {/* Platoon / Squad — hidden for Zulu (Battalion) */}
+                  {!BATTALION_COMPANIES.includes(form.company) && (
+                    <div>
+                      <label className={lCls}>Platoon</label>
+                      <select
+                        value={form.platoon}
+                        onChange={e => setForm(f => ({ ...f, platoon: e.target.value }))}
+                        className={iCls}
+                      >
+                        <option value="">— —</option>
+                        {PLATOONS.map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Squad */}
-                  <div>
-                    <label className={lCls}>Squad</label>
-                    <select
-                      value={form.squad}
-                      onChange={e => setForm(f => ({ ...f, squad: e.target.value }))}
-                      className={iCls}
-                    >
-                      <option value="">— —</option>
-                      {SQUADS.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </div>
+                  {!BATTALION_COMPANIES.includes(form.company) && (
+                    <div>
+                      <label className={lCls}>Squad</label>
+                      <select
+                        value={form.squad}
+                        onChange={e => setForm(f => ({ ...f, squad: e.target.value }))}
+                        className={iCls}
+                      >
+                        <option value="">— —</option>
+                        {SQUADS.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Secondary company — only for Zulu/Battalion */}
+                  {BATTALION_COMPANIES.includes(form.company) && (
+                    <div className="col-span-2">
+                      <label className={lCls}>Class Period Company</label>
+                      <select
+                        value={form.secondaryCompany}
+                        onChange={e => setForm(f => ({ ...f, secondaryCompany: e.target.value }))}
+                        className={`${iCls} border-yellow-500/40`}
+                      >
+                        <option value="">— None —</option>
+                        {companies
+                          .filter(c => !BATTALION_COMPANIES.includes(c))
+                          .map(c => <option key={c} value={c}>{c} Co. (Observer)</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* LET Level */}

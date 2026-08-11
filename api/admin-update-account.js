@@ -459,6 +459,11 @@ export default async function handler(req, res) {
         company: shadow?.company || profile.company || 'Battalion',
         platoon: shadow?.platoon || profile.platoon || '',
         squad: shadow?.squad || profile.squad || '',
+        // secondaryCompany is only meaningful for Zulu/Battalion members — the
+        // class period company they attend. Omit from profile if not provided.
+        ...(shadow?.secondaryCompany || profile.secondaryCompany
+          ? { secondaryCompany: shadow?.secondaryCompany || profile.secondaryCompany }
+          : {}),
         letLevel: shadow?.letLevel || 'LET 1',
         gender: shadow?.gender || 'Male',
         role: shadow?.role || 'cadet',

@@ -72,9 +72,15 @@ const SignUp = () => {
     company: '',
     platoon: '1st Platoon', // Added default
     squad: '1st Squad',     // Added default
+    secondaryCompany: '',   // Zulu/Battalion only — the class period company they attend
     phone: '',
     secretCode: ''
   });
+
+  // Zulu = Battalion. Members of Zulu are battalion-level staff and don't
+  // belong to a lettered company, but they still attend a class period with
+  // one. secondaryCompany captures that "class period" company.
+  const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -225,7 +231,8 @@ const SignUp = () => {
             position: formData.position,
             company: formData.company,
             platoon: formData.platoon,
-            squad: formData.squad
+            squad: formData.squad,
+            secondaryCompany: formData.secondaryCompany || null
           }
         })
       });
@@ -320,8 +327,8 @@ const SignUp = () => {
               </select>
             </div>
 
-            {/* Platoon Selection - not applicable at Battalion level */}
-            {formData.company !== 'Battalion' && (
+            {/* Platoon / Squad — hidden for Zulu (Battalion) members */}
+            {!BATTALION_COMPANIES.includes(formData.company) && (
               <div className="relative">
                 <select required value={formData.platoon} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, platoon: e.target.value})}>
                   {platoons.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
@@ -329,8 +336,7 @@ const SignUp = () => {
               </div>
             )}
 
-            {/* Squad Selection - not applicable at Battalion level */}
-            {formData.company !== 'Battalion' && (
+            {!BATTALION_COMPANIES.includes(formData.company) && (
               <div className="relative">
                 <select required value={formData.squad} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, squad: e.target.value})}>
                   {squads.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
@@ -338,15 +344,39 @@ const SignUp = () => {
               </div>
             )}
 
+            {/* Secondary Company — only for Zulu/Battalion: the class period
+                they're assigned to observe (not officially a member of) */}
+            {formData.company === 'Zulu' && (
+              <div className="relative col-span-full">
+                <select
+                  required
+                  value={formData.secondaryCompany}
+                  className="w-full bg-black/40 border border-yellow-500/20 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-yellow-400"
+                  onChange={(e) => setFormData({...formData, secondaryCompany: e.target.value})}
+                >
+                  <option value="" disabled>— CLASS PERIOD (SECONDARY COMPANY) —</option>
+                  {companies.filter(c => c !== 'Zulu').map(c => (
+                    <option key={c} value={c} className="bg-slate-900 text-white">{c} Company (Class Period)</option>
+                  ))}
+                </select>
+                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1.5 ml-1 tracking-widest">
+                  The company whose class you attend — you observe, not a member.
+                </p>
+              </div>
+            )}
+
             <div className="relative col-span-full">
               <select required value={formData.company} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none text-center font-black text-white" onChange={(e) => {
                 const nextCompany = e.target.value;
+                const isNextBattalion = BATTALION_COMPANIES.includes(nextCompany);
+                const isPrevBattalion = BATTALION_COMPANIES.includes(formData.company);
                 setFormData({
                   ...formData,
                   company: nextCompany,
-                  ...(nextCompany === 'Battalion'
+                  secondaryCompany: isNextBattalion ? formData.secondaryCompany : '',
+                  ...(isNextBattalion
                     ? { platoon: 'HQ Platoon', squad: 'Staff' }
-                    : (formData.company === 'Battalion' ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
+                    : (isPrevBattalion ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
                 });
               }}>
                 <option value="" disabled>— ASSIGN COMPANY —</option>

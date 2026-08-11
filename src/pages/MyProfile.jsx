@@ -406,12 +406,25 @@ const MyProfile = () => {
             </div>
             <div>
               <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Company</p>
-              <p className="text-sm font-bold">{userData?.company || '—'}</p>
+              <p className="text-sm font-bold">
+                {userData?.company || '—'}
+                {userData?.company === 'Zulu' && (
+                  <span className="ml-2 text-[9px] font-black uppercase text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">Battalion</span>
+                )}
+              </p>
             </div>
-            {userData?.company && userData.company !== 'Battalion' && (
+            {userData?.company && !['Battalion', 'Zulu'].includes(userData.company) && (
               <div>
                 <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Platoon / Squad</p>
                 <p className="text-sm font-bold">{userData?.platoon || '—'} &middot; {userData?.squad || '—'}</p>
+              </div>
+            )}
+            {userData?.company === 'Zulu' && userData?.secondaryCompany && (
+              <div>
+                <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Class Period Company</p>
+                <p className="text-sm font-bold">{userData.secondaryCompany} Company
+                  <span className="ml-2 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500">(Observer)</span>
+                </p>
               </div>
             )}
             <div className="sm:col-span-2 flex items-center gap-2">

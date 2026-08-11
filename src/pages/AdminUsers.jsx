@@ -81,11 +81,16 @@ const AdminUsers = () => {
   const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
   // JROTC_POSITIONS imported from constants.js — do not duplicate here.
 
+  // Zulu = Battalion. Members of Zulu are battalion-level staff and don't
+  // belong to a lettered company platoon/squad structure, but they still
+  // attend a class period with one. secondaryCompany captures that.
+  const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+
   const initialFormState = {
     fullName: '', email: '', company: user?.company || COMPANIES[0] || 'Zulu',
     platoon: '1st Platoon', squad: '1st Squad', rank: 'C/PVT',
     position: 'Squad Member', letLevel: 'LET 1', status: 'Active',
-    gender: 'Male', isManual: true, role: 'cadet'
+    gender: 'Male', isManual: true, role: 'cadet', secondaryCompany: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -445,12 +450,15 @@ const AdminUsers = () => {
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Company</label>
                   <select disabled={!isBattalionStaff} className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white disabled:opacity-50 appearance-none" value={formData.company} onChange={e => {
                     const nextCompany = e.target.value;
+                    const isNextBn = BATTALION_COMPANIES.includes(nextCompany);
+                    const isPrevBn = BATTALION_COMPANIES.includes(formData.company);
                     setFormData({
                       ...formData,
                       company: nextCompany,
-                      ...(nextCompany === 'Battalion'
+                      secondaryCompany: isNextBn ? (formData.secondaryCompany || '') : '',
+                      ...(isNextBn
                         ? { platoon: 'HQ Platoon', squad: 'Staff' }
-                        : (formData.company === 'Battalion' ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
+                        : (isPrevBn ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
                     });
                   }}>
                     {COMPANIES.map(c => <option key={c} value={c} className="bg-white dark:bg-slate-900">{c}</option>)}
@@ -464,7 +472,8 @@ const AdminUsers = () => {
                   </select>
                 </div>
 
-                {formData.company !== 'Battalion' && (
+                {/* Platoon / Squad — hidden for Zulu (Battalion) members */}
+                {!BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Platoon</label>
                     <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.platoon} onChange={e => setFormData({...formData, platoon: e.target.value})}>
@@ -473,12 +482,35 @@ const AdminUsers = () => {
                   </div>
                 )}
 
-                {formData.company !== 'Battalion' && (
+                {!BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Squad</label>
                     <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.squad} onChange={e => setFormData({...formData, squad: e.target.value})}>
                       {SQUADS.map(s => <option key={s} value={s} className="bg-white dark:bg-slate-900">{s}</option>)}
                     </select>
+                  </div>
+                )}
+
+                {/* Secondary Company — Zulu/Battalion members only: the class
+                    period company they attend but are not officially part of */}
+                {BATTALION_COMPANIES.includes(formData.company) && (
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">
+                      Class Period Company (Secondary)
+                    </label>
+                    <select
+                      className="w-full bg-slate-50 dark:bg-black/50 border border-yellow-500/30 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none focus:border-yellow-500"
+                      value={formData.secondaryCompany || ''}
+                      onChange={e => setFormData({...formData, secondaryCompany: e.target.value})}
+                    >
+                      <option value="">— No class period assigned —</option>
+                      {COMPANIES.filter(c => !BATTALION_COMPANIES.includes(c)).map(c => (
+                        <option key={c} value={c} className="bg-white dark:bg-slate-900">{c} Company (Class Period)</option>
+                      ))}
+                    </select>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest ml-1">
+                      Company whose class this cadet attends — they observe, not a member.
+                    </p>
                   </div>
                 )}
 
