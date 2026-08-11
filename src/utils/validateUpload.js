@@ -16,8 +16,8 @@ const SIGNATURES = {
   'application/pdf': [0x25, 0x50, 0x44, 0x46], // '%PDF'
 };
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB - generous for a phone photo, well short of anything designed to exhaust storage/bandwidth
-const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024; // 15MB - PDFs run a bit larger than photos
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;  // 10 MB — generous for a phone photo
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024; // 25 MB — JROTC newsletters/regulations can run large
 
 function bytesMatch(bytes, signature, offset = 0) {
   return signature.every((b, i) => bytes[offset + i] === b);
