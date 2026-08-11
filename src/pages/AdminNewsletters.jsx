@@ -80,7 +80,7 @@ const AdminNewsletters = () => {
     if (!file) return;
     setUploading(true);
     try {
-      const data = await uploadToCloudinary(file, 'raw');
+      const data = await uploadToCloudinary(file, 'document');
       setForm(f => ({ ...f, fileUrl: data.secure_url, fileName: file.name }));
     } catch (err) {
       console.error('PDF upload failed:', err);
