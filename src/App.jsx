@@ -59,6 +59,8 @@ const Newsletters = lazy(() => import('./pages/Newsletters'));
 const AdminNewsletters = lazy(() => import('./pages/AdminNewsletters'));
 const AdminCadetChallenge = lazy(() => import('./pages/AdminCadetChallenge'));
 const AdminRoster         = lazy(() => import('./pages/AdminRoster'));
+const AdminS2             = lazy(() => import('./pages/AdminS2'));
+const AdminS6             = lazy(() => import('./pages/AdminS6'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -296,6 +298,29 @@ const AppContent = () => {
               element={
                 <ProtectedRoute minLevel={COMMAND_LEVEL}>
                   <AdminRoster />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* S2 Intelligence: battalion S2 manages items/assignments/reviews;
+                company_s2_assistant submits inspection checklists + photos. */}
+            <Route
+              path="/admin/s2"
+              element={
+                <ProtectedRoute allowedRoles={['s2_intelligence', 'company_s2_assistant']}>
+                  <AdminS2 />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* S6 Technology: battalion S6 manages carts/tasks and sends reminders;
+                company_s6_assistant completes end-of-class checklists;
+                s5_public_affairs has read-only history access. */}
+            <Route
+              path="/admin/s6"
+              element={
+                <ProtectedRoute allowedRoles={['s6_technology', 'company_s6_assistant', 's5_public_affairs']}>
+                  <AdminS6 />
                 </ProtectedRoute>
               }
             />

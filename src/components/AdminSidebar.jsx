@@ -31,6 +31,8 @@ import {
   Newspaper,
   Activity,
   BookUser,
+  Shield,
+  Laptop,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { getInitials } from '../utils/getInitials';
@@ -63,6 +65,11 @@ const AdminSidebar = () => {
   // Roles allowed to access Cadet Challenge (S1/S3 assistants + command and above)
   const CHALLENGE_ROLES = ['company_s1_assistant', 'company_s3_assistant'];
   const canSeeChallenge = CHALLENGE_ROLES.includes(role) || userLevel >= COMMAND_LEVEL;
+
+  // S2 — battalion S2 and company S2 assistants
+  const canSeeS2 = role === 's2_intelligence' || role === 'company_s2_assistant' || userLevel >= ADMIN_LEVEL;
+  // S6 — battalion S6, S5 (read-only review), and company S6 assistants
+  const canSeeS6 = role === 's6_technology' || role === 'company_s6_assistant' || role === 's5_public_affairs' || userLevel >= ADMIN_LEVEL;
 
   const isActive = (path) => location.pathname === path;
 
@@ -140,6 +147,8 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
             {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
+            {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
@@ -164,6 +173,20 @@ const AdminSidebar = () => {
         {canSeeChallenge && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+          </div>
+        )}
+
+        {/* ── S2 INSPECTIONS — company_s2_assistant (non-commander) ── */}
+        {canSeeS2 && !isCommander && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+            {navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
+          </div>
+        )}
+
+        {/* ── S6 CHECKLIST — company_s6_assistant (non-commander) ── */}
+        {canSeeS6 && !isCommander && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+            {navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
           </div>
         )}
 

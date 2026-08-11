@@ -243,6 +243,121 @@ service cloud.firestore {
       );
     }
 
+    // ── Cadet Challenge Cycles ────────────────────────────────────────────────
+    // One doc per company+cycle combo ({company}_{cycleNum}).
+    // S1/S3 assistants + company command (45+) can read/write own company.
+    // Staff (70+) can read/write all. Battalion S1 (s1_adjutant) unlocks/sends back.
+    match /cadetChallengeCycles/{docId} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && request.resource.data.company == userDoc().company)
+      );
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && myLevel() >= 70;
+    }
+
+    // ── Cadet Challenge Records ───────────────────────────────────────────────
+    // One doc per cadet per cycle ({company}_{cycleNum}_{cadetUid}).
+    // Write: S1/S3 assistants, company command (45+), or staff (70+).
+    // Read: cadet's own record, company command for own company, staff for all.
+    match /cadetChallengeRecords/{docId} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && request.resource.data.company == userDoc().company)
+      );
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && myLevel() >= 70;
+    }
+
+    // ── S2 Inspection Items ───────────────────────────────────────────────────
+    // Managed by s2_intelligence (70+). Readable by all authenticated users
+    // (assistants need the item list when completing their assignment).
+    match /s2Items/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (
+        userDoc().role == 's2_intelligence' || myLevel() >= 85
+      );
+    }
+
+    // ── S2 Inspections ────────────────────────────────────────────────────────
+    // Created by s2_intelligence (assign). Assistants can read + update their
+    // own (to submit checklist + photo). S2 + staff can read/update all.
+    match /s2Inspections/{inspId} {
+      allow read: if isSignedIn() && (
+        userDoc().role == 's2_intelligence' || myLevel() >= 85 ||
+        resource.data.assignedToUid == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        userDoc().role == 's2_intelligence' || myLevel() >= 85
+      );
+      allow update: if isSignedIn() && (
+        userDoc().role == 's2_intelligence' || myLevel() >= 85 ||
+        resource.data.assignedToUid == request.auth.uid
+      );
+      allow delete: if isSignedIn() && (
+        userDoc().role == 's2_intelligence' || myLevel() >= 85
+      );
+    }
+
+    // ── S6 Carts ─────────────────────────────────────────────────────────────
+    // Managed by s6_technology. Readable by all authenticated users
+    // (assistants and S5 need the cart list).
+    match /s6Carts/{cartId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (
+        userDoc().role == 's6_technology' || myLevel() >= 85
+      );
+    }
+
+    // ── S6 Tasks ─────────────────────────────────────────────────────────────
+    // Permanent checklist tasks managed by s6_technology.
+    // Readable by all authenticated users (assistants and S5 need the list).
+    match /s6Tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (
+        userDoc().role == 's6_technology' || myLevel() >= 85
+      );
+    }
+
+    // ── S6 Checklists ────────────────────────────────────────────────────────
+    // Auto-created once per cart per day. Assistants can create/update their own.
+    // S6 + S5 (read-only review) + staff can read all.
+    match /s6Checklists/{checkId} {
+      allow read: if isSignedIn() && (
+        userDoc().role in ['s6_technology', 's5_public_affairs'] ||
+        myLevel() >= 85 ||
+        resource.data.completedByUid == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        userDoc().role in ['s6_technology', 'company_s6_assistant'] ||
+        myLevel() >= 85
+      );
+      allow update: if isSignedIn() && (
+        userDoc().role in ['s6_technology', 's5_public_affairs'] ||
+        myLevel() >= 85 ||
+        (userDoc().role == 'company_s6_assistant' &&
+          (resource.data.completedByUid == null || resource.data.completedByUid == request.auth.uid))
+      );
+      allow delete: if isSignedIn() && (
+        userDoc().role == 's6_technology' || myLevel() >= 85
+      );
+    }
+
     // Fallback — anything not matched above.
     match /{path=**} {
       allow read, write: if isSignedIn();
