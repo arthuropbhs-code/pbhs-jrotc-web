@@ -25,7 +25,7 @@ import {
 } from '../constants';
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
-  Loader2, CheckCircle2, Search, ChevronDown,
+  Loader2, CheckCircle2, Search, ChevronDown, Eye,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -375,14 +375,11 @@ const AdminRoster = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-blue-100 dark:border-white/5">
-                  {['Rank','Name','Position',
-                    BATTALION_COMPANIES.includes(activeCompany) ? 'Class Period' : 'Platoon',
-                    BATTALION_COMPANIES.includes(activeCompany) ? '' : 'Squad',
-                    'Gender','Challenge Scores',''].map((h, i) => h ? (
-                    <th key={i} className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-4 py-3 whitespace-nowrap">
+                  {['Rank','Name','Position','Platoon','Squad','Gender','Challenge Scores',''].map(h => (
+                    <th key={h} className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-4 py-3 whitespace-nowrap">
                       {h}
                     </th>
-                  ) : <th key={i} />)}
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -403,18 +400,28 @@ const AdminRoster = () => {
                         </span>
                       </td>
 
-                      {/* Name + account indicator */}
+                      {/* Name + account indicator + company-watch badge for Zulu */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">
                             {entry.fullName}
                           </span>
                           {hasAccount && (
                             <span
                               title={acc ? `Portal: ${acc.fullName}` : 'Has portal account'}
-                              className="text-blue-400 dark:text-blue-400 shrink-0"
+                              className="text-blue-400 shrink-0"
                             >
                               <Link2 size={12} />
+                            </span>
+                          )}
+                          {/* "Watches over" badge — only shown for Zulu/Battalion members */}
+                          {BATTALION_COMPANIES.includes(entry.company) && entry.secondaryCompany && (
+                            <span
+                              title={`Watches over ${entry.secondaryCompany} Company`}
+                              className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full"
+                            >
+                              <Eye size={9} />
+                              {entry.secondaryCompany}
                             </span>
                           )}
                         </div>
@@ -428,22 +435,14 @@ const AdminRoster = () => {
                         <span className="text-xs text-slate-600 dark:text-slate-300 font-bold">{entry.position || '—'}</span>
                       </td>
 
-                      {/* Platoon — or Class Period for Zulu/Battalion */}
+                      {/* Platoon */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {BATTALION_COMPANIES.includes(entry.company)
-                          ? entry.secondaryCompany
-                            ? <span className="text-xs font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">{entry.secondaryCompany} Co.</span>
-                            : <span className="text-slate-300 dark:text-slate-700 text-xs">—</span>
-                          : <span className="text-xs text-slate-500 dark:text-slate-400">{entry.platoon || '—'}</span>
-                        }
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.platoon || '—'}</span>
                       </td>
 
-                      {/* Squad — hidden for Zulu/Battalion rows */}
+                      {/* Squad */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {BATTALION_COMPANIES.includes(entry.company)
-                          ? null
-                          : <span className="text-xs text-slate-500 dark:text-slate-400">{entry.squad || '—'}</span>
-                        }
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{entry.squad || '—'}</span>
                       </td>
 
                       {/* Gender */}
