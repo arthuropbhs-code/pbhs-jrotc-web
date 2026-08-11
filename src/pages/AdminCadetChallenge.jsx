@@ -123,9 +123,28 @@ const AdminCadetChallenge = () => {
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const [cycleStatuses, setCycleStatuses]   = useState({});   // { "Alpha_1": { status, ... } }
-  const [records,       setRecords]         = useState([]);   // all records for selected cycle
-  const [cadets,        setCadets]          = useState([]);   // users in company (for table view)
+  const [records,       setRecords]         = useState([]);   // primary-company records for selected cycle
+  const [bnRecordsRaw,  setBnRecordsRaw]    = useState([]);   // ALL cycles' records for battalion members who observe myCompany
+  const [cadets,        setCadets]          = useState([]);   // primary-company roster members
+  const [bnCadets,      setBnCadets]        = useState([]);   // battalion members whose secondaryCompany == target
   const [dataLoading,   setDataLoading]     = useState(true);
+
+  // The active company for queries (staff filter, or the user's own company)
+  const targetCompany = filterCompany || myCompany;
+
+  // Merge primary cadets + battalion observers, deduped by uid, sorted by name
+  const allCadets = useMemo(() => {
+    const seen = new Set(cadets.map(c => c.uid));
+    return [...cadets, ...bnCadets.filter(c => !seen.has(c.uid))]
+      .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+  }, [cadets, bnCadets]);
+
+  // Cycle-filtered battalion-member records, merged with primary records, deduped by id
+  const allRecords = useMemo(() => {
+    const bnFiltered = bnRecordsRaw.filter(r => r.cycleNumber === selectedCycle);
+    const seen = new Set(records.map(r => r.id));
+    return [...records, ...bnFiltered.filter(r => !seen.has(r.id))];
+  }, [records, bnRecordsRaw, selectedCycle]);
 
   // Subscribe to cycle status docs for the selected cycle
   useEffect(() => {
@@ -186,7 +205,6 @@ const AdminCadetChallenge = () => {
   // table — not just those who have signed up to the portal.
   useEffect(() => {
     if (!myCompany && !canViewAll) return;
-    const targetCompany = filterCompany || myCompany;
     if (!targetCompany) { setCadets([]); return; }
 
     const q = query(
@@ -200,7 +218,41 @@ const AdminCadetChallenge = () => {
       setCadets(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [myCompany, canViewAll, filterCompany]);
+  }, [myCompany, canViewAll, filterCompany, targetCompany]);
+
+  // Load battalion members who observe the target company (secondaryCompany match).
+  // These cadets appear in BOTH their primary company tab AND this secondary tab.
+  useEffect(() => {
+    if (!targetCompany) { setBnCadets([]); return; }
+
+    const q = query(
+      collection(db, 'roster'),
+      where('secondaryCompany', '==', targetCompany),
+      orderBy('fullName', 'asc'),
+    );
+    const unsub = onSnapshot(q, snap => {
+      setBnCadets(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+    }, () => setBnCadets([]));
+    return () => unsub();
+  }, [targetCompany]);
+
+  // Load ALL-cycles records for battalion members who observe myCompany.
+  // This is needed so company S1 assistants can see/edit battalion observers' records
+  // even though those records are stored under the battalion member's primary company.
+  // Only runs for company-level users (canInput && !canViewAll) because canViewAll
+  // users already get all records in the primary records subscription above.
+  useEffect(() => {
+    if (!myCompany || canViewAll || !canInput) { setBnRecordsRaw([]); return; }
+
+    const q = query(
+      collection(db, 'cadetChallengeRecords'),
+      where('secondaryCompany', '==', myCompany),
+    );
+    const unsub = onSnapshot(q, snap => {
+      setBnRecordsRaw(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => setBnRecordsRaw([]));
+    return () => unsub();
+  }, [myCompany, canViewAll, canInput]);
 
   // ── Toast helper ─────────────────────────────────────────────────────────────
   const showToast = useCallback((msg) => {
@@ -244,11 +296,15 @@ const AdminCadetChallenge = () => {
   const isSubmitted   = activeCycle.status === 'submitted';
   const canEdit       = canInput && !isLocked && !(isSubmitted && !canUnlock);
 
-  // Records for the currently viewed company
+  // Records for the currently viewed company.
+  // Include records where the cadet's PRIMARY company matches (normal case) OR
+  // where secondaryCompany matches (battalion members observing this company).
   const companyRecords = useMemo(() => {
-    if (canViewAll && !filterCompany) return records;
-    return records.filter(r => r.company === activeCompany);
-  }, [records, activeCompany, canViewAll, filterCompany]);
+    if (canViewAll && !filterCompany) return allRecords;
+    return allRecords.filter(r =>
+      r.company === activeCompany || r.secondaryCompany === activeCompany
+    );
+  }, [allRecords, activeCompany, canViewAll, filterCompany]);
 
   // Map cadetId → record for table view
   const recordMap = useMemo(() => {
@@ -264,11 +320,20 @@ const AdminCadetChallenge = () => {
     if (!activeCompany) { showToast('Company not determined.'); return; }
     setSaving(true);
     try {
+      // If the selected cadet is a battalion member (has a secondaryCompany in their
+      // roster record), the record is stored under their PRIMARY company — not the
+      // company currently being viewed. This keeps one canonical record per cadet per
+      // cycle while still making it visible from the secondary-company tab.
+      const cadetRosterEntry = allCadets.find(c => c.uid === form.cadetId);
+      const recordCompany    = cadetRosterEntry?.company || activeCompany;
+      const secondaryCompany = cadetRosterEntry?.secondaryCompany || null;
+
       const payload = {
-        company:       activeCompany,
-        cycleNumber:   selectedCycle,
-        cadetId:       form.cadetId   || 'manual',
-        cadetName:     form.cadetName.trim(),
+        company:          recordCompany,
+        ...(secondaryCompany ? { secondaryCompany } : {}),
+        cycleNumber:      selectedCycle,
+        cadetId:          form.cadetId   || 'manual',
+        cadetName:        form.cadetName.trim(),
         pushUps:       form.medicalExempt ? null : (form.pushUps   !== '' ? Number(form.pushUps)   : null),
         sitUps:        form.medicalExempt ? null : (form.sitUps    !== '' ? Number(form.sitUps)    : null),
         shuttleRun:    form.medicalExempt ? null : (form.shuttleRun !== '' ? parseFloat(form.shuttleRun) : null),
@@ -284,10 +349,12 @@ const AdminCadetChallenge = () => {
         await updateDoc(doc(db, 'cadetChallengeRecords', editingRecord.id), payload);
         showToast('Record updated');
       } else {
-        // Use cadetId as doc ID if available (prevents duplicates per cadet per cycle)
+        // Use cadetId as doc ID if available (prevents duplicates per cadet per cycle).
+        // Use the cadet's primary company in the docId so battalion members always
+        // map to the same doc regardless of which company tab triggered the save.
         const docId = form.cadetId && form.cadetId !== 'manual'
-          ? `${activeCompany}_${selectedCycle}_${form.cadetId}`
-          : `${activeCompany}_${selectedCycle}_${Date.now()}`;
+          ? `${recordCompany}_${selectedCycle}_${form.cadetId}`
+          : `${recordCompany}_${selectedCycle}_${Date.now()}`;
         await setDoc(doc(db, 'cadetChallengeRecords', docId), {
           ...payload, createdAt: serverTimestamp(),
         }, { merge: true });
@@ -305,11 +372,17 @@ const AdminCadetChallenge = () => {
   // Quick-save from table view (inline edit of one field)
   const handleQuickSave = async (cadet, field, value) => {
     const existing = recordMap[cadet.uid];
-    const docId    = `${activeCompany}_${selectedCycle}_${cadet.uid}`;
-    const isExempt = existing?.medicalExempt || false;
+    // Battalion members have cadet.company = their primary company and
+    // cadet.secondaryCompany = the company being viewed. Store records under
+    // the primary company so there's one canonical doc per cadet per cycle.
+    const recordCompany    = cadet.company || activeCompany;
+    const secondaryCompany = cadet.secondaryCompany || null;
+    const docId            = `${recordCompany}_${selectedCycle}_${cadet.uid}`;
     try {
       const update = {
-        company: activeCompany, cycleNumber: selectedCycle,
+        company: recordCompany,
+        ...(secondaryCompany ? { secondaryCompany } : {}),
+        cycleNumber: selectedCycle,
         cadetId: cadet.uid, cadetName: cadet.fullName,
         enteredByUid: user.uid, enteredByName: userData?.fullName || '',
         updatedAt: serverTimestamp(),
@@ -324,11 +397,15 @@ const AdminCadetChallenge = () => {
   };
 
   const handleMedicalToggle = async (cadet) => {
-    const docId   = `${activeCompany}_${selectedCycle}_${cadet.uid}`;
-    const current = recordMap[cadet.uid]?.medicalExempt || false;
+    const recordCompany    = cadet.company || activeCompany;
+    const secondaryCompany = cadet.secondaryCompany || null;
+    const docId            = `${recordCompany}_${selectedCycle}_${cadet.uid}`;
+    const current          = recordMap[cadet.uid]?.medicalExempt || false;
     try {
       await setDoc(doc(db, 'cadetChallengeRecords', docId), {
-        company: activeCompany, cycleNumber: selectedCycle,
+        company: recordCompany,
+        ...(secondaryCompany ? { secondaryCompany } : {}),
+        cycleNumber: selectedCycle,
         cadetId: cadet.uid, cadetName: cadet.fullName,
         medicalExempt: !current,
         enteredByUid: user.uid, enteredByName: userData?.fullName || '',
@@ -597,7 +674,7 @@ const AdminCadetChallenge = () => {
         {/* ── TABLE VIEW ── */}
         {(viewMode === 'table' || canViewAll) && (
           <TableView
-            cadets={cadets}
+            cadets={allCadets}
             recordMap={recordMap}
             canEdit={canEdit}
             isLocked={isLocked}
@@ -645,7 +722,8 @@ const AdminCadetChallenge = () => {
             {companies.map(company => {
               const key     = cycleKey(company, selectedCycle);
               const stat    = cycleStatuses[key]?.status || 'open';
-              const recs    = records.filter(r => r.company === company);
+              // Include battalion members who observe this company (secondaryCompany match)
+              const recs    = allRecords.filter(r => r.company === company || r.secondaryCompany === company);
               const recMap  = {};
               recs.forEach(r => { if (r.cadetId) recMap[r.cadetId] = r; });
               return (
@@ -736,12 +814,12 @@ const AdminCadetChallenge = () => {
                 {/* Cadet name */}
                 <div>
                   <label className={lc}>Cadet Name *</label>
-                  {cadets.length > 0 ? (
+                  {allCadets.length > 0 ? (
                     <select
                       required={!editingRecord}
                       value={form.cadetId}
                       onChange={e => {
-                        const cadet = cadets.find(c => c.uid === e.target.value);
+                        const cadet = allCadets.find(c => c.uid === e.target.value);
                         setForm(f => ({
                           ...f,
                           cadetId: e.target.value,
@@ -751,13 +829,13 @@ const AdminCadetChallenge = () => {
                       className={ic}
                     >
                       <option value="">— Select Cadet —</option>
-                      {cadets.map(c => (
+                      {allCadets.map(c => (
                         <option key={c.uid} value={c.uid}>{c.fullName}</option>
                       ))}
                       <option value="manual">+ Enter manually</option>
                     </select>
                   ) : null}
-                  {(form.cadetId === 'manual' || cadets.length === 0) && (
+                  {(form.cadetId === 'manual' || allCadets.length === 0) && (
                     <input
                       required
                       type="text"

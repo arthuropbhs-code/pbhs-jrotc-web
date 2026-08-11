@@ -289,19 +289,26 @@ service cloud.firestore {
     // One doc per cadet per cycle ({company}_{cycleNum}_{cadetUid}).
     // Write: S1/S3 assistants, company command (45+), or staff (70+).
     // Read: cadet's own record, company command for own company, staff for all.
+    //
+    // Battalion members have company='Zulu' and secondaryCompany='Alpha'.
+    // Their records are stored under company='Zulu' but must also be readable
+    // and writable by Alpha's S1 assistant (via secondaryCompany match).
     match /cadetChallengeRecords/{docId} {
       allow read: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        (myLevel() >= 35 && resource.data.company == userDoc().company)
+        (myLevel() >= 35 && resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && resource.data.secondaryCompany == userDoc().company)
       );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 35 && request.resource.data.company == userDoc().company)
+        (myLevel() >= 35 && request.resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && request.resource.data.secondaryCompany == userDoc().company)
       );
       allow update: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 35 && resource.data.company == userDoc().company)
+        (myLevel() >= 35 && resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && resource.data.secondaryCompany == userDoc().company)
       );
       allow delete: if isSignedIn() && myLevel() >= 70;
     }
