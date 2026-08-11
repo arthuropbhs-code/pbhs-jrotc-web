@@ -40,11 +40,20 @@ const SessionLockScreen = ({ onUnlock }) => {
       setPassword('');
       onUnlock();
     } catch (err) {
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      if (err.code === 'auth/multi-factor-auth-required') {
+        // Firebase accepted the password (first factor passed) but is asking
+        // for the MFA second factor. Since the password was correct and the
+        // Firebase session is already valid, treat this as a successful unlock —
+        // no SMS needed for a soft-lock re-entry. The session was never invalidated.
+        sessionStorage.removeItem('sessionLocked');
+        setPassword('');
+        onUnlock();
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('Incorrect password — try again.');
       } else if (err.code === 'auth/too-many-requests') {
         setError('Too many attempts. Wait a moment then try again.');
       } else {
+        console.error('Session unlock error:', err.code, err.message);
         setError('Unlock failed. Try signing out and back in.');
       }
     } finally {
