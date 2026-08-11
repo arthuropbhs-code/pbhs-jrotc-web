@@ -229,8 +229,12 @@ service cloud.firestore {
     // read   — company command (45+) reads own company; staff (70+) reads all.
     //          company_s1_assistant + company_s3_assistant (35) also read own
     //          company so the Cadet Challenge table can be populated from the
-    //          roster and the S1 assistant can view the roster page read-only.
-    // create/update/delete — company command (45+) or staff (70+) only.
+    //          roster and the S1 assistant can view the roster page.
+    // create — company command (45+) or staff (70+), plus company_s1_assistant
+    //          for their own company.
+    // update — same as create; S1 assistants may not change fullName or company.
+    // delete — company command (45+) or staff (70+), plus company_s1_assistant
+    //          for their own company.
     match /roster/{id} {
       allow read: if isSignedIn() && (
         myLevel() >= 70 ||
@@ -240,11 +244,24 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 45 && request.resource.data.company == userDoc().company)
+        (myLevel() >= 45 && request.resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s1_assistant' &&
+          request.resource.data.company == userDoc().company)
       );
-      allow update, delete: if isSignedIn() && (
+      allow update: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company)
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        // S1 assistants may edit any field except fullName and company.
+        (userDoc().role == 'company_s1_assistant' &&
+          resource.data.company == userDoc().company &&
+          request.resource.data.company  == resource.data.company &&
+          request.resource.data.fullName == resource.data.fullName)
+      );
+      allow delete: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s1_assistant' &&
+          resource.data.company == userDoc().company)
       );
     }
 

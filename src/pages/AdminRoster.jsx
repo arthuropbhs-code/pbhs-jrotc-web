@@ -81,10 +81,12 @@ const AdminRoster = () => {
   const userLevel     = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
   const canManageAll  = userLevel >= STAFF_LEVEL;
   const canManageOwn  = userLevel >= COMMAND_LEVEL;
-  // S1 and S3 company assistants can view (read-only) their company's roster
-  // so they can cross-reference cadets while entering Cadet Challenge records.
-  const canViewOwn    = ['company_s1_assistant', 'company_s3_assistant'].includes(role);
-  const canEdit       = canManageAll || canManageOwn; // assistants are read-only
+  // S1 assistants can create, edit, and delete cadets in their own company —
+  // but they cannot change a cadet's name or company assignment.
+  const canS1Edit     = role === 'company_s1_assistant';
+  // S3 assistants are view-only (no write access).
+  const canViewOwn    = role === 'company_s3_assistant';
+  const canEdit       = canManageAll || canManageOwn || canS1Edit;
   const myCompany     = userData?.company || '';
 
   // default to the user's own company, or first company for staff
@@ -307,7 +309,7 @@ const AdminRoster = () => {
     </div>
   );
 
-  if (!canManageOwn && !canManageAll && !canViewOwn) return (
+  if (!canManageOwn && !canManageAll && !canViewOwn && !canS1Edit) return (
     <div className="min-h-screen flex items-center justify-center p-8 text-center">
       <div>
         <UserCircle className="mx-auto text-yellow-500 mb-4" size={40} />
@@ -406,7 +408,7 @@ const AdminRoster = () => {
             <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-sm">
               {search ? 'No cadets match your search' : `No cadets in ${activeCompany} Company yet`}
             </p>
-            {!search && (
+            {!search && canEdit && (
               <button onClick={openCreate} className="mt-4 text-yellow-500 text-xs font-black uppercase tracking-widest hover:text-yellow-400 transition-colors">
                 + Add first cadet
               </button>
@@ -570,18 +572,29 @@ const AdminRoster = () => {
 
               <form onSubmit={handleSave} className="p-6 space-y-4">
 
-                {/* Full Name */}
-                <div>
-                  <label className={lCls}>Full Name * (LAST, FIRST)</label>
-                  <input
-                    required
-                    type="text"
-                    value={form.fullName}
-                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
-                    placeholder="DOE, JOHN"
-                    className={iCls}
-                  />
-                </div>
+                {/* Full Name — locked for S1 assistants when editing (can't rename a cadet) */}
+                {(() => {
+                  const nameLocked = canS1Edit && !!editingId;
+                  return (
+                    <div>
+                      <label className={lCls}>
+                        Full Name * (LAST, FIRST)
+                        {nameLocked && (
+                          <span className="ml-2 text-slate-400 normal-case tracking-normal font-bold">— contact staff to change</span>
+                        )}
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={form.fullName}
+                        readOnly={nameLocked}
+                        onChange={nameLocked ? undefined : e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                        placeholder="DOE, JOHN"
+                        className={`${iCls} ${nameLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      />
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Rank */}
