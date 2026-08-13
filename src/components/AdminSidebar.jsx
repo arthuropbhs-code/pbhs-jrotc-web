@@ -12,7 +12,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import {
   LayoutDashboard,
-  ClipboardCheck,
   UserCircle,
   LogOut,
   PlusSquare,
@@ -157,13 +156,12 @@ const AdminSidebar = () => {
           <>
             {/* ── GROUP 1: OPERATIONS ─────────────── */}
             {groupLabel('Operations')}
-            {isStaffOrS4 && navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
-            {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
+            {isStaffOrS4 && navLink('/admin/orders', <PlusSquare size={18} />, 'Orders & Tasks')}
             {/* Global Broadcast: S6 and S7 cannot issue battalion-wide announcements */}
             {isStaffOrS4 && role !== 's7_special_projects' && role !== 's6_technology' && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {/* Cadet Challenge: not relevant to S6 or S7 scope */}
             {role !== 's6_technology' && role !== 's7_special_projects' && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {canSeeFundraiser && role !== 's6_technology' && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+            {canSeeFundraiser && role !== 's6_technology' && role !== 's7_special_projects' && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
             {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
@@ -234,7 +232,14 @@ const AdminSidebar = () => {
               )}
             </Link>
             {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
-            {!isCommander && canSeeFundraiser && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+          </div>
+        )}
+        {/* Fundraiser personal view — for any signed-in user who isn't
+            already seeing the Fundraiser link inside the isCommander block.
+            S6 and S7 are excluded because they have no fundraiser scope. */}
+        {!isCommander && role !== 's6_technology' && role !== 's7_special_projects' && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+            {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
           </div>
         )}
       </nav>

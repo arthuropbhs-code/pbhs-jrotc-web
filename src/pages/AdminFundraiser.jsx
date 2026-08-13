@@ -2,32 +2,32 @@
 //
 // Fallen Heroes Fundraiser Tracking
 //
-// Two tabs:
-//   Transactions — every payment entry for the company (cadet, amount, flags,
-//                   payment type, who logged it, date/time).
-//   Roster       — full company roster aggregated to show each cadet's
-//                   total $ raised and flag count.
+// ── Access model ──────────────────────────────────────────────────────────────
+// Any signed-in portal user can reach this page.
+//
+// FULL VIEW (Transactions + Roster tabs) — FULL_ACCESS_ROLES or admin 80+:
+//   s1_adjutant, s3_operations, battalion_xo, battalion_csm,
+//   battalion_commander, company_commander, company_xo, company_1sg
+//
+// PERSONAL VIEW (own entries only) — everyone else:
+//   Looks up the user's roster doc via linkedUid; falls back to cadetName
+//   matching userData.fullName. Shows $0 / 0 flags if no entries yet.
 //
 // $2 = 1 flag, rounded down.  e.g. $5 → 2 flags ($4 credited).
-//
-// Input roles (own company): company_commander, company_xo, company_1sg
-// Input roles (any company): s1_adjutant, s3_operations + all admin-level users
-// View all companies:         staff level 70+
-// Delete entries:             admin level 80+
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import {
   collection, addDoc, updateDoc, doc, onSnapshot,
-  query, where, serverTimestamp,
+  query, where, serverTimestamp, getDocs, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useCompanies } from '../hooks/useCompanies';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
-  DollarSign, Flag, Plus, Trash2, X, Loader2, CheckCircle2,
+  DollarSign, Flag, Plus, X, Loader2, CheckCircle2,
   Filter, Banknote, FileText, Smartphone, ShoppingCart,
-  Users, ReceiptText, Ban,
+  Users, ReceiptText, Ban, Heart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -35,9 +35,14 @@ import ScrambleText from '../components/ScrambleText';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-// Roles that may input entries for their own company
+// Roles that get the full Transactions + Roster view
+const FULL_ACCESS_ROLES = [
+  's1_adjutant', 's3_operations',
+  'battalion_xo', 'battalion_csm', 'battalion_commander',
+  'company_commander', 'company_xo', 'company_1sg',
+];
+
 const COMPANY_INPUT_ROLES = ['company_commander', 'company_xo', 'company_1sg'];
-// Battalion roles that may input for any company
 const BN_INPUT_ROLES      = ['s1_adjutant', 's3_operations'];
 
 const PAYMENT_TYPES = [
@@ -73,14 +78,14 @@ const AdminFundraiser = () => {
   const { user, userData, role, loading: authLoading } = useAuth();
   const { companies } = useCompanies();
 
-  const userLevel      = ROLE_HIERARCHY[role] || 0;
-  const myCompany      = userData?.company || '';
-  const canInput       = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
-  const canInputOwn    = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
-  const canViewAll     = BN_INPUT_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
-  const canDelete      = userLevel >= ADMIN_LEVEL;
+  const userLevel   = ROLE_HIERARCHY[role] || 0;
+  const myCompany   = userData?.company || '';
+  const canViewFull = FULL_ACCESS_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  const canInput    = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  const canViewAll  = BN_INPUT_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
+  const canDelete   = userLevel >= ADMIN_LEVEL;
 
-  // ── UI state ─────────────────────────────────────────────────────────────────
+  // ── Full-view UI state ────────────────────────────────────────────────────────
   const [activeTab,    setActiveTab]    = useState('transactions');
   const [filterCompany,setFilterCompany]= useState('');
   const [showModal,    setShowModal]    = useState(false);
@@ -90,7 +95,7 @@ const AdminFundraiser = () => {
   const [toast,        setToast]        = useState(null);
   const [dataLoading,  setDataLoading]  = useState(true);
 
-  // ── Data state ────────────────────────────────────────────────────────────────
+  // ── Full-view data ────────────────────────────────────────────────────────────
   const [entries, setEntries] = useState([]);
   const [cadets,  setCadets]  = useState([]);
 
@@ -105,35 +110,78 @@ const AdminFundraiser = () => {
     }
   }, [canViewAll, myCompany]);
 
-  // ── Subscribe: entries ────────────────────────────────────────────────────────
-  // NOTE: we intentionally avoid orderBy('submittedAt') in the where-query to
-  // prevent needing a composite index on (company, submittedAt) that may not
-  // exist yet. Sorting is done client-side in displayEntries instead.
+  // ── Personal-view state ───────────────────────────────────────────────────────
+  const [myRosterDocId,     setMyRosterDocId]     = useState(null);
+  const [myRosterDocLoaded, setMyRosterDocLoaded] = useState(false);
+  const [myEntries,         setMyEntries]         = useState([]);
+  const [myDataLoading,     setMyDataLoading]     = useState(true);
+
+  // Step 1 (personal view only): find my roster doc by linkedUid
   useEffect(() => {
-    if (authLoading) return;
+    if (canViewFull || !user || authLoading) return;
+    getDocs(query(collection(db, 'roster'), where('linkedUid', '==', user.uid)))
+      .then(snap => {
+        setMyRosterDocId(snap.empty ? null : snap.docs[0].id);
+        setMyRosterDocLoaded(true);
+      })
+      .catch(() => setMyRosterDocLoaded(true));
+  }, [canViewFull, user, authLoading]);
+
+  // Step 2 (personal view only): subscribe to my entries once roster doc is known
+  useEffect(() => {
+    if (canViewFull || !myRosterDocLoaded) return;
+    setMyDataLoading(true);
+
+    let q;
+    if (myRosterDocId) {
+      q = query(collection(db, 'fundraiserEntries'), where('cadetId', '==', myRosterDocId));
+    } else if (userData?.fullName) {
+      // Fallback: match by cadet name (for users without a linkedUid on their roster doc)
+      q = query(collection(db, 'fundraiserEntries'), where('cadetName', '==', userData.fullName));
+    } else {
+      setMyEntries([]);
+      setMyDataLoading(false);
+      return;
+    }
+
+    const unsub = onSnapshot(q, snap => {
+      const all = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(e => !e.voided) // personal view never shows voided entries
+        .sort((a, b) => (b.submittedAt?.seconds ?? 0) - (a.submittedAt?.seconds ?? 0));
+      setMyEntries(all);
+      setMyDataLoading(false);
+    }, err => {
+      console.error('personal fundraiser snapshot error:', err);
+      setMyDataLoading(false);
+    });
+
+    return () => unsub();
+  }, [canViewFull, myRosterDocId, myRosterDocLoaded, userData?.fullName]);
+
+  // ── Full-view subscriptions ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!canViewFull || authLoading) return;
     setDataLoading(true);
     let q;
     if (canViewAll && !filterCompany) {
       q = query(collection(db, 'fundraiserEntries'));
     } else if (activeCompany) {
-      q = query(
-        collection(db, 'fundraiserEntries'),
-        where('company', '==', activeCompany),
-      );
+      q = query(collection(db, 'fundraiserEntries'), where('company', '==', activeCompany));
     } else {
       setEntries([]); setDataLoading(false); return;
     }
     const unsub = onSnapshot(q, snap => {
       setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(false);
-    }, (err) => { console.error('fundraiserEntries snapshot error:', err); setDataLoading(false); });
+    }, err => { console.error('fundraiserEntries snapshot error:', err); setDataLoading(false); });
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, filterCompany, activeCompany, canViewAll, role]);
+  }, [canViewFull, authLoading, filterCompany, activeCompany, canViewAll, role]);
 
-  // ── Subscribe: roster (cadets) for active company ─────────────────────────────
+  // ── Full-view: roster subscription ───────────────────────────────────────────
   useEffect(() => {
-    if (!activeCompany) { setCadets([]); return; }
+    if (!canViewFull || !activeCompany) { setCadets([]); return; }
     const q = query(
       collection(db, 'roster'),
       where('company', '==', activeCompany),
@@ -143,14 +191,13 @@ const AdminFundraiser = () => {
       setCadets(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [activeCompany]);
+  }, [canViewFull, activeCompany]);
 
-  // ── Computed ──────────────────────────────────────────────────────────────────
+  // ── Full-view computed ────────────────────────────────────────────────────────
   const displayEntries = useMemo(() => {
     const filtered = (canViewAll && !filterCompany)
       ? entries
       : entries.filter(e => e.company === activeCompany);
-    // Sort newest-first client-side (avoids composite Firestore index requirement)
     return [...filtered].sort((a, b) => {
       const ta = a.submittedAt?.seconds ?? 0;
       const tb = b.submittedAt?.seconds ?? 0;
@@ -158,12 +205,10 @@ const AdminFundraiser = () => {
     });
   }, [entries, activeCompany, canViewAll, filterCompany]);
 
-  // Voided entries stay in displayEntries for the transaction log but are excluded from totals
   const activeEntries = useMemo(() => displayEntries.filter(e => !e.voided), [displayEntries]);
-  const totalAmount = useMemo(() => activeEntries.reduce((s, e) => s + (e.amount || 0), 0), [activeEntries]);
-  const totalFlags  = useMemo(() => activeEntries.reduce((s, e) => s + (e.flags  || 0), 0), [activeEntries]);
+  const totalAmount   = useMemo(() => activeEntries.reduce((s, e) => s + (e.amount || 0), 0), [activeEntries]);
+  const totalFlags    = useMemo(() => activeEntries.reduce((s, e) => s + (e.flags  || 0), 0), [activeEntries]);
 
-  // Roster aggregated view: each cadet with their totals (voided excluded)
   const rosterAggregated = useMemo(() => {
     const byId = {};
     activeEntries.forEach(e => {
@@ -176,24 +221,23 @@ const AdminFundraiser = () => {
         byId[key].lastAt = e.submittedAt;
       }
     });
-    // Merge with full roster so cadets with $0 still appear
     const result = cadets.map(c => ({
-      uid: c.uid,
-      fullName: c.fullName,
-      company: c.company,
-      rank: c.rank,
+      uid: c.uid, fullName: c.fullName, company: c.company, rank: c.rank,
       ...(byId[c.uid] || { total: 0, flags: 0, count: 0, lastAt: null }),
     }));
-    // Also include manually-entered names not in the roster
     Object.values(byId).forEach(agg => {
       if (agg.cadetId === 'manual' && !result.find(r => r.uid === agg.cadetId)) {
         result.push({ uid: 'manual', fullName: agg.cadetName, rank: '', ...agg });
       }
     });
     return result.sort((a, b) => b.total - a.total || (a.fullName || '').localeCompare(b.fullName || ''));
-  }, [displayEntries, cadets]);
+  }, [activeEntries, cadets]);
 
-  // ── Toast ─────────────────────────────────────────────────────────────────────
+  // ── Personal-view computed ────────────────────────────────────────────────────
+  const myTotal = useMemo(() => myEntries.reduce((s, e) => s + (e.amount || 0), 0), [myEntries]);
+  const myFlags = useMemo(() => myEntries.reduce((s, e) => s + (e.flags  || 0), 0), [myEntries]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   const showToast = useCallback(msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
@@ -202,7 +246,9 @@ const AdminFundraiser = () => {
   // ── Save payment ──────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
-    const name = form.cadetId === 'manual' ? form.cadetName.trim() : (cadets.find(c => c.uid === form.cadetId)?.fullName || form.cadetName.trim());
+    const name = form.cadetId === 'manual'
+      ? form.cadetName.trim()
+      : (cadets.find(c => c.uid === form.cadetId)?.fullName || form.cadetName.trim());
     if (!name) { showToast('Select or enter a cadet name.'); return; }
     if (!form.amount || Number(form.amount) <= 0) { showToast('Enter a valid amount.'); return; }
     if (!activeCompany) { showToast('Company not determined.'); return; }
@@ -210,6 +256,10 @@ const AdminFundraiser = () => {
     try {
       const amt   = parseFloat(form.amount);
       const flags = toFlags(amt);
+      // Carry the cadet's linkedUid so Firestore rules can allow them to read their own entry
+      const linkedUid = form.cadetId !== 'manual'
+        ? (cadets.find(c => c.uid === form.cadetId)?.linkedUid || null)
+        : null;
       await addDoc(collection(db, 'fundraiserEntries'), {
         company:         activeCompany,
         cadetId:         form.cadetId || 'manual',
@@ -218,6 +268,7 @@ const AdminFundraiser = () => {
         amount:          amt,
         flags,
         notes:           form.notes.trim() || null,
+        linkedUid,
         submittedByUid:  user.uid,
         submittedByName: userData?.fullName || '',
         submittedAt:     serverTimestamp(),
@@ -235,8 +286,6 @@ const AdminFundraiser = () => {
   };
 
   // ── Void (soft-delete) ────────────────────────────────────────────────────────
-  // Entries are never hard-deleted — they remain in the log with voided=true
-  // so there is always an audit trail. Voided entries are excluded from all totals.
   const handleDelete = async () => {
     if (!deleteConf) return;
     try {
@@ -254,27 +303,117 @@ const AdminFundraiser = () => {
     }
   };
 
-  // ── Access check ──────────────────────────────────────────────────────────────
+  // ── Loading gate ──────────────────────────────────────────────────────────────
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="animate-spin text-yellow-500" size={40} />
     </div>
   );
 
-  const hasAccess = canInput || canViewAll;
-  if (!hasAccess) return (
-    <div className="min-h-screen flex items-center justify-center text-center p-8">
-      <div>
-        <DollarSign className="mx-auto text-yellow-500 mb-4" size={40} />
-        <p className="font-black uppercase text-sm text-slate-500">Access Restricted</p>
-        <p className="text-xs text-slate-400 mt-2">This page is for Company Leadership and above.</p>
-      </div>
-    </div>
-  );
-
   const liveFlags = toFlags(parseFloat(form.amount) || 0);
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // ── PERSONAL VIEW ─────────────────────────────────────────────────────────────
+  if (!canViewFull) {
+    const displayName = userData?.fullName || userData?.name || 'Cadet';
+
+    return (
+      <div className="flex-1 text-slate-900 dark:text-slate-100">
+        <main className="p-6 md:p-10 max-w-3xl">
+
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              <ScrambleText text="Fallen " trigger="mount" />
+              <span className="text-yellow-500"><ScrambleText text="Heroes" trigger="mount" /></span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
+              My Fundraiser Progress · {ROLE_LABELS[role] || 'Cadet'}
+            </p>
+          </div>
+
+          {myDataLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="animate-spin text-yellow-500" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <SummaryCard
+                  icon={<DollarSign size={18} className="text-green-500" />}
+                  label="Total Raised"
+                  value={`$${myTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                />
+                <SummaryCard
+                  icon={<Flag size={18} className="text-yellow-500" />}
+                  label="Total Flags"
+                  value={myFlags.toLocaleString()}
+                />
+              </div>
+
+              {/* My entries list */}
+              {myEntries.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+                  <Heart className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No payments recorded yet</p>
+                  <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+                    Once your company leadership logs a donation for you, it will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-3 px-1">
+                    Payment History
+                  </p>
+                  <div className="overflow-x-auto rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/5">
+                          {['Date', 'Payment', 'Amount', 'Flags', 'Notes'].map(h => (
+                            <th key={h} className="text-left p-3 font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {myEntries.map((entry, idx) => (
+                          <tr key={entry.id} className={`border-b border-slate-100 dark:border-white/5 ${idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-white/[0.02]'}`}>
+                            <td className="p-3 text-slate-400 whitespace-nowrap">
+                              {entry.submittedAt?.toDate
+                                ? entry.submittedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : '—'}
+                            </td>
+                            <td className="p-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${PAYMENT_COLORS[entry.paymentType] || 'bg-slate-100'}`}>
+                                {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.icon}
+                                {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.label || entry.paymentType}
+                              </span>
+                            </td>
+                            <td className="p-3 font-black text-green-600 dark:text-green-400 whitespace-nowrap">
+                              ${(entry.amount || 0).toFixed(2)}
+                            </td>
+                            <td className="p-3 font-black text-yellow-600 dark:text-yellow-400">
+                              {entry.flags ?? toFlags(entry.amount)}
+                            </td>
+                            <td className="p-3 text-slate-500 dark:text-slate-400 max-w-[180px] truncate">
+                              {entry.notes || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <Footer />
+        </main>
+      </div>
+    );
+  }
+
+  // ── FULL VIEW (Transactions + Roster tabs) ────────────────────────────────────
   return (
     <div className="flex-1 text-slate-900 dark:text-slate-100">
       <main className="p-6 md:p-10 max-w-7xl">
@@ -291,7 +430,7 @@ const AdminFundraiser = () => {
             </p>
           </div>
 
-          {canInputOwn && activeCompany && (
+          {canInput && activeCompany && (
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
@@ -358,7 +497,7 @@ const AdminFundraiser = () => {
             <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
               <DollarSign className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
               <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No payments logged yet</p>
-              {canInputOwn && <button onClick={() => setShowModal(true)} className="mt-4 text-yellow-500 text-xs font-black uppercase hover:text-yellow-400">+ Log first payment</button>}
+              {canInput && <button onClick={() => setShowModal(true)} className="mt-4 text-yellow-500 text-xs font-black uppercase hover:text-yellow-400">+ Log first payment</button>}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">

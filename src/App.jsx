@@ -27,7 +27,9 @@ const SignUp = lazy(() => import('./pages/SignUp'));
 const Photos = lazy(() => import('./pages/Photos'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const TaskManagement = lazy(() => import('./pages/TaskManagement'));
+// TaskManagement page merged into AdminOrders — kept as a lazy import
+// only so the old /admin/assign-tasks route can redirect instead of 404.
+// Once all bookmarks are gone this can be removed entirely.
 const CadetInfo = lazy(() => import('./pages/CadetInfo'));
 const Teams = lazy(() => import('./pages/Teams'));
 const Announcements = lazy(() => import('./pages/Announcements'));
@@ -179,14 +181,8 @@ const AppContent = () => {
               those pages don't need the authenticated sidebar. */}
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route
-              path="/admin/assign-tasks"
-              element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
-                  <TaskManagement />
-                </ProtectedRoute>
-              }
-            />
+            {/* /admin/assign-tasks merged into /admin/orders — redirect any old bookmarks */}
+            <Route path="/admin/assign-tasks" element={<Navigate to="/admin/orders" replace />} />
             <Route
               path="/admin/orders"
               element={
@@ -331,12 +327,13 @@ const AppContent = () => {
               }
             />
 
-            {/* Fundraiser Tracking — Fallen Heroes: company command + S1/S3 adjutants log
-                donations; staff (70+) and admins view all companies. */}
+            {/* Fundraiser Tracking — Fallen Heroes: every authenticated portal user can
+                reach this route; the component itself handles the split between full
+                access (transactions + roster) and personal view (own entries only). */}
             <Route
               path="/admin/fundraiser"
               element={
-                <ProtectedRoute allowedRoles={['company_commander', 'company_xo', 'company_1sg', 's1_adjutant', 's3_operations']}>
+                <ProtectedRoute>
                   <AdminFundraiser />
                 </ProtectedRoute>
               }
