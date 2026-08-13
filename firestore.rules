@@ -387,6 +387,70 @@ service cloud.firestore {
       );
     }
 
+    // ── Fundraiser Entries (Fallen Heroes) ───────────────────────────────────
+    // create — company command (45+) and company_s4_assistant for own company;
+    //          s1_adjutant + s3_operations (70) and higher for any company.
+    // read   — company command reads own company; staff (70+) reads all.
+    // delete — staff (70+) only.
+    match /fundraiserEntries/{entryId} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && request.resource.data.company == userDoc().company)
+      );
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && myLevel() >= 70;
+    }
+
+    // ── Uniform Sizes ─────────────────────────────────────────────────────────
+    // One doc per cadet: {company}_{cadetUid}
+    // Input: S4 assistant + company command (45+) for own company; logistics/admin for all.
+    // Read:  company command (45+) reads own company; logistics/admin (70+) reads all.
+    // Delete: logistics/admin (70+) only.
+    match /uniformSizes/{docId} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && request.resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && request.resource.data.company == userDoc().company)
+      );
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && myLevel() >= 70;
+    }
+
+    // ── Uniform Size Status ───────────────────────────────────────────────────
+    // One doc per company — tracks draft/submitted/pending workflow state.
+    // S4 assistant + company command write own company status; logistics/admin write all.
+    // Read: same gate as uniformSizes.
+    match /uniformSizeStatus/{company} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        userDoc().role == 's4_logistics' ||
+        (myLevel() >= 45 && company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && company == userDoc().company)
+      );
+      allow write: if isSignedIn() && (
+        myLevel() >= 70 ||
+        userDoc().role == 's4_logistics' ||
+        (myLevel() >= 45 && company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && company == userDoc().company)
+      );
+    }
+
     // Fallback — anything not matched above.
     match /{path=**} {
       allow read, write: if isSignedIn();

@@ -61,6 +61,8 @@ const AdminCadetChallenge = lazy(() => import('./pages/AdminCadetChallenge'));
 const AdminRoster         = lazy(() => import('./pages/AdminRoster'));
 const AdminS2             = lazy(() => import('./pages/AdminS2'));
 const AdminS6             = lazy(() => import('./pages/AdminS6'));
+const AdminFundraiser     = lazy(() => import('./pages/AdminFundraiser'));
+const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -325,6 +327,28 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={['s6_technology', 'company_s6_assistant', 's5_public_affairs']}>
                   <AdminS6 />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fundraiser Tracking — Fallen Heroes: company command + S1/S3 adjutants log
+                donations; staff (70+) and admins view all companies. */}
+            <Route
+              path="/admin/fundraiser"
+              element={
+                <ProtectedRoute allowedRoles={['company_commander', 'company_xo', 'company_1sg', 's1_adjutant', 's3_operations']}>
+                  <AdminFundraiser />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Uniform Sizes — S4 assistants + company leadership enter sizes;
+                S4 logistics views/manages all; battalion 85+ view all. */}
+            <Route
+              path="/admin/uniform-sizes"
+              element={
+                <ProtectedRoute allowedRoles={['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics']}>
+                  <AdminUniformSizes />
                 </ProtectedRoute>
               }
             />

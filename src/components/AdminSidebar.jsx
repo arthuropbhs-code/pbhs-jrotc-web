@@ -33,6 +33,8 @@ import {
   BookUser,
   Shield,
   Laptop,
+  Heart,
+  Ruler,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -69,6 +71,14 @@ const AdminSidebar = () => {
   // Roles allowed to access Cadet Challenge (S1/S3 assistants + command and above)
   const CHALLENGE_ROLES = ['company_s1_assistant', 'company_s3_assistant'];
   const canSeeChallenge = CHALLENGE_ROLES.includes(role) || userLevel >= COMMAND_LEVEL;
+
+  // Fundraiser — company command + S1/S3 adjutants + staff view all
+  const FUNDRAISER_ROLES = ['company_commander', 'company_xo', 'company_1sg', 's1_adjutant', 's3_operations'];
+  const canSeeFundraiser = FUNDRAISER_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
+
+  // Uniform Sizes — S4 assistants + company command + S4 logistics
+  const UNIFORM_SIZES_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
+  const canSeeUniformSizes = UNIFORM_SIZES_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   // S2 — battalion S2 and company S2 assistants
   const canSeeS2 = role === 's2_intelligence' || role === 'company_s2_assistant' || userLevel >= ADMIN_LEVEL;
@@ -151,6 +161,7 @@ const AdminSidebar = () => {
             {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
             {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {canSeeFundraiser && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
             {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
@@ -199,7 +210,7 @@ const AdminSidebar = () => {
 
         {/* ── UNIFORM ITEMS — gated to S4 assistants, company command, battalion command ── */}
         {canSeeUniforms && (
-          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <Link
               to="/uniform-requests"
               className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
@@ -217,6 +228,8 @@ const AdminSidebar = () => {
                 </span>
               )}
             </Link>
+            {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
+            {!isCommander && canSeeFundraiser && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
           </div>
         )}
       </nav>
