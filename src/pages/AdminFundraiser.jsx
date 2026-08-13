@@ -83,7 +83,9 @@ const AdminFundraiser = () => {
   const canViewFull = FULL_ACCESS_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
   const canInput    = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
   const canViewAll  = BN_INPUT_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
-  const canDelete   = userLevel >= ADMIN_LEVEL;
+  // Void permission mirrors input permission: company command can void their own
+  // company's entries; S1/S3 adjutants and admin 80+ can void any company's entries.
+  const canDelete   = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   // ── Full-view UI state ────────────────────────────────────────────────────────
   const [activeTab,    setActiveTab]    = useState('transactions');
