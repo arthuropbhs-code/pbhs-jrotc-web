@@ -42,9 +42,11 @@ const AdminOrders = () => {
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isInstructor = userLevel >= 95;
+  const isS7 = role === 's7_special_projects';
 
   // Target audience a user can address, gated by their rank.
-  // Instructors: any audience. Battalion Command + Staff (70–90): staff roles only.
+  // Instructors: any audience. S7: only S7 Assistants and Company XOs.
+  // Other Battalion Command + Staff (70–90): all staff roles.
   // Company leadership is blocked at the route level — no entry here.
   const TARGET_OPTIONS = isInstructor ? [
     "All Battalion",
@@ -64,6 +66,9 @@ const AdminOrders = () => {
     "Company Commanders",
     "Company XOs",
     "First Sergeants",
+  ] : isS7 ? [
+    "S7 - Assistants",
+    "Company XOs",
   ] : [
     "All Staff",
     "S1 - Adjutant",

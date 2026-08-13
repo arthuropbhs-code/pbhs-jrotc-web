@@ -159,7 +159,8 @@ const AdminSidebar = () => {
             {groupLabel('Operations')}
             {isStaffOrS4 && navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
             {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
-            {isStaffOrS4 && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
+            {/* Global Broadcast: S7 cannot issue battalion-wide announcements */}
+            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
             {canSeeFundraiser && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
@@ -168,12 +169,14 @@ const AdminSidebar = () => {
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
-            {isStaffOrS4 && navLink('/admin/users',     <UserCog size={18} />, 'Personnel')}
+            {/* Personnel: S7 does not manage portal accounts */}
+            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
             {isStaffOrS4 && navLink('/admin/teams', <Users size={18} />, 'Teams')}
-            {isStaffOrS4 && navLink('/admin/leadership', <Star size={18} />,     'Leadership')}
+            {/* Leadership & Newsletters: S7 has no access */}
+            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents',   <FileText size={18} />, 'Documents')}
-            {isStaffOrS4 && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
+            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}

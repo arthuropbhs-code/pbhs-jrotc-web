@@ -20,9 +20,11 @@ const TaskManagement = () => {
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const canDelete = userLevel >= ADMIN_LEVEL;
   const isInstructor = userLevel >= 95;
+  const isS7 = role === 's7_special_projects';
 
   // What the assigner can target, gated by their own rank.
-  // Instructors: any audience. Battalion Command + Staff (70–90): staff roles only.
+  // Instructors: any audience. S7: only S7 Assistants and Company XOs.
+  // Other Battalion Command + Staff (70–90): all staff roles.
   // Company leadership is blocked at the route level — no entry here.
   const TARGET_OPTIONS = isInstructor ? [
     { value: 'All Battalion',          label: 'All Battalion' },
@@ -42,6 +44,9 @@ const TaskManagement = () => {
     { value: 'Company Commanders',     label: 'Company Commanders' },
     { value: 'Company XOs',            label: 'Company XOs' },
     { value: 'First Sergeants',        label: 'First Sergeants' },
+  ] : isS7 ? [
+    { value: 'S7 - Assistants',        label: 'S7 - Assistants' },
+    { value: 'Company XOs',            label: 'Company XOs' },
   ] : [
     { value: 'All Staff',              label: 'All Staff' },
     { value: 'S1 - Adjutant',          label: 'S1 - Adjutant' },

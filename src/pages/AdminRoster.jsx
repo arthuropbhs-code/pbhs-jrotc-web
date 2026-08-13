@@ -84,9 +84,10 @@ const AdminRoster = () => {
   // S1 assistants can create, edit, and delete cadets in their own company —
   // but they cannot change a cadet's name or company assignment.
   const canS1Edit     = role === 'company_s1_assistant';
-  // S3 assistants are view-only (no write access).
+  // S3 assistants and S7 are view-only (no write access).
+  // S7 can see all companies (canManageAll=true for queries) but cannot modify.
   const canViewOwn    = role === 'company_s3_assistant';
-  const canEdit       = canManageAll || canManageOwn || canS1Edit;
+  const canEdit       = role !== 's7_special_projects' && (canManageAll || canManageOwn || canS1Edit);
   const myCompany     = userData?.company || '';
 
   // default to the user's own company, or first company for staff
