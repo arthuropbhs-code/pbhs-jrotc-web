@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, where, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell } from 'lucide-react';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, where, addDoc, serverTimestamp, getDoc, getDocs } from 'firebase/firestore';
+import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell, Edit3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,14 +25,23 @@ const UniformRequests = () => {
 
   // Form State
   const [formData, setFormData] = useState({
-    issuedBy: '',   
-    cadetName: '',  
+    issuedBy: '',
+    cadetName: '',
+    rosterDocId: null,
+    linkedUid: null,
     company: COMPANIES[0] ?? 'Zulu',
     rank: '',
-    item: '', 
-    detail: '', 
+    item: '',
+    detail: '',
     notes: ''
   });
+
+  // Roster search state
+  const [roster, setRoster] = useState([]);
+  const [cadetSearch, setCadetSearch] = useState('');
+  const [showCadetResults, setShowCadetResults] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const cadetSearchRef = useRef(null);
 
   const showNotify = (message, type = 'success') => {
     setNotification({ message, type });
@@ -119,6 +128,35 @@ const UniformRequests = () => {
     });
     return () => unsubscribe();
   }, [userProfile, canApprove, isHighCommand, isS4Assistant, isCompanyLeadership]);
+
+  // Load battalion roster for cadet name autocomplete (only for requesters)
+  useEffect(() => {
+    if (!userProfile || !canRequest) return;
+    const loadRoster = async () => {
+      // S4 assistants only see their own company; battalion S4 sees everyone
+      const q = isS4Assistant && userProfile.company
+        ? query(collection(db, 'roster'), where('company', '==', userProfile.company))
+        : query(collection(db, 'roster'));
+      const snap = await getDocs(q);
+      setRoster(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''))
+      );
+    };
+    loadRoster();
+  }, [userProfile, canRequest, isS4Assistant]);
+
+  // Close cadet search dropdown when clicking outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (cadetSearchRef.current && !cadetSearchRef.current.contains(e.target)) {
+        setShowCadetResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   // --- DATA CONFIGURATION ---
   const OFFICIAL_RIBBONS = ["Medal for Heroism (Ribbon)", "Superior Cadet Award (Ribbon)", "N-1-1 Distinguished Cadet", "N-1-2 Academic Excellence", "N-1-3 Academic Achievement", "N-1-4 Perfect Attendance", "N-1-5 Student Governement", "N-1-6 LET Service", "N-1-7 Superior Instructor", "N-1-8 CPR First Aid", "N-1-9 Distinguished Cadet", "N-1-10 Honor Cadet", "N-3-1 Dai/Sai Leadership", "N-3-2 Personal Appearance", "N-3-3 Proficiency", "N-3-4 Drill Team", "N-3-5 Orienteering", "N-3-6 Color | Honor Guard", "N-3-7 Rifle Marksmanship", "N-3-8 Adventure Training", "N-3-9 Commendation", "N-3-10 Good Conduct", "N-3-11 JCLC Participation", "N-3-12 Championship Drill", "N-3-13 Raider Team", "N-3-14 Recondo / Rappelling", "N-3-15 Meritorious Actions", "N-2-1 Varsity Athletics", "N-2-2 Physical Fitness", "N-2-3 JROTC Athletics", "N-2-4 Junior Varsity Athletics", "N-2-5 Athletic Service", "N-4-1 Parade", "N-4-2 Recruiting", "N-4-3 School Support", "N-4-4 Community Service", "N-4-5 Confidence Course", "N-4-6 Service Learning", "N-4-7 Excellent Staff Performance", "Company Commander of the Quarter", "Company XO of the Quarter", "100 Flags", "Funeral Detail"];
@@ -219,14 +257,38 @@ const UniformRequests = () => {
         requestedByEmail: !canApprove ? (userProfile?.email || null) : null
       });
       setShowModal(false);
-      setFormData(prev => ({ 
-        ...prev, 
-        cadetName: '', 
-        item: '', 
-        detail: '', 
-        notes: '' 
+      setFormData(prev => ({
+        ...prev,
+        cadetName: '',
+        rosterDocId: null,
+        linkedUid: null,
+        item: '',
+        detail: '',
+        notes: ''
       }));
+      setCadetSearch('');
+      setManualEntry(false);
       showNotify("Request Logged Successfully!");
+
+      // Best-effort notification — notify Battalion S4 of the new request
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        await fetch('/api/notify-uniform', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'item-request',
+            idToken,
+            company: formData.company,
+            cadetName: formData.cadetName,
+            item: formData.item,
+            detail: formData.detail || '',
+            requesterName: userProfile?.fullName || '',
+          }),
+        });
+      } catch (err) {
+        console.error('Uniform item-request notification failed:', err);
+      }
     } catch (err) {
       console.error("Uniform request save failed:", err);
       showNotify("System Error.", "error");
@@ -240,6 +302,13 @@ const UniformRequests = () => {
     if (formData.item === "Rank Insignia") return "Select Rank Level";
     return "Select Size / Specification";
   };
+
+  // Filtered roster results for the cadet name search autocomplete
+  const rosterResults = cadetSearch.length >= 1
+    ? roster
+        .filter(c => (c.fullName || '').toLowerCase().includes(cadetSearch.toLowerCase()))
+        .slice(0, 10)
+    : [];
 
   // Personal-view users: neither requesters nor approvers
   const isPersonalView = !canRequest && !canApprove && !isHighCommand && !isCompanyLeadership;
@@ -469,30 +538,119 @@ const UniformRequests = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* FIX 3: RECIPIENT NAME NOW TYPABLE */}
-                  <div className="space-y-1">
+                  {/* RECIPIENT CADET — roster search autocomplete */}
+                  <div className="space-y-1 relative" ref={cadetSearchRef}>
                     <label className="text-[10px] font-black uppercase text-yellow-500 ml-1">
                       Recipient Cadet
                     </label>
-                    <input 
-                      placeholder="Type Cadet Name" 
-                      className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white outline-none focus:border-yellow-500" 
-                      value={formData.cadetName} 
-                      onChange={e => setFormData({...formData, cadetName: e.target.value})} 
-                    />
+
+                    {manualEntry ? (
+                      /* Manual text entry (fallback when not found in roster) */
+                      <div className="flex items-center gap-2">
+                        <input
+                          placeholder="Type full name..."
+                          autoFocus
+                          className="flex-1 bg-black/50 border border-yellow-500/40 p-3 rounded-xl text-sm text-white outline-none focus:border-yellow-500"
+                          value={formData.cadetName}
+                          onChange={e => setFormData({ ...formData, cadetName: e.target.value, rosterDocId: null, linkedUid: null })}
+                        />
+                        <button
+                          type="button"
+                          title="Back to search"
+                          onClick={() => { setManualEntry(false); setFormData({ ...formData, cadetName: '', rosterDocId: null, linkedUid: null }); }}
+                          className="p-3 text-slate-500 hover:text-white transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : formData.rosterDocId ? (
+                      /* Cadet selected from roster — show chip */
+                      <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                        <span className="flex-1 text-sm font-bold text-white">{formData.cadetName}</span>
+                        <button
+                          type="button"
+                          title="Clear selection"
+                          onClick={() => setFormData({ ...formData, cadetName: '', rosterDocId: null, linkedUid: null })}
+                          className="text-slate-500 hover:text-white transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      /* Search input with live-matching dropdown */
+                      <>
+                        <input
+                          placeholder="Search by name..."
+                          className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white outline-none focus:border-yellow-500"
+                          value={cadetSearch}
+                          onChange={e => { setCadetSearch(e.target.value); setShowCadetResults(true); }}
+                          onFocus={() => cadetSearch.length >= 1 && setShowCadetResults(true)}
+                        />
+                        {showCadetResults && cadetSearch.length >= 1 && (
+                          <div className="absolute top-full left-0 right-0 z-50 bg-slate-800 border border-white/10 rounded-xl mt-1 max-h-52 overflow-y-auto shadow-2xl">
+                            {rosterResults.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({
+                                    ...formData,
+                                    cadetName: c.fullName,
+                                    rosterDocId: c.id,
+                                    linkedUid: c.linkedUid || null,
+                                    company: c.company || formData.company,
+                                  });
+                                  setCadetSearch('');
+                                  setShowCadetResults(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/10 transition-colors"
+                              >
+                                <p className="font-bold text-white">{c.fullName}</p>
+                                <p className="text-[10px] text-slate-400">{c.company} · {c.rank || 'Cadet'}</p>
+                              </button>
+                            ))}
+                            {rosterResults.length === 0 && (
+                              <p className="px-4 py-3 text-xs text-slate-500 italic">No matches for "{cadetSearch}"</p>
+                            )}
+                            {/* Enter manually fallback */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setManualEntry(true);
+                                setFormData({ ...formData, cadetName: cadetSearch, rosterDocId: null, linkedUid: null });
+                                setCadetSearch('');
+                                setShowCadetResults(false);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-xs text-yellow-400 hover:bg-white/5 border-t border-white/5 transition-colors font-bold flex items-center gap-2"
+                            >
+                              <Edit3 size={11} /> Enter manually
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-500 ml-1">
                       Company
                     </label>
-                    <select 
-                      className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white" 
-                      value={formData.company} 
-                      onChange={e => setFormData({...formData, company: e.target.value || COMPANIES[0] || 'Zulu'})}
-                    >
-                      {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {isS4Assistant ? (
+                      /* S4 assistants are locked to their own company */
+                      <input
+                        readOnly
+                        className="w-full bg-black/30 border border-white/5 p-3 rounded-xl text-sm text-slate-400 cursor-not-allowed"
+                        value={userProfile?.company || formData.company}
+                      />
+                    ) : (
+                      <select
+                        className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white"
+                        value={formData.company}
+                        onChange={e => setFormData({ ...formData, company: e.target.value || COMPANIES[0] || 'Zulu' })}
+                      >
+                        {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
 

@@ -165,7 +165,7 @@ export default async function handler(req, res) {
   try { await checkRateLimit(req, 'notify-uniform', 10, 60); }
   catch { return res.status(429).json({ error: 'Too many requests' }); }
 
-  const { type, idToken, company, submitterName, recordCount, cadetName, editorName } = req.body || {};
+  const { type, idToken, company, submitterName, recordCount, cadetName, editorName, item, detail, requesterName } = req.body || {};
 
   if (!type || !idToken) return res.status(400).json({ error: 'Missing type or idToken' });
 
@@ -190,7 +190,8 @@ export default async function handler(req, res) {
       getUsersByRole(accessToken, projectId, 'battalion_commander'),
     ]);
 
-    const recipients = [...s4Logistics, ...bnXOs, ...bnCdrs];
+    // Include the submitter so they receive a confirmation copy
+    const recipients = [...s4Logistics, ...bnXOs, ...bnCdrs, { email: caller.email, fullName: caller.fullName }];
     const unique = [...new Map(recipients.map(u => [u.email, u])).values()];
 
     const subject = `Uniform Sizes Submitted — ${company} Company`;
@@ -229,6 +230,29 @@ export default async function handler(req, res) {
           and click <strong>Acknowledge</strong> to confirm you have reviewed the changes.
         </p>
       </div>`;
+
+    await Promise.allSettled(s4Logistics.map(u => resendSend(u.email, subject, buildEmail({ heading: subject, message }))));
+    return res.status(200).json({ ok: true, sent: s4Logistics.length });
+  }
+
+  // ── ITEM-REQUEST: Someone logs a new uniform item request ────────────────
+  if (type === 'item-request') {
+    const s4Logistics = await getUsersByRole(accessToken, projectId, 's4_logistics');
+
+    const subject = `New Uniform Request — ${cadetName || 'Unknown Cadet'} (${company} Company)`;
+    const message = `
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#475569;">
+        <strong style="color:#0f172a;">${requesterName || caller.fullName}</strong> has logged a
+        new uniform item request that requires your review.
+      </p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin:0 0 24px;">
+        <p style="margin:0 0 8px;font-size:13px;color:#64748b;"><strong style="color:#0f172a;">Cadet:</strong> ${cadetName || '—'}</p>
+        <p style="margin:0 0 8px;font-size:13px;color:#64748b;"><strong style="color:#0f172a;">Company:</strong> ${company}</p>
+        <p style="margin:0;font-size:13px;color:#64748b;"><strong style="color:#0f172a;">Item:</strong> ${item || '—'}${detail ? ` — ${detail}` : ''}</p>
+      </div>
+      <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
+        Log in to the Command Portal → Uniform Items to review and approve or deny this request.
+      </p>`;
 
     await Promise.allSettled(s4Logistics.map(u => resendSend(u.email, subject, buildEmail({ heading: subject, message }))));
     return res.status(200).json({ ok: true, sent: s4Logistics.length });

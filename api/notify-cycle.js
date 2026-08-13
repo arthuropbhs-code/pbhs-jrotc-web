@@ -204,7 +204,8 @@ export default async function handler(req, res) {
       getUsersByRole(accessToken, projectId, 'battalion_commander'),
     ]);
 
-    const recipients = [...s1s, ...s3s, ...xos, ...bns];
+    // Include the submitter so they receive a copy of their own finalization
+    const recipients = [...s1s, ...s3s, ...xos, ...bns, { email: caller.email, fullName: caller.fullName }];
     const unique     = [...new Map(recipients.map(u => [u.email, u])).values()];
 
     const subject = `Cadet Challenge #${cycleNumber} Submitted — ${company} Company`;

@@ -59,7 +59,7 @@ const AdminUsers = () => {
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isAuthorized = userLevel >= STAFF_LEVEL;
-  const isBattalionStaff = userLevel >= ADMIN_LEVEL;
+  const isBattalionStaff = userLevel >= ADMIN_LEVEL || role === 's6_technology' || role === 's1_adjutant';
 
   // Mirrors api/admin-update-account.js's EMAIL_MANAGER_ROLES - this is just
   // a UI convenience gate, the endpoint itself is the real enforcement.
@@ -448,14 +448,11 @@ const AdminUsers = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
-      <div className="max-w-6xl mx-auto">
+    <div className="flex-1 text-slate-900 dark:text-slate-100">
+      <main className="p-6 md:p-10 max-w-7xl">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
               <UserCog className="text-yellow-600 dark:text-yellow-500" /> {isBattalionStaff ? 'Battalion' : user?.company + ' Company'} Personnel
             </h1>
@@ -545,7 +542,7 @@ const AdminUsers = () => {
              </div>
           ))}
         </div>
-      </div>
+      </main>
 
       {/* Add/Edit Modal */}
       <AnimatePresence>

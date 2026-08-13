@@ -103,7 +103,7 @@ const AdminS6 = () => {
 
   return (
     <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-6xl">
+      <main className="p-6 md:p-10 max-w-7xl">
         <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
           <div>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
@@ -764,6 +764,14 @@ const AssistantTodayView = ({ user, userData, showToast }) => {
       </p>
       {loading ? (
         [1,2].map(n => <div key={n} className="h-24 bg-slate-100 dark:bg-slate-900/60 rounded-2xl animate-pulse" />)
+      ) : carts.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+          <Laptop className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+          <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No tasks set up yet</p>
+          <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+            Once your S6 officer configures carts and tasks, they will appear here.
+          </p>
+        </div>
       ) : carts.map(cart => {
         const cl           = checklists.find(c => c.cartId === cart.id);
         const isSubmitted  = cl?.status === 'submitted' || cl?.status === 'reviewed';

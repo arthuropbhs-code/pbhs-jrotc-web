@@ -79,6 +79,24 @@ const AdminSidebar = () => {
   const UNIFORM_SIZES_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
   const canSeeUniformSizes = UNIFORM_SIZES_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
+  // Full Cadet Challenge management access (input roles + view-all roles)
+  const CHALLENGE_FULL_ROLES = [
+    'company_s1_assistant', 'company_s3_assistant',
+    'company_xo', 'company_1sg', 'company_commander',
+    's1_adjutant', 's3_operations',
+    'battalion_xo', 'battalion_commander', 'battalion_csm',
+    'sergeant_major', 'senior_army_instructor', 'army_instructor',
+  ];
+  const hasFullChallengeAccess = CHALLENGE_FULL_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
+  // Full Fundraiser management access (company/battalion command + S1/S3)
+  const FUNDRAISER_FULL_ROLES = [
+    's1_adjutant', 's3_operations',
+    'battalion_xo', 'battalion_csm', 'battalion_commander',
+    'company_commander', 'company_xo', 'company_1sg',
+  ];
+  const hasFullFundraiserAccess = FUNDRAISER_FULL_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
   // S2 — battalion S2 and company S2 assistants
   const canSeeS2 = role === 's2_intelligence' || role === 'company_s2_assistant' || userLevel >= ADMIN_LEVEL;
   // S6 — battalion S6, S5 (read-only review), and company S6 assistants
@@ -157,29 +175,30 @@ const AdminSidebar = () => {
             {/* ── GROUP 1: OPERATIONS ─────────────── */}
             {groupLabel('Operations')}
             {isStaffOrS4 && navLink('/admin/orders', <PlusSquare size={18} />, 'Orders & Tasks')}
-            {/* Global Broadcast: S6 and S7 cannot issue battalion-wide announcements */}
-            {isStaffOrS4 && role !== 's7_special_projects' && role !== 's6_technology' && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
-            {/* Cadet Challenge: not relevant to S6 or S7 scope */}
-            {role !== 's6_technology' && role !== 's7_special_projects' && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {canSeeFundraiser && role !== 's6_technology' && role !== 's7_special_projects' && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+            {/* Global Broadcast: S5 + battalion command only */}
+            {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
+            {/* Cadet Challenge: only roles with full management access (input + view-all) */}
+            {hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {/* Fundraiser: company/battalion command + S1/S3 only */}
+            {hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
             {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
-            {/* Personnel: S7 does not manage portal accounts */}
-            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
-            {isStaffOrS4 && navLink('/admin/teams', <Users size={18} />, 'Teams')}
-            {/* Leadership & Newsletters: S7 has no access */}
-            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
+            {/* Personnel: S1 + S6 + battalion command only */}
+            {(role === 's1_adjutant' || role === 's6_technology' || isTopFour) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
+            {/* Teams: all staff except S1 (S1 uses Personnel instead) */}
+            {isStaffOrS4 && role !== 's1_adjutant' && navLink('/admin/teams', <Users size={18} />, 'Teams')}
+            {/* Leadership & Newsletters: S5 + battalion command only */}
+            {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents',   <FileText size={18} />, 'Documents')}
-            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
+            {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',    <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
-            {/* S6 only sees Battalion Stats + Customization — not Camp Attendance */}
             {isStaffOrS4 && groupLabel('Analytics')}
             {isStaffOrS4 && role !== 's6_technology' && navLink('/admin/camps', <Tent size={18} />, 'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
@@ -234,18 +253,17 @@ const AdminSidebar = () => {
             {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
-        {/* Personal-view links for any signed-in user who isn't already
-            seeing these pages inside the isCommander block.
-            S6 and S7 are at STAFF_LEVEL (70) which means isCommander=true,
-            so this block never renders for them. */}
-        {!isCommander && (
+        {/* Personal-view links — shown for any user (including staff) who lacks
+            full-page access to one or more of these features. This replaces
+            the old !isCommander guard so S6, S7, S2, S4, S5, etc. also get
+            personal-view links for the pages they don't manage. */}
+        {(!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
-            {/* Cadet Challenge: only if not already shown in canSeeChallenge block */}
-            {!canSeeChallenge && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
-            {/* Uniform Items / Sizes: only if not already shown in canSeeUniforms block */}
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
+            {!hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {!hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {!canSeeUniforms && navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
-            {!canSeeUniforms && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
+            {!canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
       </nav>

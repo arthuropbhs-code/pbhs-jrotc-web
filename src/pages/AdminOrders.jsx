@@ -31,7 +31,7 @@ const AdminOrders = () => {
   const { userData, role } = useAuth();
   const userLevel    = ROLE_HIERARCHY[role] || 0;
   const isInstructor = userLevel >= 95;
-  const isS7         = role === 's7_special_projects';
+  const isS7         = role === 's7_special_projects'; // kept for any other uses below
   const canDelete    = userLevel >= ADMIN_LEVEL;
 
   // ── Order state ──────────────────────────────────────────────────────────────
@@ -63,14 +63,22 @@ const AdminOrders = () => {
     "S1 - Adjutant", "S2 - Intelligence", "S3 - Operations",
     "S4 - Logistics", "S5 - Public Affairs", "S6 - Technology", "S7 - Special Projects",
   ];
-  const S7_TARGETS = ["S7 - Assistants", "Company XOs"];
+  const S7_TARGETS = ["S7 - Assistants", "Company XOs"]; // kept for fallback reference
 
-  const ORDER_TARGETS = isInstructor ? ALL_TARGETS : isS7 ? S7_TARGETS : STAFF_TARGETS;
-  const TASK_TARGETS  = isInstructor
-    ? ALL_TARGETS.map(v => ({ value: v, label: v }))
-    : isS7
-      ? S7_TARGETS.map(v => ({ value: v, label: v }))
-      : STAFF_TARGETS.map(v => ({ value: v, label: v }));
+  // Each staff role sees only the sub-groups they directly supervise.
+  // Instructors see everyone; S5 + battalion command keep the full STAFF_TARGETS list.
+  const getRoleTargets = () => {
+    if (isInstructor)                    return ALL_TARGETS;
+    if (role === 's1_adjutant')          return ["Company XOs", "S1 - Assistants"];
+    if (role === 's2_intelligence')      return ["Company XOs", "S2 - Assistants"];
+    if (role === 's3_operations')        return ["Company XOs", "S3 - Assistants"];
+    if (role === 's4_logistics')         return ["Company XOs", "S4 - Assistants"];
+    if (role === 's6_technology')        return ["Company XOs", "S6 - Assistants"];
+    if (role === 's7_special_projects')  return ["Company XOs", "S7 - Assistants"];
+    return STAFF_TARGETS; // S5 + battalion command keep broad access
+  };
+  const ORDER_TARGETS = getRoleTargets();
+  const TASK_TARGETS  = ORDER_TARGETS.map(v => ({ value: v, label: v }));
 
   // ── Subscriptions ─────────────────────────────────────────────────────────────
   useEffect(() => {
