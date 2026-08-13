@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import {
   LayoutDashboard,
@@ -44,6 +44,8 @@ const AdminSidebar = () => {
   const { userData, role, loading } = useAuth();
   const location = useLocation();
   const [requestCount, setRequestCount] = useState(0);
+  // Whether the Sergeant Major is listed on at least one special team (gates Teams link)
+  const [isOnTeam, setIsOnTeam] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'uniform_requests'), (snapshot) => {
@@ -52,6 +54,18 @@ const AdminSidebar = () => {
     });
     return () => unsub();
   }, []);
+
+  // Check team membership for Sergeant Major (Teams link shown only if they're on one)
+  useEffect(() => {
+    const email = userData?.email || auth.currentUser?.email;
+    if (role !== 'sergeant_major' || !email) { setIsOnTeam(false); return; }
+    const q = query(
+      collection(db, 'specialTeams'),
+      where('commanderEmails', 'array-contains', email)
+    );
+    const unsub = onSnapshot(q, snap => setIsOnTeam(!snap.empty));
+    return () => unsub();
+  }, [role, userData?.email]);
 
   const handleLogout = () => {
     clearDeviceTrust(); // Clear the trusted-device token on explicit sign-out
@@ -62,6 +76,10 @@ const AdminSidebar = () => {
   const isCommander  = userLevel >= COMMAND_LEVEL;
   const isTopFour    = userLevel >= ADMIN_LEVEL;
   const isStaffOrS4  = userLevel >= STAFF_LEVEL;
+
+  // Command roles whose scope is operations — they do not administer the portal
+  // (S2/S6 pages, media tools, customization). Battalion XO + instructors are unaffected.
+  const isRestrictedCmd = role === 'sergeant_major' || role === 'battalion_commander' || role === 'battalion_csm';
 
   // Roles allowed to access Uniform Items (mirrors App.jsx allowedRoles + adminLevel override)
   const UNIFORM_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
@@ -181,28 +199,30 @@ const AdminSidebar = () => {
             {hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
             {/* Fundraiser: company/battalion command + S1/S3 only */}
             {hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
-            {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
-            {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
+            {/* S2/S6: operational admin tools — not shown to SGM, BC, CSM */}
+            {(role === 's2_intelligence' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
+            {(role === 's6_technology' || role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
-            {/* Personnel: S1 + S6 + battalion command only */}
-            {(role === 's1_adjutant' || role === 's6_technology' || isTopFour) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
-            {/* Teams: all staff except S1 (S1 uses Personnel instead) */}
-            {isStaffOrS4 && role !== 's1_adjutant' && navLink('/admin/teams', <Users size={18} />, 'Teams')}
-            {/* Leadership & Newsletters: S5 + battalion command only */}
-            {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
-            {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
-            {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',    <Image size={18} />,    'Photo Gallery')}
+            {/* Personnel: S1 + S6 + XO/BC/CSM (not SGM) */}
+            {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
+            {/* Teams: all staff except S1; SGM only if listed on a team */}
+            {isStaffOrS4 && role !== 's1_adjutant' && (role !== 'sergeant_major' || isOnTeam) && navLink('/admin/teams', <Users size={18} />, 'Teams')}
+            {/* Leadership, media tools, newsletters: S5 + XO + instructors only */}
+            {(role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
+            {(role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
+            {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/photos',    <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
             {isStaffOrS4 && groupLabel('Analytics')}
             {isStaffOrS4 && role !== 's6_technology' && navLink('/admin/camps', <Tent size={18} />, 'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
-            {(isTopFour || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
+            {/* Customization: portal settings — S6 + XO + instructors only, not SGM/BC/CSM */}
+            {((isTopFour && !isRestrictedCmd) || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
         )}
 

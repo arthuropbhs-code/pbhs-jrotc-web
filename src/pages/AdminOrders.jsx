@@ -75,7 +75,9 @@ const AdminOrders = () => {
     if (role === 's4_logistics')         return ["Company XOs", "S4 - Assistants"];
     if (role === 's6_technology')        return ["Company XOs", "S6 - Assistants"];
     if (role === 's7_special_projects')  return ["Company XOs", "S7 - Assistants"];
-    return STAFF_TARGETS; // S5 + battalion command keep broad access
+    // Sergeant Major issues direction to company command tiers only
+    if (role === 'sergeant_major')       return ["Company Commanders", "Company XOs", "First Sergeants"];
+    return STAFF_TARGETS; // S5 + battalion XO/BC/CSM keep broad access
   };
   const ORDER_TARGETS = getRoleTargets();
   const TASK_TARGETS  = ORDER_TARGETS.map(v => ({ value: v, label: v }));
