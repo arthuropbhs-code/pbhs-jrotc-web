@@ -102,13 +102,28 @@ const AdminCadetChallenge = () => {
   const canUnlock   = role === UNLOCK_ROLE;
   const myCompany   = userData?.company || '';
 
-  // Which companies to display
-  const visibleCompanies = canViewAll ? companies : (myCompany ? [myCompany] : []);
+  // Which companies to display in the cycle-status subscription.
+  // Always include myCompany even if it's not in the admin-configured companies list
+  // (battalion HQ company "Zulu" may not appear in the lettered-company settings).
+  const visibleCompanies = useMemo(() => {
+    if (!canViewAll) return myCompany ? [myCompany] : [];
+    const extra = myCompany && !companies.includes(myCompany) ? [myCompany] : [];
+    return [...extra, ...companies];
+  }, [canViewAll, companies, myCompany]);
 
   // ── UI state ────────────────────────────────────────────────────────────────
   const [selectedCycle,   setSelectedCycle]   = useState(1);
   const [viewMode,        setViewMode]         = useState('table');    // 'table' | 'individual'
   const [filterCompany,   setFilterCompany]    = useState('');         // staff filter
+  // Default Battalion S1 (canViewAll) to their own company so they immediately
+  // see Zulu's table + cycle status + action buttons on first load.
+  const initFilterRef = useRef(false);
+  useEffect(() => {
+    if (!initFilterRef.current && canViewAll && myCompany) {
+      setFilterCompany(myCompany);
+      initFilterRef.current = true;
+    }
+  }, [canViewAll, myCompany]);
   const [showModal,       setShowModal]        = useState(false);
   const [editingRecord,   setEditingRecord]    = useState(null);       // { id, ...record } or null
   const [form,            setForm]             = useState(EMPTY_FORM);
@@ -602,7 +617,7 @@ const AdminCadetChallenge = () => {
 
         {/* Staff company filter */}
         {canViewAll && (
-          <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-xl px-4 py-2 shadow-sm">
               <Filter size={13} className="text-slate-400" />
               <select
@@ -611,32 +626,41 @@ const AdminCadetChallenge = () => {
                 className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent outline-none pr-2"
               >
                 <option value="">All Companies</option>
+                {/* Include myCompany (e.g. Zulu) even if not in the admin-configured list */}
+                {myCompany && !companies.includes(myCompany) && (
+                  <option key={myCompany}>{myCompany}</option>
+                )}
                 {companies.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
-            {/* Cycle status overview (staff) */}
-            <div className="flex gap-2 flex-wrap">
-              {(filterCompany ? [filterCompany] : companies).map(company => {
-                const key  = cycleKey(company, selectedCycle);
-                const stat = cycleStatuses[key]?.status || 'open';
-                return (
-                  <span key={company} className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColor(stat)}`}>
-                    {company}: {statusLabel(stat)}
-                  </span>
-                );
-              })}
-            </div>
+            {/* Cycle status pills — show all companies when no filter, otherwise just the selected one */}
+            {!filterCompany && (
+              <div className="flex gap-2 flex-wrap">
+                {visibleCompanies.map(company => {
+                  const key  = cycleKey(company, selectedCycle);
+                  const stat = cycleStatuses[key]?.status || 'open';
+                  return (
+                    <span key={company} className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColor(stat)}`}>
+                      {company}: {statusLabel(stat)}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── Company-level: Cycle status banner + action buttons ── */}
-        {!canViewAll && activeCompany && (
+        {/* ── Cycle status banner + action buttons ─────────────────────────────────
+            Shown for company-level users (always) and for canViewAll users when a
+            specific company is selected — giving Battalion S1 the same controls a
+            company S1 assistant sees for their own company.                        */}
+        {activeCompany && (!canViewAll || filterCompany) && (
           <div className="flex items-center gap-3 mb-6 flex-wrap">
             <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl ${statusColor(activeCycle.status)}`}>
-              Cycle #{selectedCycle} — {statusLabel(activeCycle.status)}
+              {canViewAll && <>{filterCompany} · </>}Cycle #{selectedCycle} — {statusLabel(activeCycle.status)}
             </span>
 
-            {/* Finalize button — S1 assistant only, cycle must be open */}
+            {/* Finalize — company S1 assistant only, cycle must be open */}
             {canFinalize && activeCycle.status === 'open' && (
               <button
                 onClick={() => setFinalizeConf(activeCompany)}
@@ -646,7 +670,33 @@ const AdminCadetChallenge = () => {
               </button>
             )}
 
-            {activeCycle.status === 'submitted' && (
+            {/* Unlock — Battalion S1 only */}
+            {canUnlock && activeCycle.status !== 'open' && (
+              <button
+                onClick={() => handleUnlock(activeCompany)}
+                className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-yellow-500/30 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+              >
+                <Unlock size={13} /> Unlock Cycle
+              </button>
+            )}
+            {canUnlock && activeCycle.status === 'submitted' && (
+              <>
+                <button
+                  onClick={() => handleLock(activeCompany)}
+                  className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-500 transition-all"
+                >
+                  <Lock size={13} /> Lock & Verify
+                </button>
+                <button
+                  onClick={() => setSendBackConf({ company: activeCompany })}
+                  className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-400 transition-all"
+                >
+                  <RotateCcw size={13} /> Send Back
+                </button>
+              </>
+            )}
+
+            {activeCycle.status === 'submitted' && !canUnlock && (
               <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
                 Submitted by {activeCycle.submittedBy || 'S1 Assistant'} · awaiting Battalion S1 review
               </span>
@@ -719,7 +769,7 @@ const AdminCadetChallenge = () => {
         {/* ── STAFF: all companies' records ── */}
         {canViewAll && !filterCompany && (
           <div className="space-y-6 mt-6">
-            {companies.map(company => {
+            {visibleCompanies.map(company => {
               const key     = cycleKey(company, selectedCycle);
               const stat    = cycleStatuses[key]?.status || 'open';
               // Include battalion members who observe this company (secondaryCompany match)
@@ -740,50 +790,10 @@ const AdminCadetChallenge = () => {
           </div>
         )}
 
-        {/* ── STAFF: single-company filtered view ── */}
-        {canViewAll && filterCompany && (
-          <div className="mt-4 space-y-3">
-            {/* Action bar for filtered company */}
-            {canUnlock && (
-              <div className="flex gap-3 mb-4 flex-wrap">
-                {activeCycle.status !== 'open' && (
-                  <button
-                    onClick={() => handleUnlock(filterCompany)}
-                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-yellow-500/30 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
-                  >
-                    <Unlock size={13} /> Unlock Cycle
-                  </button>
-                )}
-                {activeCycle.status === 'submitted' && (
-                  <>
-                    <button
-                      onClick={() => handleLock(filterCompany)}
-                      className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-500 transition-all"
-                    >
-                      <Lock size={13} /> Lock & Verify
-                    </button>
-                    <button
-                      onClick={() => setSendBackConf({ company: filterCompany })}
-                      className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-400 transition-all"
-                    >
-                      <RotateCcw size={13} /> Send Back
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            {dataLoading ? (
-              [1,2,3].map(n => <div key={n} className="h-16 bg-slate-100 dark:bg-slate-900/60 rounded-2xl animate-pulse" />)
-            ) : companyRecords.map(rec => (
-              <RecordCard key={rec.id} rec={rec} canEdit={false} canDelete={false} />
-            ))}
-            {!dataLoading && companyRecords.length === 0 && (
-              <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No records for {filterCompany}</p>
-              </div>
-            )}
-          </div>
-        )}
+        {/* ── STAFF: single-company filtered view ──────────────────────────────────
+            The cycle status banner + action buttons (lock/unlock/send-back) are
+            now handled by the unified banner above the table. Nothing extra needed
+            here — the TableView is the primary display for the filtered company.   */}
 
         <Footer />
       </main>
