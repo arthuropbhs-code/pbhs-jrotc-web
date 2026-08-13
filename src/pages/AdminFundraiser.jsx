@@ -320,7 +320,7 @@ const AdminFundraiser = () => {
 
     return (
       <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-3xl">
+        <main className="p-6 md:p-10 max-w-7xl">
 
           {/* Header */}
           <div className="mb-8">

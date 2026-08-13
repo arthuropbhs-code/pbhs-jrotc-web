@@ -589,7 +589,7 @@ const AdminCadetChallenge = () => {
   if (!hasFullAccess) {
     return (
       <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-3xl">
+        <main className="p-6 md:p-10 max-w-7xl">
           <div className="mb-8">
             <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
               <ScrambleText text="Cadet " trigger="mount" />
