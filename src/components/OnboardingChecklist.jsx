@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Circle, X, PartyPopper } from 'lucide-react';
@@ -53,6 +53,14 @@ const OnboardingChecklist = ({ storageKey, title, items }) => {
 
   const remaining = items.filter((item) => !checked.includes(item.id));
   const allDone = remaining.length === 0;
+
+  // Auto-dismiss 2.5 s after the last item is checked so the user gets a
+  // brief "You're all set" moment before the card disappears on its own.
+  useEffect(() => {
+    if (!allDone) return;
+    const t = setTimeout(dismiss, 2500);
+    return () => clearTimeout(t);
+  }, [allDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="mb-8 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-3xl p-8 shadow-sm relative transition-colors">

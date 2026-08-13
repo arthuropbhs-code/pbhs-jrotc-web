@@ -54,18 +54,31 @@ const AdminDashboard = () => {
   const isTopFour = userLevel >= ADMIN_LEVEL;
   const isStaffOrS4 = userLevel >= STAFF_LEVEL;
 
+  // Mirrors the isRestrictedCmd constant in AdminSidebar / RESTRICTED_CMD in App.jsx.
+  const isRestrictedCmd = role === 'sergeant_major' || role === 'battalion_commander' || role === 'battalion_csm';
+
   const cadetOnboardingItems = [
     { id: 'profile', label: 'Complete your profile', description: 'Add your rank, position, and company so staff can find you.', link: '/admin/profile', linkText: 'My Profile' },
     { id: 'cadet-info', label: 'Review Cadet Info', description: 'Rank structure, LET levels, and what to expect this year.', link: '/cadet-info', linkText: 'View' },
     { id: 'documents', label: 'Read documents & regulations', description: 'Battalion policies, forms, and required reading.', link: '/documents', linkText: 'View' },
   ];
 
+  // Each item is only included when the user can actually reach that page,
+  // matching the sidebar and route protection rules so the checklist never
+  // links somewhere the user would get immediately redirected away from.
+  const canSeePersonnel = role === 's1_adjutant' || role === 's6_technology'
+    || (isTopFour && role !== 'sergeant_major');
+  const canSeeBroadcast = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);
+  const canSeeNewsletter = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);
+  const canSeeLeadership = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);
+  const canSeeStats      = isStaffOrS4; // all staff can see stats
+
   const staffOnboardingItems = [
-    { id: 'personnel', label: 'Explore Manage Personnel', description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users', linkText: 'Open' },
-    { id: 'broadcast', label: 'Send a Global Broadcast', description: 'See how battalion-wide announcements work.', link: '/admin/announcements', linkText: 'Open' },
-    { id: 'newsletter', label: 'Manage Newsletters', description: 'Publish battalion newsletter issues for cadets to read.', link: '/admin/newsletters', linkText: 'Open' },
-    { id: 'leadership', label: 'Review Manage Leadership', description: 'Command staff listing shown on the public site.', link: '/admin/leadership', linkText: 'Open' },
-    { id: 'stats', label: 'Check Battalion Stats', description: 'Roster breakdown, uniform logistics, and camp attendance.', link: '/admin/stats', linkText: 'Open' },
+    ...(canSeePersonnel ? [{ id: 'personnel',  label: 'Explore Manage Personnel',  description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users',          linkText: 'Open' }] : []),
+    ...(canSeeBroadcast ? [{ id: 'broadcast',  label: 'Send a Global Broadcast',    description: 'See how battalion-wide announcements work.',              link: '/admin/announcements', linkText: 'Open' }] : []),
+    ...(canSeeNewsletter? [{ id: 'newsletter', label: 'Manage Newsletters',         description: 'Publish battalion newsletter issues for cadets to read.', link: '/admin/newsletters',   linkText: 'Open' }] : []),
+    ...(canSeeLeadership? [{ id: 'leadership', label: 'Review Manage Leadership',   description: 'Command staff listing shown on the public site.',          link: '/admin/leadership',    linkText: 'Open' }] : []),
+    ...(canSeeStats      ? [{ id: 'stats',     label: 'Check Battalion Stats',      description: 'Roster breakdown, uniform logistics, and camp attendance.', link: '/admin/stats',        linkText: 'Open' }] : []),
   ];
 
   // Client-side only - a real security boundary for this also needs a

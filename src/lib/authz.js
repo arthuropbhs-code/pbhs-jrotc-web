@@ -11,7 +11,12 @@
 // - minLevel alone: requires userLevel to meet or exceed it.
 // - With neither constraint, any signed-in user passes (the caller is
 //   expected to have already handled the signed-out case separately).
-export function canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel }) {
+export function canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel, excludedRoles }) {
+  // Explicit deny list wins before any other check — used to carve out specific
+  // roles that sit at or above an otherwise-qualifying level threshold (e.g.
+  // SGM/BC/CSM at ADMIN_LEVEL but excluded from admin-portal-management pages).
+  if (excludedRoles?.includes(role)) return false;
+
   if (allowedRoles && minLevel) {
     // Both specified: allowedRoles extends the minLevel tier by adding
     // specific roles below the threshold (OR condition).

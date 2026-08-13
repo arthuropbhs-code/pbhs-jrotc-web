@@ -72,7 +72,12 @@ const RouteFallback = () => (
   </div>
 );
 
-const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
+// Command roles whose operational scope doesn't extend to portal-management
+// pages (S2/S6 tools, media, leadership board, customization). Mirrors the
+// same constant in AdminSidebar — kept in sync manually.
+const RESTRICTED_CMD = ['sergeant_major', 'battalion_commander', 'battalion_csm'];
+
+const ProtectedRoute = ({ children, minLevel, allowedRoles, excludedRoles }) => {
   const { user, role, userData, loading } = useAuth();
   const location = useLocation();
 
@@ -97,7 +102,8 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles }) => {
   // allowedRoles isolates specific roles (e.g. S5/S6) that a level threshold
   // can't express on its own, since they're tied with every other S-role at
   // STAFF_LEVEL. Top command can always override, same as everywhere else.
-  if (!canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel: ADMIN_LEVEL })) {
+  // excludedRoles denies specific roles even if they meet the level threshold.
+  if (!canAccessRoute({ userLevel, role, minLevel, allowedRoles, adminLevel: ADMIN_LEVEL, excludedRoles })) {
     return <Navigate to="/admin/dashboard" />;
   }
 
@@ -203,40 +209,46 @@ const AppContent = () => {
             } />
 
             {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
+            {/* S5 + battalion XO + instructors. SGM/BC/CSM excluded — they
+                issue orders but don't broadcast battalion-wide announcements. */}
             <Route
               path="/admin/announcements"
               element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs']} excludedRoles={RESTRICTED_CMD}>
                   <AdminAnnouncements />
                 </ProtectedRoute>
               }
             />
 
+            {/* Personnel: S1 + S6 manage accounts; XO/BC/CSM/instructors can view.
+                SGM excluded — operational command, not portal admin. */}
             <Route
               path="/admin/users"
               element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <ProtectedRoute allowedRoles={['s1_adjutant', 's6_technology']} excludedRoles={['sergeant_major']}>
                   <AdminUsers />
                 </ProtectedRoute>
               }
             />
 
-            {/* No minLevel here: AdminTeams.jsx gates per-team access itself via commanderEmails, independent of rank */}
-            <Route path="/admin/teams" element={<ProtectedRoute><AdminTeams /></ProtectedRoute>} />
+            {/* AdminTeams gates per-team access itself via commanderEmails */}
+            <Route path="/admin/teams" element={<ProtectedRoute minLevel={STAFF_LEVEL}><AdminTeams /></ProtectedRoute>} />
 
+            {/* Leadership board: public-site management — S5 + XO + instructors only */}
             <Route
               path="/admin/leadership"
               element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs']} excludedRoles={RESTRICTED_CMD}>
                   <AdminLeadership />
                 </ProtectedRoute>
               }
             />
 
+            {/* Content, Documents, Photos: S5 + S6 author; XO + instructors can edit */}
             <Route
               path="/admin/content"
               element={
-                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']} excludedRoles={RESTRICTED_CMD}>
                   <AdminContent />
                 </ProtectedRoute>
               }
@@ -245,7 +257,7 @@ const AppContent = () => {
             <Route
               path="/admin/documents"
               element={
-                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']} excludedRoles={RESTRICTED_CMD}>
                   <AdminDocuments />
                 </ProtectedRoute>
               }
@@ -254,25 +266,27 @@ const AppContent = () => {
             <Route
               path="/admin/photos"
               element={
-                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology']} excludedRoles={RESTRICTED_CMD}>
                   <AdminPhotos />
                 </ProtectedRoute>
               }
             />
 
+            {/* Newsletters: S5 publishes; XO + instructors can manage */}
             <Route
               path="/admin/newsletters"
               element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs']} excludedRoles={RESTRICTED_CMD}>
                   <AdminNewsletters />
                 </ProtectedRoute>
               }
             />
 
+            {/* Camp Attendance: all staff except S6 (operational, not tech scope) */}
             <Route
               path="/admin/camps"
               element={
-                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                <ProtectedRoute minLevel={STAFF_LEVEL} excludedRoles={['s6_technology']}>
                   <AdminCamps />
                 </ProtectedRoute>
               }
@@ -306,24 +320,23 @@ const AppContent = () => {
               }
             />
 
-            {/* S2 Intelligence: battalion S2 manages items/assignments/reviews;
-                company_s2_assistant submits inspection checklists + photos. */}
+            {/* S2 Intelligence: battalion S2 + company S2 assistants + XO + instructors.
+                SGM/BC/CSM excluded — S2 is a staff function, not a command review tool. */}
             <Route
               path="/admin/s2"
               element={
-                <ProtectedRoute allowedRoles={['s2_intelligence', 'company_s2_assistant']}>
+                <ProtectedRoute allowedRoles={['s2_intelligence', 'company_s2_assistant']} excludedRoles={RESTRICTED_CMD}>
                   <AdminS2 />
                 </ProtectedRoute>
               }
             />
 
-            {/* S6 Technology: battalion S6 manages carts/tasks and sends reminders;
-                company_s6_assistant completes end-of-class checklists;
-                s5_public_affairs has read-only history access. */}
+            {/* S6 Technology: S6 + company S6 assistants + S5 (read-only history) + XO + instructors.
+                SGM/BC/CSM excluded — technology management is outside their scope. */}
             <Route
               path="/admin/s6"
               element={
-                <ProtectedRoute allowedRoles={['s6_technology', 'company_s6_assistant', 's5_public_affairs']}>
+                <ProtectedRoute allowedRoles={['s6_technology', 'company_s6_assistant', 's5_public_affairs']} excludedRoles={RESTRICTED_CMD}>
                   <AdminS6 />
                 </ProtectedRoute>
               }
@@ -355,11 +368,12 @@ const AppContent = () => {
             {/* No minLevel here: every signed-in user manages their own profile */}
             <Route path="/admin/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
-            {/* S6 Technology + ADMIN_LEVEL (80+) override: configure battalion company names */}
+            {/* Customization: S6 configures company names; XO + instructors can also edit.
+                SGM/BC/CSM excluded — portal configuration is outside their scope. */}
             <Route
               path="/admin/companies"
               element={
-                <ProtectedRoute allowedRoles={['s6_technology']}>
+                <ProtectedRoute allowedRoles={['s6_technology']} excludedRoles={RESTRICTED_CMD}>
                   <AdminCompanies />
                 </ProtectedRoute>
               }
