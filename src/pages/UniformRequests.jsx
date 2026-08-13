@@ -101,9 +101,13 @@ const UniformRequests = () => {
       // Company S4 assistant or company CC/XO/1SG — scoped to their company
       q = query(collection(db, "uniform_requests"), where("company", "==", userProfile.company));
     } else {
-      // Should never reach here due to route gate; return nothing defensively
-      setRequests([]);
-      return;
+      // Personal view: any other signed-in user sees only requests for their own name
+      if (userProfile.fullName) {
+        q = query(collection(db, "uniform_requests"), where("cadetName", "==", userProfile.fullName));
+      } else {
+        setRequests([]);
+        return;
+      }
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -237,12 +241,74 @@ const UniformRequests = () => {
     return "Select Size / Specification";
   };
 
+  // Personal-view users: neither requesters nor approvers
+  const isPersonalView = !canRequest && !canApprove && !isHighCommand && !isCompanyLeadership;
+
   const filteredRequests = requests.filter(req => {
     const matchesFilter = req.status === filter;
-    const matchesSearch = req.cadetName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = req.cadetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           req.item?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  // ── PERSONAL VIEW ─────────────────────────────────────────────────────────────
+  if (isPersonalView) {
+    const STATUS_COLORS = {
+      Pending:  'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20',
+      Approved: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
+      Issued:   'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20',
+    };
+    return (
+      <div className="flex-1 text-slate-900 dark:text-slate-100">
+        <main className="p-6 md:p-10 max-w-3xl">
+          <div className="mb-8">
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              Uniform <span className="text-yellow-500">Items</span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
+              My Requests · {userProfile?.fullName || 'Cadet'}
+            </p>
+          </div>
+
+          {!userProfile ? (
+            <div className="flex items-center justify-center py-24">
+              <Clock size={32} className="text-yellow-500 animate-spin" />
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+              <Shirt className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No requests on file</p>
+              <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+                When your S4 assistant logs a uniform request for you, it will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[...requests]
+                .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0))
+                .map(req => (
+                  <div key={req.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-slate-900 dark:text-white text-sm truncate">{req.item}{req.detail ? ` — ${req.detail}` : ''}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                        Logged by {req.issuedBy || '—'} · {req.timestamp?.toDate
+                          ? req.timestamp.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                          : '—'}
+                      </p>
+                      {req.notes && <p className="text-xs text-slate-500 mt-1 italic">{req.notes}</p>}
+                    </div>
+                    <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl shrink-0 ${STATUS_COLORS[req.status] || STATUS_COLORS.Pending}`}>
+                      {req.status}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+          <Footer />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 pt-24 font-sans">

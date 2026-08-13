@@ -194,8 +194,10 @@ const AppContent = () => {
             {/* Gated: S4 assistants, company command (CC/XO/1SG), S4 logistics,
                 and battalion command (adminLevel override). All lower tiers are
                 redirected — cadets, squad/platoon leadership don't have access. */}
+            {/* Uniform Items: any signed-in user can open this page;
+                full request/approve flow gated inside the component by role. */}
             <Route path="/uniform-requests" element={
-              <ProtectedRoute allowedRoles={['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics']}>
+              <ProtectedRoute>
                 <UniformRequests />
               </ProtectedRoute>
             } />
@@ -339,12 +341,12 @@ const AppContent = () => {
               }
             />
 
-            {/* Uniform Sizes — S4 assistants + company leadership enter sizes;
-                S4 logistics views/manages all; battalion 85+ view all. */}
+            {/* Uniform Sizes: any signed-in user can open this page;
+                full input/finalize flow gated inside the component by role. */}
             <Route
               path="/admin/uniform-sizes"
               element={
-                <ProtectedRoute allowedRoles={['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics']}>
+                <ProtectedRoute>
                   <AdminUniformSizes />
                 </ProtectedRoute>
               }

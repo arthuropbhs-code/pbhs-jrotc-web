@@ -234,12 +234,18 @@ const AdminSidebar = () => {
             {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
-        {/* Fundraiser personal view — for any signed-in user who isn't
-            already seeing the Fundraiser link inside the isCommander block.
-            S6 and S7 are excluded because they have no fundraiser scope. */}
-        {!isCommander && role !== 's6_technology' && role !== 's7_special_projects' && (
-          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
+        {/* Personal-view links for any signed-in user who isn't already
+            seeing these pages inside the isCommander block.
+            S6 and S7 are at STAFF_LEVEL (70) which means isCommander=true,
+            so this block never renders for them. */}
+        {!isCommander && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
+            {/* Cadet Challenge: only if not already shown in canSeeChallenge block */}
+            {!canSeeChallenge && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
             {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+            {/* Uniform Items / Sizes: only if not already shown in canSeeUniforms block */}
+            {!canSeeUniforms && navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
+            {!canSeeUniforms && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
       </nav>

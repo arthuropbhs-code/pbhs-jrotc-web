@@ -31,7 +31,7 @@ import React, {
 } from 'react';
 import { db, auth } from '../firebase';
 import {
-  collection, doc, setDoc, getDoc, deleteDoc,
+  collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   onSnapshot, query, orderBy, where, serverTimestamp,
 } from 'firebase/firestore';
 import { getIdToken } from 'firebase/auth';
@@ -138,6 +138,12 @@ const AdminUniformSizes = () => {
   const [dataLoading,    setDataLoading]    = useState(true);
   const [detectingLeader,setDetectingLeader]= useState(false);
 
+  // ── Personal-view state ───────────────────────────────────────────────────────
+  const [myRosterDocId,     setMyRosterDocId]     = useState(null);
+  const [myRosterDocLoaded, setMyRosterDocLoaded] = useState(false);
+  const [mySizeRecord,      setMySizeRecord]      = useState(null);
+  const [myPersonalLoading, setMyPersonalLoading] = useState(true);
+
   // ── Data state ────────────────────────────────────────────────────────────────
   const [sizes,      setSizes]      = useState([]);   // uniformSizes records
   const [cadets,     setCadets]     = useState([]);   // roster
@@ -200,6 +206,39 @@ const AdminUniformSizes = () => {
     });
     return () => unsub();
   }, [activeCompany]);
+
+  // ── Personal-view effects ─────────────────────────────────────────────────────
+  // Step 1: find the user's roster doc by linkedUid
+  useEffect(() => {
+    if (canInput || canViewAll || authLoading || !user) return;
+    getDocs(query(collection(db, 'roster'), where('linkedUid', '==', user.uid)))
+      .then(snap => {
+        setMyRosterDocId(snap.empty ? null : snap.docs[0].id);
+        setMyRosterDocLoaded(true);
+      })
+      .catch(() => setMyRosterDocLoaded(true));
+  }, [canInput, canViewAll, authLoading, user]);
+
+  // Step 2: subscribe to the user's size record (0 or 1 docs)
+  useEffect(() => {
+    if (canInput || canViewAll || !myRosterDocLoaded) return;
+    setMyPersonalLoading(true);
+    let q;
+    if (myRosterDocId) {
+      q = query(collection(db, 'uniformSizes'), where('cadetId', '==', myRosterDocId));
+    } else if (userData?.fullName) {
+      q = query(collection(db, 'uniformSizes'), where('cadetName', '==', userData.fullName));
+    } else {
+      setMySizeRecord(null);
+      setMyPersonalLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(q, snap => {
+      setMySizeRecord(snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() });
+      setMyPersonalLoading(false);
+    }, () => setMyPersonalLoading(false));
+    return () => unsub();
+  }, [canInput, canViewAll, myRosterDocId, myRosterDocLoaded, userData?.fullName]);
 
   // ── Computed ──────────────────────────────────────────────────────────────────
   const displaySizes = useMemo(() => {
@@ -450,16 +489,75 @@ const AdminUniformSizes = () => {
     </div>
   );
 
-  const hasAccess = canInput || canViewAll;
-  if (!hasAccess) return (
-    <div className="min-h-screen flex items-center justify-center text-center p-8">
-      <div>
-        <Shirt className="mx-auto text-yellow-500 mb-4" size={40} />
-        <p className="font-black uppercase text-sm text-slate-500">Access Restricted</p>
-        <p className="text-xs text-slate-400 mt-2">This page is for S4 Assistants and Company Leadership.</p>
+  const hasFullAccess = canInput || canViewAll;
+
+  // ── PERSONAL VIEW (read-only, for cadets without input/management access) ─────
+  if (!hasFullAccess) {
+    const rec = mySizeRecord;
+    const SizeRow = ({ label, value }) => value ? (
+      <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-white/5 last:border-0">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</span>
+        <span className="text-sm font-black text-slate-900 dark:text-white">{value}</span>
       </div>
-    </div>
-  );
+    ) : null;
+
+    return (
+      <div className="flex-1 text-slate-900 dark:text-slate-100">
+        <main className="p-6 md:p-10 max-w-2xl">
+          <div className="mb-8">
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              <ScrambleText text="Uniform " trigger="mount" />
+              <span className="text-yellow-500"><ScrambleText text="Sizes" trigger="mount" /></span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
+              My Sizes · {ROLE_LABELS[role] || 'Cadet'}
+            </p>
+          </div>
+
+          {myPersonalLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="animate-spin text-yellow-500" size={32} />
+            </div>
+          ) : !rec ? (
+            <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+              <Shirt className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No sizes on file</p>
+              <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+                Once your S4 assistant enters your sizes, they will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Status badge */}
+              <div className="flex items-center gap-3">
+                <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl ${statusColor(rec.status || 'draft')}`}>
+                  {statusLabel(rec.status || 'draft')}
+                </span>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl p-6 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-4">Class B Uniform</p>
+                <SizeRow label="Shirt"  value={rec.classBShirtSize} />
+                <SizeRow label="Pants"  value={rec.classBPantsSize} />
+                <SizeRow label="Shoes"  value={rec.classBShoeSize}  />
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl p-6 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-4">Other Items</p>
+                <SizeRow label="PT Shirt"      value={rec.ptShirtSize}      />
+                <SizeRow label="Company Shirt" value={rec.companyShirtSize} />
+                {rec.hasClassA && <SizeRow label="Class A Jacket" value={rec.classAJacketSize} />}
+                {!rec.ptShirtSize && !rec.companyShirtSize && !rec.hasClassA && (
+                  <p className="text-xs text-slate-400 text-center py-2">—</p>
+                )}
+              </div>
+            </div>
+          )}
+          <Footer />
+        </main>
+      </div>
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (

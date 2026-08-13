@@ -144,6 +144,12 @@ const AdminCadetChallenge = () => {
   const [bnCadets,      setBnCadets]        = useState([]);   // battalion members whose secondaryCompany == target
   const [dataLoading,   setDataLoading]     = useState(true);
 
+  // ── Personal-view state (users without input/view access) ─────────────────────
+  const [myRosterDocId,     setMyRosterDocId]     = useState(null);
+  const [myRosterDocLoaded, setMyRosterDocLoaded] = useState(false);
+  const [myPersonalRecords, setMyPersonalRecords] = useState([]);
+  const [myPersonalLoading, setMyPersonalLoading] = useState(true);
+
   // The active company for queries (staff filter, or the user's own company)
   const targetCompany = filterCompany || myCompany;
 
@@ -268,6 +274,42 @@ const AdminCadetChallenge = () => {
     }, () => setBnRecordsRaw([]));
     return () => unsub();
   }, [myCompany, canViewAll, canInput]);
+
+  // ── Personal-view effects ─────────────────────────────────────────────────────
+  // Step 1: find the user's roster doc by linkedUid
+  useEffect(() => {
+    if (canInput || canViewAll || authLoading || !user) return;
+    getDocs(query(collection(db, 'roster'), where('linkedUid', '==', user.uid)))
+      .then(snap => {
+        setMyRosterDocId(snap.empty ? null : snap.docs[0].id);
+        setMyRosterDocLoaded(true);
+      })
+      .catch(() => setMyRosterDocLoaded(true));
+  }, [canInput, canViewAll, authLoading, user]);
+
+  // Step 2: subscribe to all of the user's records across every cycle
+  useEffect(() => {
+    if (canInput || canViewAll || !myRosterDocLoaded) return;
+    setMyPersonalLoading(true);
+    let q;
+    if (myRosterDocId) {
+      q = query(collection(db, 'cadetChallengeRecords'), where('cadetId', '==', myRosterDocId));
+    } else if (userData?.fullName) {
+      q = query(collection(db, 'cadetChallengeRecords'), where('cadetName', '==', userData.fullName));
+    } else {
+      setMyPersonalRecords([]);
+      setMyPersonalLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(q, snap => {
+      const recs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.cycleNumber || 0) - (b.cycleNumber || 0));
+      setMyPersonalRecords(recs);
+      setMyPersonalLoading(false);
+    }, () => setMyPersonalLoading(false));
+    return () => unsub();
+  }, [canInput, canViewAll, myRosterDocId, myRosterDocLoaded, userData?.fullName]);
 
   // ── Toast helper ─────────────────────────────────────────────────────────────
   const showToast = useCallback((msg) => {
@@ -541,15 +583,53 @@ const AdminCadetChallenge = () => {
     );
   }
 
-  const hasAccess = canInput || canViewAll || userLevel >= COMMAND_LEVEL;
-  if (!hasAccess) {
+  // Users without input/view access get a read-only personal view
+  const hasFullAccess = canInput || canViewAll;
+
+  if (!hasFullAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-center p-8">
-        <div>
-          <Activity className="mx-auto text-yellow-500 mb-4" size={40} />
-          <p className="font-black uppercase text-sm text-slate-500">Access Restricted</p>
-          <p className="text-xs text-slate-400 mt-2">This page is for S1/S3 Assistants and above.</p>
-        </div>
+      <div className="flex-1 text-slate-900 dark:text-slate-100">
+        <main className="p-6 md:p-10 max-w-3xl">
+          <div className="mb-8">
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+              <ScrambleText text="Cadet " trigger="mount" />
+              <span className="text-yellow-500"><ScrambleText text="Challenge" trigger="mount" /></span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
+              My Fitness Records · {ROLE_LABELS[role] || 'Cadet'}
+            </p>
+          </div>
+
+          {myPersonalLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="animate-spin text-yellow-500" size={32} />
+            </div>
+          ) : myPersonalRecords.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+              <Activity className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No records yet</p>
+              <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+                Once your S1 assistant enters your fitness scores, they will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {CYCLES.map(cycleNum => {
+                const rec = myPersonalRecords.find(r => r.cycleNumber === cycleNum);
+                if (!rec) return null;
+                return (
+                  <div key={cycleNum}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 mb-3 px-1">
+                      Cycle #{cycleNum}
+                    </p>
+                    <RecordCard rec={rec} canEdit={false} canDelete={false} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <Footer />
+        </main>
       </div>
     );
   }

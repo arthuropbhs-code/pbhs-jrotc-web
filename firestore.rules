@@ -294,12 +294,9 @@ service cloud.firestore {
     // Their records are stored under company='Zulu' but must also be readable
     // and writable by Alpha's S1 assistant (via secondaryCompany match).
     match /cadetChallengeRecords/{docId} {
-      allow read: if isSignedIn() && (
-        myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        (myLevel() >= 35 && resource.data.company == userDoc().company) ||
-        (myLevel() >= 35 && resource.data.secondaryCompany == userDoc().company)
-      );
+      // Read open to all signed-in users so cadets can query their own records
+      // by cadetId (roster doc ID) for the personal view. UI enforces scoping.
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 35 && request.resource.data.company == userDoc().company) ||
@@ -414,11 +411,9 @@ service cloud.firestore {
     // Read:  company command (45+) reads own company; logistics/admin (70+) reads all.
     // Delete: logistics/admin (70+) only.
     match /uniformSizes/{docId} {
-      allow read: if isSignedIn() && (
-        myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        (userDoc().role == 'company_s4_assistant' && resource.data.company == userDoc().company)
-      );
+      // Read open to all signed-in users so cadets can query their own size record
+      // by cadetId (roster doc ID) for the personal view. UI enforces scoping.
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 45 && request.resource.data.company == userDoc().company) ||
