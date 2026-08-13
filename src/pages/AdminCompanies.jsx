@@ -24,7 +24,9 @@ const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Unifo
 
 const AdminCompanies = () => {
   const { user, role, loading: authLoading } = useAuth();
-  const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
+  // s6_technology is explicitly allowed via the route's allowedRoles; the
+  // level check alone (>= 80) would block them since they sit at level 70.
+  const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL || role === 's6_technology';
 
   const [companies, setCompanies] = useState(DEFAULT_COMPANIES);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);

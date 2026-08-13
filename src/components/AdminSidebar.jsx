@@ -159,10 +159,11 @@ const AdminSidebar = () => {
             {groupLabel('Operations')}
             {isStaffOrS4 && navLink('/admin/orders',       <PlusSquare size={18} />,     'Issue Orders')}
             {isStaffOrS4 && navLink('/admin/assign-tasks', <ClipboardCheck size={18} />, 'Assign Tasks')}
-            {/* Global Broadcast: S7 cannot issue battalion-wide announcements */}
-            {isStaffOrS4 && role !== 's7_special_projects' && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
-            {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {canSeeFundraiser && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+            {/* Global Broadcast: S6 and S7 cannot issue battalion-wide announcements */}
+            {isStaffOrS4 && role !== 's7_special_projects' && role !== 's6_technology' && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
+            {/* Cadet Challenge: not relevant to S6 or S7 scope */}
+            {role !== 's6_technology' && role !== 's7_special_projects' && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+            {canSeeFundraiser && role !== 's6_technology' && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {(role === 's2_intelligence' || isTopFour) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
             {(role === 's6_technology' || role === 's5_public_affairs' || isTopFour) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
 
@@ -180,8 +181,9 @@ const AdminSidebar = () => {
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
+            {/* S6 only sees Battalion Stats + Customization — not Camp Attendance */}
             {isStaffOrS4 && groupLabel('Analytics')}
-            {isStaffOrS4 && navLink('/admin/camps', <Tent size={18} />,     'Camp Attendance')}
+            {isStaffOrS4 && role !== 's6_technology' && navLink('/admin/camps', <Tent size={18} />, 'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
             {(isTopFour || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
