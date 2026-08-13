@@ -177,7 +177,7 @@ const AdminSidebar = () => {
             {(role === 's5_public_affairs' || role === 's6_technology' || isTopFour) && navLink('/admin/photos',     <Image size={18} />,    'Photo Gallery')}
 
             {/* ── GROUP 3: ANALYTICS ──────────────── */}
-            {groupLabel('Analytics')}
+            {isStaffOrS4 && groupLabel('Analytics')}
             {isStaffOrS4 && navLink('/admin/camps', <Tent size={18} />,     'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
             {(isTopFour || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}

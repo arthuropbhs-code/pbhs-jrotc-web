@@ -106,18 +106,19 @@ const AdminFundraiser = () => {
   }, [canViewAll, myCompany]);
 
   // ── Subscribe: entries ────────────────────────────────────────────────────────
+  // NOTE: we intentionally avoid orderBy('submittedAt') in the where-query to
+  // prevent needing a composite index on (company, submittedAt) that may not
+  // exist yet. Sorting is done client-side in displayEntries instead.
   useEffect(() => {
     if (authLoading) return;
     setDataLoading(true);
     let q;
     if (canViewAll && !filterCompany) {
-      // View all — no company filter; sorted newest first
-      q = query(collection(db, 'fundraiserEntries'), orderBy('submittedAt', 'desc'));
+      q = query(collection(db, 'fundraiserEntries'));
     } else if (activeCompany) {
       q = query(
         collection(db, 'fundraiserEntries'),
         where('company', '==', activeCompany),
-        orderBy('submittedAt', 'desc'),
       );
     } else {
       setEntries([]); setDataLoading(false); return;
@@ -125,7 +126,7 @@ const AdminFundraiser = () => {
     const unsub = onSnapshot(q, snap => {
       setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setDataLoading(false);
-    }, () => setDataLoading(false));
+    }, (err) => { console.error('fundraiserEntries snapshot error:', err); setDataLoading(false); });
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, filterCompany, activeCompany, canViewAll, role]);
@@ -146,8 +147,15 @@ const AdminFundraiser = () => {
 
   // ── Computed ──────────────────────────────────────────────────────────────────
   const displayEntries = useMemo(() => {
-    if (canViewAll && !filterCompany) return entries;
-    return entries.filter(e => e.company === activeCompany);
+    const filtered = (canViewAll && !filterCompany)
+      ? entries
+      : entries.filter(e => e.company === activeCompany);
+    // Sort newest-first client-side (avoids composite Firestore index requirement)
+    return [...filtered].sort((a, b) => {
+      const ta = a.submittedAt?.seconds ?? 0;
+      const tb = b.submittedAt?.seconds ?? 0;
+      return tb - ta;
+    });
   }, [entries, activeCompany, canViewAll, filterCompany]);
 
   const totalAmount = useMemo(() => displayEntries.reduce((s, e) => s + (e.amount || 0), 0), [displayEntries]);
@@ -369,7 +377,7 @@ const AdminFundraiser = () => {
                         ${(entry.amount || 0).toFixed(2)}
                       </td>
                       <td className="p-3 font-black text-yellow-600 dark:text-yellow-400 whitespace-nowrap">
-                        🚩 {entry.flags ?? toFlags(entry.amount)}
+                        {entry.flags ?? toFlags(entry.amount)}
                       </td>
                       <td className="p-3 text-slate-500 dark:text-slate-400 max-w-[160px] truncate">{entry.notes || '—'}</td>
                       <td className="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{entry.submittedByName || '—'}</td>
@@ -431,7 +439,7 @@ const AdminFundraiser = () => {
                       </td>
                       <td className="p-3">
                         <span className={`font-black ${cadet.flags > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400'}`}>
-                          {cadet.flags > 0 ? `🚩 ${cadet.flags}` : '—'}
+                          {cadet.flags > 0 ? cadet.flags : '—'}
                         </span>
                       </td>
                       <td className="p-3 text-slate-500 dark:text-slate-400">{cadet.count || 0}</td>
@@ -540,7 +548,7 @@ const AdminFundraiser = () => {
                   </div>
                   {form.amount && parseFloat(form.amount) > 0 && (
                     <p className="mt-2 text-xs font-black text-yellow-600 dark:text-yellow-400 ml-1">
-                      = 🚩 {liveFlags} flag{liveFlags !== 1 ? 's' : ''}
+                      = {liveFlags} flag{liveFlags !== 1 ? 's' : ''}
                       {parseFloat(form.amount) % 2 !== 0 && (
                         <span className="text-slate-400 font-normal ml-2">(${parseFloat(form.amount).toFixed(2)} → rounded down)</span>
                       )}
