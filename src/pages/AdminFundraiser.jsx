@@ -16,10 +16,10 @@
 // Delete entries:             admin level 80+
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
-  collection, addDoc, deleteDoc, doc, onSnapshot,
-  query, orderBy, where, serverTimestamp,
+  collection, addDoc, updateDoc, doc, onSnapshot,
+  query, where, serverTimestamp,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useCompanies } from '../hooks/useCompanies';
@@ -27,7 +27,7 @@ import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
   DollarSign, Flag, Plus, Trash2, X, Loader2, CheckCircle2,
   Filter, Banknote, FileText, Smartphone, ShoppingCart,
-  Users, ReceiptText, ChevronDown,
+  Users, ReceiptText, Ban,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -158,13 +158,15 @@ const AdminFundraiser = () => {
     });
   }, [entries, activeCompany, canViewAll, filterCompany]);
 
-  const totalAmount = useMemo(() => displayEntries.reduce((s, e) => s + (e.amount || 0), 0), [displayEntries]);
-  const totalFlags  = useMemo(() => displayEntries.reduce((s, e) => s + (e.flags  || 0), 0), [displayEntries]);
+  // Voided entries stay in displayEntries for the transaction log but are excluded from totals
+  const activeEntries = useMemo(() => displayEntries.filter(e => !e.voided), [displayEntries]);
+  const totalAmount = useMemo(() => activeEntries.reduce((s, e) => s + (e.amount || 0), 0), [activeEntries]);
+  const totalFlags  = useMemo(() => activeEntries.reduce((s, e) => s + (e.flags  || 0), 0), [activeEntries]);
 
-  // Roster aggregated view: each cadet with their totals
+  // Roster aggregated view: each cadet with their totals (voided excluded)
   const rosterAggregated = useMemo(() => {
     const byId = {};
-    displayEntries.forEach(e => {
+    activeEntries.forEach(e => {
       const key = e.cadetId === 'manual' ? `manual_${e.cadetName}` : e.cadetId;
       if (!byId[key]) byId[key] = { cadetId: e.cadetId, cadetName: e.cadetName, total: 0, flags: 0, count: 0, lastAt: null };
       byId[key].total += e.amount || 0;
@@ -232,14 +234,24 @@ const AdminFundraiser = () => {
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────────────────
+  // ── Void (soft-delete) ────────────────────────────────────────────────────────
+  // Entries are never hard-deleted — they remain in the log with voided=true
+  // so there is always an audit trail. Voided entries are excluded from all totals.
   const handleDelete = async () => {
     if (!deleteConf) return;
     try {
-      await deleteDoc(doc(db, 'fundraiserEntries', deleteConf.id));
+      await updateDoc(doc(db, 'fundraiserEntries', deleteConf.id), {
+        voided:        true,
+        voidedAt:      serverTimestamp(),
+        voidedByUid:   user.uid,
+        voidedByName:  userData?.fullName || '',
+      });
       setDeleteConf(null);
-      showToast('Entry deleted');
-    } catch { showToast('Delete failed'); }
+      showToast('Entry voided');
+    } catch (err) {
+      console.error(err);
+      showToast('Void failed — try again');
+    }
   };
 
   // ── Access check ──────────────────────────────────────────────────────────────
@@ -332,7 +344,7 @@ const AdminFundraiser = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             <SummaryCard icon={<DollarSign size={18} className="text-green-500" />} label="Total Raised" value={`$${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
             <SummaryCard icon={<Flag size={18} className="text-yellow-500" />} label="Total Flags" value={totalFlags.toLocaleString()} />
-            <SummaryCard icon={<ReceiptText size={18} className="text-blue-500" />} label="Transactions" value={displayEntries.length.toLocaleString()} />
+            <SummaryCard icon={<ReceiptText size={18} className="text-blue-500" />} label="Active Payments" value={activeEntries.length.toLocaleString()} />
           </div>
         )}
 
@@ -359,45 +371,71 @@ const AdminFundraiser = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayEntries.map((entry, idx) => (
-                    <tr key={entry.id} className={`border-b border-slate-100 dark:border-white/5 ${idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-white/[0.02]'}`}>
-                      <td className="p-3 font-black text-slate-900 dark:text-white whitespace-nowrap">
-                        {entry.cadetName}
-                        {canViewAll && filterCompany === '' && (
-                          <span className="ml-2 text-[9px] font-bold text-slate-400">{entry.company}</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${PAYMENT_COLORS[entry.paymentType] || 'bg-slate-100'}`}>
-                          {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.icon}
-                          {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.label || entry.paymentType}
-                        </span>
-                      </td>
-                      <td className="p-3 font-black text-green-600 dark:text-green-400 whitespace-nowrap">
-                        ${(entry.amount || 0).toFixed(2)}
-                      </td>
-                      <td className="p-3 font-black text-yellow-600 dark:text-yellow-400 whitespace-nowrap">
-                        {entry.flags ?? toFlags(entry.amount)}
-                      </td>
-                      <td className="p-3 text-slate-500 dark:text-slate-400 max-w-[160px] truncate">{entry.notes || '—'}</td>
-                      <td className="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{entry.submittedByName || '—'}</td>
-                      <td className="p-3 text-slate-400 whitespace-nowrap">
-                        {entry.submittedAt?.toDate
-                          ? entry.submittedAt.toDate().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                          : '—'}
-                      </td>
-                      <td className="p-3">
-                        {canDelete && (
-                          <button
-                            onClick={() => setDeleteConf({ id: entry.id, cadetName: entry.cadetName, amount: entry.amount })}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {displayEntries.map((entry, idx) => {
+                    const isVoided = !!entry.voided;
+                    return (
+                      <tr
+                        key={entry.id}
+                        className={`border-b border-slate-100 dark:border-white/5 transition-colors ${
+                          isVoided
+                            ? 'opacity-50 bg-red-50/40 dark:bg-red-900/10'
+                            : idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-white/[0.02]'
+                        }`}
+                      >
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {isVoided && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[9px] font-black uppercase tracking-widest shrink-0">
+                                <Ban size={8} /> Void
+                              </span>
+                            )}
+                            <span className={`font-black ${isVoided ? 'line-through text-slate-400 dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}>
+                              {entry.cadetName}
+                            </span>
+                            {canViewAll && filterCompany === '' && (
+                              <span className="text-[9px] font-bold text-slate-400">{entry.company}</span>
+                            )}
+                          </div>
+                          {isVoided && entry.voidedByName && (
+                            <p className="text-[9px] text-red-500/70 dark:text-red-400/60 mt-0.5">
+                              Voided by {entry.voidedByName}
+                              {entry.voidedAt?.toDate ? ` · ${entry.voidedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                            </p>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${isVoided ? 'opacity-40 grayscale' : ''} ${PAYMENT_COLORS[entry.paymentType] || 'bg-slate-100'}`}>
+                            {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.icon}
+                            {PAYMENT_TYPES.find(t => t.key === entry.paymentType)?.label || entry.paymentType}
+                          </span>
+                        </td>
+                        <td className={`p-3 font-black whitespace-nowrap ${isVoided ? 'line-through text-slate-400 dark:text-slate-600' : 'text-green-600 dark:text-green-400'}`}>
+                          ${(entry.amount || 0).toFixed(2)}
+                        </td>
+                        <td className={`p-3 font-black whitespace-nowrap ${isVoided ? 'line-through text-slate-400 dark:text-slate-600' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                          {entry.flags ?? toFlags(entry.amount)}
+                        </td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400 max-w-[160px] truncate">{entry.notes || '—'}</td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{entry.submittedByName || '—'}</td>
+                        <td className="p-3 text-slate-400 whitespace-nowrap">
+                          {entry.submittedAt?.toDate
+                            ? entry.submittedAt.toDate().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            : '—'}
+                        </td>
+                        <td className="p-3">
+                          {canDelete && !isVoided && (
+                            <button
+                              onClick={() => setDeleteConf({ id: entry.id, cadetName: entry.cadetName, amount: entry.amount })}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                              title="Void entry"
+                            >
+                              <Ban size={13} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -580,17 +618,20 @@ const AdminFundraiser = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Delete Confirmation ── */}
+      {/* ── Void Confirmation ── */}
       <AnimatePresence>
         {deleteConf && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
-              <Trash2 className="mx-auto text-red-500 mb-4" size={32} />
-              <h3 className="font-black uppercase text-sm tracking-widest mb-2">Delete Entry?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                Permanently removes <strong>{deleteConf.cadetName}</strong>'s ${(deleteConf.amount||0).toFixed(2)} payment.
+              <Ban className="mx-auto text-red-500 mb-4" size={32} />
+              <h3 className="font-black uppercase text-sm tracking-widest mb-2">Void Entry?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                Marks <strong>{deleteConf.cadetName}</strong>'s <strong>${(deleteConf.amount||0).toFixed(2)}</strong> payment as voided.
+              </p>
+              <p className="text-xs text-slate-400 mb-6">
+                The entry stays in the transaction log with a VOID label for audit purposes and is excluded from all totals.
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setDeleteConf(null)}
@@ -598,8 +639,8 @@ const AdminFundraiser = () => {
                   Cancel
                 </button>
                 <button onClick={handleDelete}
-                  className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest">
-                  Delete
+                  className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                  <Ban size={13} /> Void
                 </button>
               </div>
             </motion.div>
