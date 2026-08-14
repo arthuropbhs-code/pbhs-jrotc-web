@@ -65,6 +65,7 @@ const AdminS2             = lazy(() => import('./pages/AdminS2'));
 const AdminS6             = lazy(() => import('./pages/AdminS6'));
 const AdminFundraiser     = lazy(() => import('./pages/AdminFundraiser'));
 const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
+const AdminS1             = lazy(() => import('./pages/AdminS1'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -375,6 +376,24 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={['s6_technology']} excludedRoles={RESTRICTED_CMD}>
                   <AdminCompanies />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* S1 Tracker: form turn-in tracking + roster link.
+                S1/S3 adjutants, battalion XO, company command (CC/XO/1SG),
+                company S1 and S3 assistants. S4/S5/S6/S7 staff excluded —
+                this is a personnel accountability tool, not a general-staff page.
+                ADMIN_LEVEL (80+) always overrides. */}
+            <Route
+              path="/admin/s1"
+              element={
+                <ProtectedRoute allowedRoles={[
+                  's1_adjutant', 's3_operations', 'battalion_xo',
+                  'company_s1_assistant', 'company_xo', 'company_1sg',
+                  'company_commander', 'company_s3_assistant',
+                ]}>
+                  <AdminS1 />
                 </ProtectedRoute>
               }
             />

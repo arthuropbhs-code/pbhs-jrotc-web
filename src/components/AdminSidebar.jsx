@@ -34,6 +34,7 @@ import {
   Laptop,
   Heart,
   Ruler,
+  ClipboardList,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -119,6 +120,13 @@ const AdminSidebar = () => {
   const canSeeS2 = role === 's2_intelligence' || role === 'company_s2_assistant' || userLevel >= ADMIN_LEVEL;
   // S6 — battalion S6, S5 (read-only review), and company S6 assistants
   const canSeeS6 = role === 's6_technology' || role === 'company_s6_assistant' || role === 's5_public_affairs' || userLevel >= ADMIN_LEVEL;
+  // S1 Tracker — S1/S3 adjutants, battalion XO, company command + S1/S3 assistants.
+  // Excludes S2/S4/S5/S6/S7 staff (not a general-staff tool). Matches /admin/s1 route.
+  const S1_TRACKER_ROLES = [
+    's1_adjutant', 's3_operations', 'battalion_xo',
+    'company_s1_assistant', 'company_xo', 'company_1sg', 'company_commander', 'company_s3_assistant',
+  ];
+  const canSeeS1 = S1_TRACKER_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   const isActive = (path) => location.pathname === path;
 
@@ -206,6 +214,8 @@ const AdminSidebar = () => {
             {/* ── GROUP 2: MANAGE ─────────────────── */}
             {groupLabel('Manage')}
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
+            {/* S1 Tracker: form turn-in tracking — S1/S3 adjutants, battalion XO, company command */}
+            {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {/* Personnel: S1 + S6 + XO/BC/CSM (not SGM) */}
             {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
             {/* Teams: all staff except S1; SGM only if listed on a team */}
@@ -247,6 +257,15 @@ const AdminSidebar = () => {
         {canSeeS6 && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
             {navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
+          </div>
+        )}
+
+        {/* ── S1 TRACKER — company_s1_assistant / company_s3_assistant (non-commander) ── */}
+        {canSeeS1 && !isCommander && (
+          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
+            {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
+            {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
+              navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 
