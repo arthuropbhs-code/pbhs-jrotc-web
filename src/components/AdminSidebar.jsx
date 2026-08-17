@@ -35,6 +35,7 @@ import {
   Heart,
   Ruler,
   ClipboardList,
+  NotepadText,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -128,6 +129,10 @@ const AdminSidebar = () => {
   ];
   const canSeeS1 = S1_TRACKER_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
+  // Meeting Logs — Battalion XO (edit), S1 Adjutant (view), Battalion Commander (view)
+  const MEETING_LOG_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
+  const canSeeMeetingLogs = MEETING_LOG_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
   const isActive = (path) => location.pathname === path;
 
   const navLink = (to, icon, label, extra = '') => (
@@ -216,6 +221,8 @@ const AdminSidebar = () => {
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
             {/* S1 Tracker: form turn-in tracking — S1/S3 adjutants, battalion XO, company command */}
             {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
+            {/* Meeting Logs: XO edits; S1 + BC view */}
+            {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
             {/* Personnel: S1 + S6 + XO/BC/CSM (not SGM) */}
             {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
             {/* Teams: all staff except S1; SGM only if listed on a team */}
@@ -264,6 +271,8 @@ const AdminSidebar = () => {
         {canSeeS1 && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
+            {/* S1 Adjutant also gets Meeting Logs in this section */}
+            {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
             {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
               navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>

@@ -38,10 +38,11 @@ import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject }
 import {
   ClipboardList, Plus, ChevronLeft, CheckCircle2, Clock,
   Search, ChevronDown, ChevronUp, BookUser, Upload,
-  Mail, X, FileText, Paperclip,
+  Mail, X, FileText, Paperclip, Trophy,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, COMMAND_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
+import S1PromotionBoard from '../components/S1PromotionBoard';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
 const CAN_CREATE_ROLES = [
@@ -310,6 +311,7 @@ const AdminS1 = () => {
   const [sendingEmail,    setSendingEmail]    = useState(false);
   const [emailFeedback,   setEmailFeedback]   = useState('');  // success/error message
   const [creating,        setCreating]        = useState(false);
+  const [activeTab,       setActiveTab]       = useState('forms'); // 'forms' | 'board'
 
   const [createForm, setCreateForm] = useState({
     title:   '',
@@ -592,9 +594,9 @@ const AdminS1 = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   // ════════════════════════════════════════════════════════════════════════════════
-  // DETAIL VIEW
+  // DETAIL VIEW  (forms tab only)
   // ════════════════════════════════════════════════════════════════════════════════
-  if (view === 'detail' && selectedEvent) {
+  if (activeTab === 'forms' && view === 'detail' && selectedEvent) {
     const isPastDue  = isPast(selectedEvent.dueDate);
     const hasOverdue = isPastDue && pendingCount > 0;
     const pct        = visibleSubs.length > 0
@@ -775,7 +777,7 @@ const AdminS1 = () => {
       <main className="p-6 md:p-10 max-w-7xl">
 
         {/* ── Header ─────────────────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 mb-10">
+        <div className="flex items-start justify-between gap-4 mb-8">
           <div>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
               S1 <span className="text-yellow-500">Tracker</span>
@@ -791,7 +793,7 @@ const AdminS1 = () => {
             >
               <BookUser size={14} /> Battalion Roster
             </Link>
-            {canCreate && (
+            {activeTab === 'forms' && canCreate && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
@@ -801,6 +803,34 @@ const AdminS1 = () => {
             )}
           </div>
         </div>
+
+        {/* ── Tab bar ─────────────────────────────────────────────────────────────── */}
+        <div className="flex gap-1 mb-8 bg-blue-50/70 dark:bg-slate-800/50 rounded-2xl p-1 max-w-xs">
+          {[
+            { key: 'forms', label: 'Form Tracker',    Icon: ClipboardList },
+            { key: 'board', label: 'Promotion Board', Icon: Trophy        },
+          ].map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => {
+                setActiveTab(key);
+                if (key === 'board' && view === 'detail') closeDetail();
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                activeTab === key
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              }`}
+            >
+              <Icon size={11} /> {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            FORM TRACKER (list view)
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'forms' && (<>
 
         {/* ── Active events ───────────────────────────────────────────────────────── */}
         <section className="mb-10">
@@ -849,12 +879,29 @@ const AdminS1 = () => {
             )}
           </section>
         )}
+
+        </>)} {/* end activeTab === 'forms' */}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PROMOTION BOARD
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'board' && (
+          <S1PromotionBoard
+            userData={userData}
+            role={role}
+            userLevel={userLevel}
+            myCompany={myCompany}
+            isBattalionLevel={isBattalionLevel}
+            isS1={isS1}
+          />
+        )}
+
       </main>
 
       {/* ════════════════════════════════════════════════════════════════════════════
-          CREATE MODAL
+          CREATE MODAL  (form tracker only)
       ════════════════════════════════════════════════════════════════════════════ */}
-      {showCreateModal && (
+      {activeTab === 'forms' && showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-blue-100 dark:border-white/5">
             <div className="flex items-center justify-between mb-6">

@@ -66,6 +66,7 @@ const AdminS6             = lazy(() => import('./pages/AdminS6'));
 const AdminFundraiser     = lazy(() => import('./pages/AdminFundraiser'));
 const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
 const AdminS1             = lazy(() => import('./pages/AdminS1'));
+const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -394,6 +395,16 @@ const AppContent = () => {
                   'company_commander', 'company_s3_assistant',
                 ]}>
                   <AdminS1 />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Meeting Logs — XO edits; S1 & BC view */}
+            <Route
+              path="/admin/meeting-logs"
+              element={
+                <ProtectedRoute allowedRoles={['battalion_xo', 's1_adjutant', 'battalion_commander']}>
+                  <AdminMeetingLogs />
                 </ProtectedRoute>
               }
             />
