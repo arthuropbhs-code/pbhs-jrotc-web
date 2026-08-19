@@ -54,8 +54,8 @@ const CalendarPage = () => {
         {/* HEADER SECTION */}
         <Reveal className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-2 hover:text-yellow-600 dark:hover:text-yellow-500 transition-all">
-              <ArrowLeft size={14} /> Back to Command
+            <Link to="/" className="text-slate-400 dark:text-slate-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-2 hover:text-yellow-600 dark:hover:text-yellow-500 transition-all">
+              <ArrowLeft size={14} /> Back to Home
             </Link>
             <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
               <CalendarIcon className="text-yellow-600 dark:text-yellow-500" /> Battalion Schedule

@@ -118,12 +118,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && myLevel() >= resource.data.issuerLevel;
     }
 
-    // Public calendar — readable without auth.
+    // Public calendar — readable without auth. Any signed-in staff can write
+    // (mirrors /admin/events which is open to all authenticated users).
     match /events/{id} {
       allow read: if true;
-      allow write: if isSignedIn() && (
-        userDoc().role in ['s5_public_affairs', 's6_technology'] || isAdmin()
-      );
+      allow write: if isSignedIn();
     }
 
     // Internal orders feed — not public.
