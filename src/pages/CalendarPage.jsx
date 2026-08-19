@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft, Tag } from 'lucide-react';
+import { TYPE_COLORS } from './AdminEvents';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -150,7 +151,14 @@ const CalendarPage = () => {
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 p-6 rounded-[2rem] relative overflow-hidden group hover:border-yellow-500/30 transition-all shadow-lg shadow-slate-200/40 dark:shadow-none"
                   >
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-yellow-600 dark:bg-yellow-500" />
-                    <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase mb-1 tracking-tighter">{event.date}</p>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-tighter">{event.date}</p>
+                      {event.type && (
+                        <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${TYPE_COLORS[event.type] || TYPE_COLORS.Other}`}>
+                          <Tag size={8} /> {event.type}
+                        </span>
+                      )}
+                    </div>
                     <h4 className="font-bold text-slate-900 dark:text-white mb-3 tracking-tight group-hover:text-yellow-600 dark:group-hover:text-yellow-500 transition-colors">
                       {event.title}
                     </h4>

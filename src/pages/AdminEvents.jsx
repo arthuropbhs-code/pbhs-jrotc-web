@@ -2,7 +2,7 @@
 //
 // Calendar events management — open to all authenticated staff.
 // Events appear on the public /events calendar page.
-// Schema: { title, date (YYYY-MM-DD), location, time, createdAt, updatedAt }
+// Schema: { title, date (YYYY-MM-DD), type, location, time, description, createdAt, updatedAt }
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -13,7 +13,7 @@ import { db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import {
   Calendar, Plus, Edit3, Trash2, Save, X, Loader2,
-  MapPin, Clock, ArrowLeft, Info,
+  MapPin, Clock, ArrowLeft, Info, Tag,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -22,7 +22,43 @@ const inputClass =
 const labelClass =
   'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1';
 
-const BLANK = { title: '', date: '', location: '', time: '', description: '' };
+export const EVENT_TYPES = [
+  'Training',
+  'Competition',
+  'Ceremony',
+  'Field Trip',
+  'Meeting',
+  'Social',
+  'Fundraiser',
+  'Community Service',
+  'Inspection',
+  'Other',
+];
+
+export const TYPE_COLORS = {
+  Training:            'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  Competition:         'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20',
+  Ceremony:            'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+  'Field Trip':        'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
+  Meeting:             'bg-slate-400/10 text-slate-600 dark:text-slate-400 border-slate-400/20',
+  Social:              'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20',
+  Fundraiser:          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  'Community Service': 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+  Inspection:          'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  Other:               'bg-slate-500/10 text-slate-500 dark:text-slate-500 border-slate-500/20',
+};
+
+const TypeBadge = ({ type }) => {
+  if (!type) return null;
+  const colors = TYPE_COLORS[type] || TYPE_COLORS.Other;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${colors}`}>
+      <Tag size={8} /> {type}
+    </span>
+  );
+};
+
+const BLANK = { title: '', date: '', type: '', location: '', time: '', description: '' };
 
 const AdminEvents = () => {
   const { userData } = useAuth();
@@ -50,6 +86,7 @@ const AdminEvents = () => {
       const payload = {
         title:       editingEvent.title.trim(),
         date:        editingEvent.date,
+        type:        editingEvent.type        || '',
         location:    editingEvent.location.trim(),
         time:        editingEvent.time.trim(),
         description: editingEvent.description.trim(),
@@ -113,6 +150,19 @@ const AdminEvents = () => {
             value={editingEvent.date}
             onChange={e => setField('date', e.target.value)}
           />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className={labelClass}>Category</label>
+          <select
+            className={inputClass}
+            value={editingEvent.type}
+            onChange={e => setField('type', e.target.value)}
+          >
+            <option value="">— Select —</option>
+            {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Location</label>
@@ -233,10 +283,13 @@ const AdminEvents = () => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-black uppercase italic text-sm text-slate-900 dark:text-white truncate">
-                    {ev.title}
-                  </p>
-                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="font-black uppercase italic text-sm text-slate-900 dark:text-white truncate">
+                      {ev.title}
+                    </p>
+                    <TypeBadge type={ev.type} />
+                  </div>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                       {ev.date}
                     </span>
@@ -271,6 +324,7 @@ const AdminEvents = () => {
                         id:          ev.id,
                         title:       ev.title,
                         date:        ev.date,
+                        type:        ev.type        || '',
                         location:    ev.location    || '',
                         time:        ev.time        || '',
                         description: ev.description || '',

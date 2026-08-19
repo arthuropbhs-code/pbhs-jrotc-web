@@ -65,7 +65,8 @@ const AdminContent = () => {
   const [events, setEvents] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null); // null = closed, BLANK_EVENT = new, {id,...} = editing
   const [eventSaving, setEventSaving] = useState(false);
-  const BLANK_EVENT = { title: '', date: '', location: '', time: '', description: '' };
+  const BLANK_EVENT = { title: '', date: '', type: '', location: '', time: '', description: '' };
+  const EVENT_TYPES = ['Training','Competition','Ceremony','Field Trip','Meeting','Social','Fundraiser','Community Service','Inspection','Other'];
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -83,6 +84,7 @@ const AdminContent = () => {
       const payload = {
         title:       editingEvent.title,
         date:        editingEvent.date,
+        type:        editingEvent.type        || '',
         location:    editingEvent.location    || '',
         time:        editingEvent.time        || '',
         description: editingEvent.description || '',
@@ -632,7 +634,14 @@ const AdminContent = () => {
                           <input className={inputClass} type="date" value={editingEvent.date} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className={labelClass}>Category</label>
+                          <select className={inputClass} value={editingEvent.type || ''} onChange={e => setEditingEvent({ ...editingEvent, type: e.target.value })}>
+                            <option value="">— Select —</option>
+                            {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
                         <div>
                           <label className={labelClass}>Location</label>
                           <input className={inputClass} value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} placeholder="e.g. Pine Bluff High School Gym" />
@@ -685,7 +694,7 @@ const AdminContent = () => {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => setEditingEvent({ id: ev.id, title: ev.title, date: ev.date, location: ev.location || '', time: ev.time || '', description: ev.description || '' })}
+                          onClick={() => setEditingEvent({ id: ev.id, title: ev.title, date: ev.date, type: ev.type || '', location: ev.location || '', time: ev.time || '', description: ev.description || '' })}
                           className="p-2 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
                           title="Edit"
                         >
