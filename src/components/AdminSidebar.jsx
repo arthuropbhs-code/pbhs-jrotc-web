@@ -36,13 +36,14 @@ import {
   Ruler,
   ClipboardList,
   NotepadText,
+  X,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
 import { getInitials } from '../utils/getInitials';
 import ScrambleText from './ScrambleText';
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const { userData, role, loading } = useAuth();
   const location = useLocation();
   const [requestCount, setRequestCount] = useState(0);
@@ -138,6 +139,7 @@ const AdminSidebar = () => {
   const navLink = (to, icon, label, extra = '') => (
     <Link
       to={to}
+      onClick={onClose}
       className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm transition-all ${
         isActive(to)
           ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
@@ -156,18 +158,34 @@ const AdminSidebar = () => {
   );
 
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-blue-100 dark:border-white/5 p-6 flex flex-col fixed h-full z-10 shadow-sm transition-colors duration-300">
-      {/* Branding */}
-      <div className="mb-8">
-        <h2 className="text-xl font-black uppercase italic tracking-tighter text-yellow-500">
-          <ScrambleText text="Battalion" trigger="hover" speed={25} />
-        </h2>
-        <p className="text-[10px] text-blue-400 dark:text-slate-500 uppercase font-bold tracking-[0.2em]">Admin Dashboard</p>
+    <aside className={`
+      w-64 bg-white dark:bg-slate-900 border-r border-blue-100 dark:border-white/5
+      p-6 flex flex-col fixed h-full z-30 shadow-sm
+      transition-transform duration-300 ease-in-out
+      ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+    `}>
+      {/* Branding + mobile close button */}
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-black uppercase italic tracking-tighter text-yellow-500">
+            <ScrambleText text="Battalion" trigger="hover" speed={25} />
+          </h2>
+          <p className="text-[10px] text-blue-400 dark:text-slate-500 uppercase font-bold tracking-[0.2em]">Admin Dashboard</p>
+        </div>
+        {/* Close button visible only on mobile */}
+        <button
+          onClick={onClose}
+          aria-label="Close navigation menu"
+          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-slate-600 dark:hover:text-slate-300 transition-colors -mr-1 -mt-1"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Avatar quick link */}
       <Link
         to="/admin/profile"
+        onClick={onClose}
         className="flex items-center gap-3 mb-6 p-3 rounded-2xl border border-blue-100 dark:border-white/5 hover:border-yellow-500/30 transition-colors group"
       >
         <div className="w-9 h-9 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-xs font-black uppercase shrink-0 overflow-hidden group-hover:scale-105 transition-transform">
@@ -189,6 +207,7 @@ const AdminSidebar = () => {
         {/* Always-visible top links */}
         <Link
           to="/"
+          onClick={onClose}
           className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5 hover:text-yellow-500 transition-all mb-2 border-b border-blue-100 dark:border-white/5 pb-4"
         >
           <ArrowLeft size={18} /> Back to Home
@@ -283,6 +302,7 @@ const AdminSidebar = () => {
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <Link
               to="/uniform-requests"
+              onClick={onClose}
               className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
                 isActive('/uniform-requests')
                   ? 'bg-yellow-500 text-slate-950'

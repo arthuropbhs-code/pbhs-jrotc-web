@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import AdminSidebar from './AdminSidebar';
 import SessionLockScreen from './SessionLockScreen';
 
@@ -19,6 +20,8 @@ const AdminLayout = () => {
   const [locked, setLocked] = useState(
     () => sessionStorage.getItem('sessionLocked') === '1'
   );
+  // Mobile sidebar open/closed state (desktop always shows sidebar via CSS)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handleLock = () => setLocked(true);
@@ -26,11 +29,38 @@ const AdminLayout = () => {
     return () => window.removeEventListener('idle-session-lock', handleLock);
   }, []);
 
+  // Close sidebar when route changes (user tapped a nav link)
+  const handleSidebarClose = () => setSidebarOpen(false);
+
   return (
     <div className="flex min-h-screen bg-blue-50 dark:bg-slate-950 transition-colors duration-300">
-      <AdminSidebar />
-      {/* ml-64 clears the fixed 256px sidebar */}
-      <div className="flex-1 ml-64 flex flex-col">
+      <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
+
+      {/* Mobile backdrop — tapping outside the sidebar closes it */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={handleSidebarClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Main content — full-width on mobile, offset by 256px sidebar on lg+ */}
+      <div className="flex-1 lg:ml-64 flex flex-col min-w-0">
+        {/* Mobile top bar with hamburger — hidden on desktop */}
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-b border-blue-100 dark:border-white/5 sticky top-0 z-10 shadow-sm">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open navigation menu"
+            className="p-2 rounded-xl text-slate-500 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-yellow-500 font-black text-sm uppercase italic tracking-tight select-none">
+            Battalion HQ
+          </span>
+        </div>
+
         <Outlet />
       </div>
 
