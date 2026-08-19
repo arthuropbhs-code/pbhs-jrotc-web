@@ -7,13 +7,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   collection, onSnapshot, query, orderBy,
-  addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
+  addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import {
   Calendar, Plus, Edit3, Trash2, Save, X, Loader2,
-  MapPin, Clock, ArrowLeft, Info, Tag,
+  MapPin, Clock, ArrowLeft, Info, Tag, Check,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -32,6 +32,7 @@ export const EVENT_TYPES = [
   'Fundraiser',
   'Community Service',
   'Inspection',
+  'No School',
   'Other',
 ];
 
@@ -45,6 +46,7 @@ export const TYPE_COLORS = {
   Fundraiser:          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
   'Community Service': 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
   Inspection:          'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  'No School':         'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
   Other:               'bg-slate-500/10 text-slate-500 dark:text-slate-500 border-slate-500/20',
 };
 
@@ -68,7 +70,33 @@ const AdminEvents = () => {
   const [editingEvent, setEditingEvent] = useState(null); // null=none, BLANK=new, {id,...}=edit
   const [saving, setSaving]           = useState(false);
 
-  // ── Data ──────────────────────────────────────────────────────────────────
+  // ── Blue/Gold anchor date ─────────────────────────────────────────────────
+  const DEFAULT_ANCHOR = '2025-08-11'; // first Blue Day — update to match your school calendar
+  const [anchorDate, setAnchorDate]     = useState(DEFAULT_ANCHOR);
+  const [anchorSaving, setAnchorSaving] = useState(false);
+  const [anchorSaved,  setAnchorSaved]  = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'blueGoldCalendar'), (snap) => {
+      if (snap.exists() && snap.data().anchorDate) setAnchorDate(snap.data().anchorDate);
+    });
+    return () => unsub();
+  }, []);
+
+  const saveAnchorDate = async () => {
+    setAnchorSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'blueGoldCalendar'), { anchorDate }, { merge: true });
+      setAnchorSaved(true);
+      setTimeout(() => setAnchorSaved(false), 2500);
+    } catch (err) {
+      console.error('Anchor save failed:', err);
+    } finally {
+      setAnchorSaving(false);
+    }
+  };
+
+  // ── Events data ───────────────────────────────────────────────────────────
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('date', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
@@ -241,6 +269,47 @@ const AdminEvents = () => {
               <Plus size={14} /> New Event
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Blue/Gold schedule settings */}
+      <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+          <span className="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0" />
+          <h2 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+            Blue / Gold Day Schedule
+          </h2>
+        </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-4 ml-8">
+          Set the date of the first Blue Day of the school year. The calendar alternates Blue → Gold each school day, automatically skipping weekends and any events marked <strong>No School</strong>.
+        </p>
+        <div className="flex items-end gap-3 ml-8">
+          <div className="flex-1 max-w-xs">
+            <label className={labelClass}>First Blue Day</label>
+            <input
+              className={inputClass}
+              type="date"
+              value={anchorDate}
+              onChange={e => setAnchorDate(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={saveAnchorDate}
+            disabled={anchorSaving}
+            className={`flex items-center gap-2 px-5 py-3 font-black text-xs uppercase rounded-xl transition-all shadow-lg disabled:opacity-50 whitespace-nowrap ${
+              anchorSaved
+                ? 'bg-green-500 text-white shadow-green-500/20'
+                : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-yellow-500/20'
+            }`}
+          >
+            {anchorSaving
+              ? <Loader2 size={14} className="animate-spin" />
+              : anchorSaved
+                ? <Check size={14} />
+                : <Save size={14} />}
+            {anchorSaved ? 'Saved!' : 'Save'}
+          </button>
         </div>
       </div>
 

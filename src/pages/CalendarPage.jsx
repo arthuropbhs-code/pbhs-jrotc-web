@@ -1,12 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft, Tag } from 'lucide-react';
-import { TYPE_COLORS } from './AdminEvents';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '../firebase';
+import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft, Tag } from 'lucide-react';
+import { TYPE_COLORS } from './AdminEvents';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
+
+// ── Blue/Gold computation ────────────────────────────────────────────────────
+// Counts weekday school days from anchorStr to targetStr, skipping noSchoolSet.
+// Both strings are YYYY-MM-DD. Returns -1 if target is before anchor.
+function countSchoolDays(anchorStr, targetStr, noSchoolSet) {
+  const [ay, am, ad] = anchorStr.split('-').map(Number);
+  const [ty, tm, td] = targetStr.split('-').map(Number);
+  const anchor = new Date(ay, am - 1, ad);
+  const target = new Date(ty, tm - 1, td);
+  if (target < anchor) return -1;
+  if (target.getTime() === anchor.getTime()) return 0;
+  let count = 0;
+  const curr = new Date(anchor);
+  while (curr < target) {
+    curr.setDate(curr.getDate() + 1);
+    const dow = curr.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const ds = `${curr.getFullYear()}-${String(curr.getMonth()+1).padStart(2,'0')}-${String(curr.getDate()).padStart(2,'0')}`;
+    if (!noSchoolSet.has(ds)) count++;
+  }
+  return count;
+}
 
 const CalendarPage = () => {
   usePageMeta({
@@ -17,14 +39,23 @@ const CalendarPage = () => {
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState(null); // null = all
+  const [anchorDate, setAnchorDate] = useState('2025-08-11'); // first Blue Day
 
   // --- DATA FETCHING ---
   useEffect(() => {
     const q = query(collection(db, "events"), orderBy("date", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setEvents(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsubscribe();
+  }, []);
+
+  // Load anchor date from admin settings
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'blueGoldCalendar'), (snap) => {
+      if (snap.exists() && snap.data().anchorDate) setAnchorDate(snap.data().anchorDate);
+    });
+    return () => unsub();
   }, []);
 
   // --- CALENDAR MATH ---
@@ -35,6 +66,41 @@ const CalendarPage = () => {
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
 
+  // --- BLUE/GOLD ---
+  // Dates marked as "No School" — the alternation skips these days
+  const noSchoolDates = useMemo(
+    () => new Set(events.filter(e => e.type === 'No School' && e.date).map(e => e.date)),
+    [events]
+  );
+
+  // Map of day-of-month → 'blue' | 'gold' for the current month view
+  const blueGoldMap = useMemo(() => {
+    const map = new Map();
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = new Date(y, m, day).getDay();
+      if (dow === 0 || dow === 6) continue; // weekend
+      const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (noSchoolDates.has(ds)) continue; // day off — no Blue/Gold
+      const n = countSchoolDays(anchorDate, ds, noSchoolDates);
+      if (n >= 0) map.set(day, n % 2 === 0 ? 'blue' : 'gold');
+    }
+    return map;
+  }, [anchorDate, currentDate, daysInMonth, noSchoolDates]);
+
+  // Today's Blue/Gold status for the header badge
+  const todayBlueGold = useMemo(() => {
+    const today = new Date();
+    const dow = today.getDay();
+    if (dow === 0 || dow === 6) return null;
+    const ds = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    if (noSchoolDates.has(ds)) return null;
+    const n = countSchoolDays(anchorDate, ds, noSchoolDates);
+    return n >= 0 ? (n % 2 === 0 ? 'blue' : 'gold') : null;
+  }, [anchorDate, noSchoolDates]);
+
+  // --- CATEGORY FILTER ---
   // Unique categories present across ALL events (stable as months change)
   const activeTypes = [...new Set(events.map(e => e.type).filter(Boolean))].sort();
 
@@ -62,16 +128,28 @@ const CalendarPage = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-white/5 shadow-xl shadow-slate-200/50 dark:shadow-none">
-            <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white">
-              <ChevronLeft />
-            </button>
-            <h2 className="text-lg font-black uppercase italic min-w-[160px] text-center tracking-tight">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white">
-              <ChevronRight />
-            </button>
+          <div className="flex flex-col items-end gap-3">
+            {todayBlueGold && (
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                todayBlueGold === 'blue'
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                  : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${todayBlueGold === 'blue' ? 'bg-blue-500' : 'bg-yellow-500'}`} />
+                Today is a {todayBlueGold === 'blue' ? 'Blue' : 'Gold'} Day
+              </div>
+            )}
+            <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-white/5 shadow-xl shadow-slate-200/50 dark:shadow-none">
+              <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <ChevronLeft />
+              </button>
+              <h2 className="text-lg font-black uppercase italic min-w-[160px] text-center tracking-tight">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+              <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <ChevronRight />
+              </button>
+            </div>
           </div>
         </Reveal>
 
@@ -159,6 +237,14 @@ const CalendarPage = () => {
 
                     {hasEvent && !isToday && (
                       <div className="absolute bottom-2 w-1.5 h-1.5 bg-yellow-500 rounded-full shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                    )}
+
+                    {blueGoldMap.get(day) && (
+                      <span className={`absolute top-1 left-1.5 text-[9px] font-black uppercase leading-none ${
+                        blueGoldMap.get(day) === 'blue' ? 'text-blue-500' : 'text-yellow-500'
+                      }`}>
+                        {blueGoldMap.get(day) === 'blue' ? 'B' : 'G'}
+                      </span>
                     )}
                   </div>
                 );

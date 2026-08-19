@@ -219,9 +219,10 @@ service cloud.firestore {
     // Admin-configurable settings: company names, document categories,
     // page visibility toggle (settings/pageVisibility is read pre-auth by
     // the public nav, so read must be public).
+    // blueGoldCalendar anchor date is writable by any signed-in staff via /admin/events.
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isSignedIn() && isAdmin();
+      allow write: if isSignedIn();
     }
 
     // Battalion Roster — source of truth for all cadets regardless of portal account.
