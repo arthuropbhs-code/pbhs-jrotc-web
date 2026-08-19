@@ -155,17 +155,24 @@ const CalendarPage = () => {
                       {event.title}
                     </h4>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <MapPin size={12} className="text-slate-400 dark:text-slate-600" /> 
-                        <span className="text-[10px] font-bold uppercase truncate">{event.location}</span>
-                      </div>
+                      {event.location && (
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <MapPin size={12} className="text-slate-400 dark:text-slate-600" />
+                          <span className="text-[10px] font-bold uppercase truncate">{event.location}</span>
+                        </div>
+                      )}
                       {event.time && (
                         <div className="flex items-center gap-2 text-slate-500">
-                          <Clock size={12} className="text-slate-400 dark:text-slate-600" /> 
+                          <Clock size={12} className="text-slate-400 dark:text-slate-600" />
                           <span className="text-[10px] font-bold uppercase">{event.time}</span>
                         </div>
                       )}
                     </div>
+                    {event.description && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+                        {event.description}
+                      </p>
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>

@@ -65,7 +65,7 @@ const AdminContent = () => {
   const [events, setEvents] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null); // null = closed, BLANK_EVENT = new, {id,...} = editing
   const [eventSaving, setEventSaving] = useState(false);
-  const BLANK_EVENT = { title: '', date: '', location: '', time: '' };
+  const BLANK_EVENT = { title: '', date: '', location: '', time: '', description: '' };
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -81,11 +81,12 @@ const AdminContent = () => {
     setEventSaving(true);
     try {
       const payload = {
-        title: editingEvent.title,
-        date: editingEvent.date,
-        location: editingEvent.location || '',
-        time: editingEvent.time || '',
-        updatedAt: serverTimestamp(),
+        title:       editingEvent.title,
+        date:        editingEvent.date,
+        location:    editingEvent.location    || '',
+        time:        editingEvent.time        || '',
+        description: editingEvent.description || '',
+        updatedAt:   serverTimestamp(),
       };
       if (editingEvent.id) {
         await updateDoc(doc(db, 'events', editingEvent.id), payload);
@@ -641,6 +642,10 @@ const AdminContent = () => {
                           <input className={inputClass} value={editingEvent.time} onChange={e => setEditingEvent({ ...editingEvent, time: e.target.value })} placeholder="e.g. 6:00 PM" />
                         </div>
                       </div>
+                      <div>
+                        <label className={labelClass}>Description</label>
+                        <textarea className={`${inputClass} resize-none`} rows={3} value={editingEvent.description || ''} onChange={e => setEditingEvent({ ...editingEvent, description: e.target.value })} placeholder="Optional details — dress code, what to bring, special instructions, etc." />
+                      </div>
                       <div className="flex gap-2 pt-1">
                         <button
                           disabled={eventSaving || !editingEvent.title || !editingEvent.date}
@@ -680,7 +685,7 @@ const AdminContent = () => {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => setEditingEvent({ id: ev.id, title: ev.title, date: ev.date, location: ev.location || '', time: ev.time || '' })}
+                          onClick={() => setEditingEvent({ id: ev.id, title: ev.title, date: ev.date, location: ev.location || '', time: ev.time || '', description: ev.description || '' })}
                           className="p-2 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
                           title="Edit"
                         >
@@ -723,6 +728,10 @@ const AdminContent = () => {
                     <label className={labelClass}>Time</label>
                     <input className={inputClass} value={editingEvent.time} onChange={e => setEditingEvent({ ...editingEvent, time: e.target.value })} placeholder="e.g. 6:00 PM" />
                   </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Description</label>
+                  <textarea className={`${inputClass} resize-none`} rows={3} value={editingEvent.description || ''} onChange={e => setEditingEvent({ ...editingEvent, description: e.target.value })} placeholder="Optional details — dress code, what to bring, special instructions, etc." />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button

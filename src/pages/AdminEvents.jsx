@@ -22,7 +22,7 @@ const inputClass =
 const labelClass =
   'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1';
 
-const BLANK = { title: '', date: '', location: '', time: '' };
+const BLANK = { title: '', date: '', location: '', time: '', description: '' };
 
 const AdminEvents = () => {
   const { userData } = useAuth();
@@ -48,11 +48,12 @@ const AdminEvents = () => {
     setSaving(true);
     try {
       const payload = {
-        title:     editingEvent.title.trim(),
-        date:      editingEvent.date,
-        location:  editingEvent.location.trim(),
-        time:      editingEvent.time.trim(),
-        updatedAt: serverTimestamp(),
+        title:       editingEvent.title.trim(),
+        date:        editingEvent.date,
+        location:    editingEvent.location.trim(),
+        time:        editingEvent.time.trim(),
+        description: editingEvent.description.trim(),
+        updatedAt:   serverTimestamp(),
       };
       if (editingEvent.id) {
         await updateDoc(doc(db, 'events', editingEvent.id), payload);
@@ -131,6 +132,16 @@ const AdminEvents = () => {
             placeholder="e.g. 6:00 PM"
           />
         </div>
+      </div>
+      <div>
+        <label className={labelClass}>Description</label>
+        <textarea
+          className={`${inputClass} resize-none`}
+          rows={3}
+          value={editingEvent.description}
+          onChange={e => setField('description', e.target.value)}
+          placeholder="Optional details — dress code, what to bring, special instructions, etc."
+        />
       </div>
       <div className="flex gap-2 pt-1">
         <button
@@ -245,6 +256,11 @@ const AdminEvents = () => {
                       </span>
                     )}
                   </div>
+                  {ev.description && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                      {ev.description}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -252,11 +268,12 @@ const AdminEvents = () => {
                   <button
                     onClick={() =>
                       setEditingEvent({
-                        id:       ev.id,
-                        title:    ev.title,
-                        date:     ev.date,
-                        location: ev.location || '',
-                        time:     ev.time     || '',
+                        id:          ev.id,
+                        title:       ev.title,
+                        date:        ev.date,
+                        location:    ev.location    || '',
+                        time:        ev.time        || '',
+                        description: ev.description || '',
                       })
                     }
                     className="p-2 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
