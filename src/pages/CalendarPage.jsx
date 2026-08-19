@@ -16,6 +16,7 @@ const CalendarPage = () => {
   });
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedType, setSelectedType] = useState(null); // null = all
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -33,6 +34,17 @@ const CalendarPage = () => {
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+
+  // Unique categories present across ALL events (stable as months change)
+  const activeTypes = [...new Set(events.map(e => e.type).filter(Boolean))].sort();
+
+  // Events in the current month, optionally filtered by type
+  const monthEvents = events.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date.replace(/-/g, '/'));
+    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+  });
+  const visibleEvents = selectedType ? monthEvents.filter(e => e.type === selectedType) : monthEvents;
 
   return (
     /* pt-48 ensures clearance from global nav bar */
@@ -63,8 +75,39 @@ const CalendarPage = () => {
           </div>
         </Reveal>
 
+        {/* CATEGORY FILTER BAR */}
+        {activeTypes.length > 0 && (
+          <Reveal className="mb-8">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setSelectedType(null)}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  selectedType === null
+                    ? 'bg-yellow-500 text-slate-950 border-yellow-500 shadow-md shadow-yellow-500/20'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-yellow-500/40'
+                }`}
+              >
+                All Events
+              </button>
+              {activeTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(t => t === type ? null : type)}
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+                    selectedType === type
+                      ? `${TYPE_COLORS[type] || TYPE_COLORS.Other} shadow-sm`
+                      : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </Reveal>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
-          
+
           {/* MAIN CALENDAR GRID */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl shadow-slate-200/40 dark:shadow-none">
             <div className="grid grid-cols-7 mb-6">
@@ -85,14 +128,10 @@ const CalendarPage = () => {
                   currentDate.getMonth() === today.getMonth() && 
                   currentDate.getFullYear() === today.getFullYear();
 
-                const hasEvent = events.some(e => {
+                const hasEvent = visibleEvents.some(e => {
                   if (!e.date) return false;
                   const eventDate = new Date(e.date.replace(/-/g, '/'));
-                  return (
-                    eventDate.getDate() === day && 
-                    eventDate.getMonth() === currentDate.getMonth() &&
-                    eventDate.getFullYear() === currentDate.getFullYear()
-                  );
+                  return eventDate.getDate() === day;
                 });
 
                 return (
@@ -136,13 +175,7 @@ const CalendarPage = () => {
             
             <div className="space-y-4">
               <AnimatePresence mode="popLayout">
-                {events
-                  .filter(e => {
-                    if (!e.date) return false;
-                    const eventDate = new Date(e.date.replace(/-/g, '/'));
-                    return eventDate.getMonth() === currentDate.getMonth() && eventDate.getFullYear() === currentDate.getFullYear();
-                  })
-                  .map((event, idx) => (
+                {visibleEvents.map((event, idx) => (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }} 
                     animate={{ opacity: 1, y: 0 }}
@@ -185,12 +218,9 @@ const CalendarPage = () => {
                 ))}
               </AnimatePresence>
 
-              {events.filter(e => {
-                if(!e.date) return false;
-                return new Date(e.date.replace(/-/g, '/')).getMonth() === currentDate.getMonth();
-              }).length === 0 && (
+              {visibleEvents.length === 0 && (
                 <div className="text-center py-24 bg-slate-100/50 dark:bg-transparent border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] text-slate-400 dark:text-slate-800 text-[10px] font-black uppercase tracking-widest">
-                  No Mission Entries
+                  {selectedType ? `No ${selectedType} events this month` : 'No Mission Entries'}
                 </div>
               )}
             </div>
