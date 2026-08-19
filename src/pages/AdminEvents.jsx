@@ -1,0 +1,294 @@
+// src/pages/AdminEvents.jsx
+//
+// Calendar events management — open to all authenticated staff.
+// Events appear on the public /events calendar page.
+// Schema: { title, date (YYYY-MM-DD), location, time, createdAt, updatedAt }
+
+import React, { useState, useEffect } from 'react';
+import {
+  collection, onSnapshot, query, orderBy,
+  addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
+} from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../hooks/useAuth';
+import {
+  Calendar, Plus, Edit3, Trash2, Save, X, Loader2,
+  MapPin, Clock, ArrowLeft, Info,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const inputClass =
+  'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-colors';
+const labelClass =
+  'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1';
+
+const BLANK = { title: '', date: '', location: '', time: '' };
+
+const AdminEvents = () => {
+  const { userData } = useAuth();
+
+  const [events, setEvents]           = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [editingEvent, setEditingEvent] = useState(null); // null=none, BLANK=new, {id,...}=edit
+  const [saving, setSaving]           = useState(false);
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const q = query(collection(db, 'events'), orderBy('date', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // ── Save (create or update) ───────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!editingEvent?.title || !editingEvent?.date) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title:     editingEvent.title.trim(),
+        date:      editingEvent.date,
+        location:  editingEvent.location.trim(),
+        time:      editingEvent.time.trim(),
+        updatedAt: serverTimestamp(),
+      };
+      if (editingEvent.id) {
+        await updateDoc(doc(db, 'events', editingEvent.id), payload);
+      } else {
+        await addDoc(collection(db, 'events'), {
+          ...payload,
+          createdBy: userData?.fullName || 'Staff',
+          createdAt: serverTimestamp(),
+        });
+      }
+      setEditingEvent(null);
+    } catch (err) {
+      console.error('Event save failed:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this event from the public calendar?')) return;
+    try {
+      await deleteDoc(doc(db, 'events', id));
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
+
+  // ── Form helper ───────────────────────────────────────────────────────────
+  const setField = (key, val) => setEditingEvent(ev => ({ ...ev, [key]: val }));
+
+  const EventForm = ({ isNew = false }) => (
+    <div className={`bg-white dark:bg-slate-900/40 border rounded-2xl p-5 space-y-3 ${
+      isNew ? 'border-yellow-500/30' : 'border-slate-200 dark:border-white/5'
+    }`}>
+      {isNew && (
+        <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">
+          New Event
+        </h3>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Title *</label>
+          <input
+            className={inputClass}
+            value={editingEvent.title}
+            onChange={e => setField('title', e.target.value)}
+            placeholder="e.g. Military Ball 2025–2026"
+            autoFocus={isNew}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Date *</label>
+          <input
+            className={inputClass}
+            type="date"
+            value={editingEvent.date}
+            onChange={e => setField('date', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Location</label>
+          <input
+            className={inputClass}
+            value={editingEvent.location}
+            onChange={e => setField('location', e.target.value)}
+            placeholder="e.g. PBHS Gymnasium"
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Time</label>
+          <input
+            className={inputClass}
+            value={editingEvent.time}
+            onChange={e => setField('time', e.target.value)}
+            placeholder="e.g. 6:00 PM"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button
+          disabled={saving || !editingEvent.title || !editingEvent.date}
+          onClick={handleSave}
+          className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-all shadow-lg shadow-yellow-500/20"
+        >
+          {saving
+            ? <Loader2 size={14} className="animate-spin" />
+            : <Save size={14} />}
+          {isNew ? 'Add Event' : 'Save'}
+        </button>
+        <button
+          onClick={() => setEditingEvent(null)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase rounded-xl hover:opacity-70 transition-all"
+        >
+          <X size={14} /> Cancel
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full">
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          to="/admin/dashboard"
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-colors mb-3"
+        >
+          <ArrowLeft size={13} /> Back to Dashboard
+        </Link>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3 text-slate-900 dark:text-white">
+              <Calendar className="text-yellow-500" size={24} /> Calendar Events
+            </h1>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+              {events.length} event{events.length !== 1 ? 's' : ''} on the public calendar
+            </p>
+          </div>
+          {!editingEvent && (
+            <button
+              onClick={() => setEditingEvent({ ...BLANK })}
+              className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20 whitespace-nowrap"
+            >
+              <Plus size={14} /> New Event
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Info banner */}
+      <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-[11px] text-blue-700 dark:text-blue-300 mb-6">
+        <Info size={15} className="flex-shrink-0 mt-0.5" />
+        Events appear on the public <strong>/events</strong> calendar page, ordered by date. Location and time are optional but recommended.
+      </div>
+
+      {/* New-event form (shown above the list) */}
+      {editingEvent && !editingEvent.id && <div className="mb-4"><EventForm isNew /></div>}
+
+      {/* Event list */}
+      <div className="space-y-3">
+        {loading && (
+          <div className="text-center py-16 text-slate-400 dark:text-slate-600 text-xs font-black uppercase tracking-widest animate-pulse">
+            Loading events…
+          </div>
+        )}
+
+        {!loading && events.length === 0 && !editingEvent && (
+          <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl text-slate-400 dark:text-slate-700 text-[10px] font-black uppercase tracking-widest">
+            No events yet — click "New Event" to add one
+          </div>
+        )}
+
+        {events.map(ev => (
+          <div
+            key={ev.id}
+            className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden"
+          >
+            {editingEvent?.id === ev.id ? (
+              <div className="p-5"><EventForm /></div>
+            ) : (
+              <div className="flex items-center gap-4 p-5">
+                {/* Date badge */}
+                <div className="flex-shrink-0 w-12 h-12 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center justify-center">
+                  <Calendar size={20} className="text-yellow-600 dark:text-yellow-500" />
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-black uppercase italic text-sm text-slate-900 dark:text-white truncate">
+                    {ev.title}
+                  </p>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      {ev.date}
+                    </span>
+                    {ev.location && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        <MapPin size={10} /> {ev.location}
+                      </span>
+                    )}
+                    {ev.time && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        <Clock size={10} /> {ev.time}
+                      </span>
+                    )}
+                    {ev.createdBy && (
+                      <span className="text-[10px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-widest">
+                        by {ev.createdBy}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() =>
+                      setEditingEvent({
+                        id:       ev.id,
+                        title:    ev.title,
+                        date:     ev.date,
+                        location: ev.location || '',
+                        time:     ev.time     || '',
+                      })
+                    }
+                    className="p-2 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
+                    title="Edit"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(ev.id)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                    title="Delete"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Floating "Add" button at the bottom if list is long */}
+      {!editingEvent && events.length >= 4 && (
+        <button
+          onClick={() => setEditingEvent({ ...BLANK })}
+          className="w-full mt-4 py-4 border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl text-xs font-black uppercase text-slate-400 hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-500 transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> New Event
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default AdminEvents;

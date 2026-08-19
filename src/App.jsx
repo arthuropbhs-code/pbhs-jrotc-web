@@ -67,6 +67,7 @@ const AdminFundraiser     = lazy(() => import('./pages/AdminFundraiser'));
 const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
 const AdminS1             = lazy(() => import('./pages/AdminS1'));
 const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
+const AdminEvents         = lazy(() => import('./pages/AdminEvents'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -407,6 +408,12 @@ const AppContent = () => {
                   <AdminMeetingLogs />
                 </ProtectedRoute>
               }
+            />
+
+            {/* Calendar Events — all authenticated staff can create/edit/delete events */}
+            <Route
+              path="/admin/events"
+              element={<ProtectedRoute><AdminEvents /></ProtectedRoute>}
             />
           </Route>
 
