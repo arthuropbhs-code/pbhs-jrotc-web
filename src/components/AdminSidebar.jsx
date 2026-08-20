@@ -230,87 +230,97 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </div>
         ) : isCommander && (
           <>
-            {/* ── GROUP 1: OPERATIONS ─────────────── */}
-            {groupLabel('Operations')}
+            {/* ── COMMAND ─────────────────────────── */}
+            {groupLabel('Command')}
             {isStaffOrS4 && navLink('/admin/orders', <PlusSquare size={18} />, 'Orders & Tasks')}
-            {/* Global Broadcast: S5 + battalion command only */}
             {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
-            {/* Cadet Challenge: only roles with full management access (input + view-all) */}
+            {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
+
+            {/* ── PERSONNEL ───────────────────────── */}
+            {groupLabel('Personnel')}
+            {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
+            {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
+            {isStaffOrS4 && role !== 's1_adjutant' && (role !== 'sergeant_major' || isOnTeam) && navLink('/admin/teams', <Users size={18} />, 'Teams')}
+            {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
+            {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
+
+            {/* ── PROGRAMS ────────────────────────── */}
+            {groupLabel('Programs')}
             {hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {/* Fundraiser: company/battalion command + S1/S3 only */}
             {hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
-            {/* S2/S6: operational admin tools — not shown to SGM, BC, CSM */}
+            {isStaffOrS4 && role !== 's6_technology' && navLink('/admin/camps', <Tent size={18} />, 'Camp Attendance')}
             {(role === 's2_intelligence' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
             {(role === 's6_technology' || role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
+            {canSeeUniforms && (
+              <Link
+                to="/uniform-requests"
+                onClick={onClose}
+                className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
+                  isActive('/uniform-requests')
+                    ? 'bg-yellow-500 text-slate-950'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Shirt size={18} /> Uniform Items
+                </div>
+                {requestCount > 0 && (
+                  <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
+                    {requestCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
 
-            {/* ── GROUP 2: MANAGE ─────────────────── */}
-            {groupLabel('Manage')}
-            {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
-            {/* S1 Tracker: form turn-in tracking — S1/S3 adjutants, battalion XO, company command */}
-            {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
-            {/* Meeting Logs: XO edits; S1 + BC view */}
-            {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
-            {/* Feedback Hub: S5/S6/top3/instructors */}
-            {canSeeFeedback && navLink('/admin/feedback', <MessageSquare size={18} />, 'Feedback Hub')}
-            {/* Honor Company: staff only (private scoreboard) */}
-            {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
-            {/* Personnel: S1 + S6 + XO/BC/CSM (not SGM) */}
-            {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
-            {/* Teams: all staff except S1; SGM only if listed on a team */}
-            {isStaffOrS4 && role !== 's1_adjutant' && (role !== 'sergeant_major' || isOnTeam) && navLink('/admin/teams', <Users size={18} />, 'Teams')}
-            {/* Leadership, media tools, newsletters: S5 + XO + instructors only */}
-            {(role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/leadership', <Star size={18} />, 'Leadership')}
+            {/* ── PUBLISHING ──────────────────────── */}
+            {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd) || isStaffOrS4) && groupLabel('Publishing')}
+            {(role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/leadership',  <Star size={18} />,     'Leadership')}
             {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/content',   <FileText size={18} />, 'Content')}
             {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/documents', <FileText size={18} />, 'Documents')}
             {(role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/newsletters', <Newspaper size={18} />, 'Newsletters')}
             {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd)) && navLink('/admin/photos',    <Image size={18} />,    'Photo Gallery')}
-
-            {/* ── GROUP 3: ANALYTICS ──────────────── */}
-            {isStaffOrS4 && groupLabel('Analytics')}
-            {isStaffOrS4 && role !== 's6_technology' && navLink('/admin/camps', <Tent size={18} />, 'Camp Attendance')}
             {isStaffOrS4 && navLink('/admin/stats', <BarChart3 size={18} />, 'Battalion Stats')}
-            {/* Customization: portal settings — S6 + XO + instructors only, not SGM/BC/CSM */}
+            {canSeeFeedback && navLink('/admin/feedback', <MessageSquare size={18} />, 'Feedback Hub')}
             {((isTopFour && !isRestrictedCmd) || role === 's6_technology') && navLink('/admin/companies', <Building2 size={18} />, 'Customization')}
           </>
         )}
 
-        {/* ── CADET CHALLENGE + ROSTER — visible to S1/S3 assistants + command/staff ── */}
+        {/* ── NON-COMMANDER: Cadet Challenge + Roster ── */}
         {canSeeChallenge && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {/* S1 and S3 assistants can view their company's roster read-only */}
             {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
               navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 
-        {/* ── S2 INSPECTIONS — company_s2_assistant (non-commander) ── */}
+        {/* ── NON-COMMANDER: S2 Inspections ── */}
         {canSeeS2 && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
             {navLink('/admin/s2', <Shield size={18} />, 'S2 Inspections')}
           </div>
         )}
 
-        {/* ── S6 CHECKLIST — company_s6_assistant (non-commander) ── */}
+        {/* ── NON-COMMANDER: S6 Checklist ── */}
         {canSeeS6 && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5">
             {navLink('/admin/s6', <Laptop size={18} />, 'S6 Checklist')}
           </div>
         )}
 
-        {/* ── S1 TRACKER — company_s1_assistant / company_s3_assistant (non-commander) ── */}
+        {/* ── NON-COMMANDER: S1 Tracker ── */}
         {canSeeS1 && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
-            {/* S1 Adjutant also gets Meeting Logs in this section */}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
             {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
               navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 
-        {/* ── UNIFORM ITEMS — gated to S4 assistants, company command, battalion command ── */}
-        {canSeeUniforms && (
+        {/* ── NON-COMMANDER: Uniform Items ── */}
+        {canSeeUniforms && !isCommander && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <Link
               to="/uniform-requests"
@@ -333,10 +343,8 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
-        {/* Personal-view links — shown for any user (including staff) who lacks
-            full-page access to one or more of these features. This replaces
-            the old !isCommander guard so S6, S7, S2, S4, S5, etc. also get
-            personal-view links for the pages they don't manage. */}
+
+        {/* ── Personal-view links for staff who lack full management access ── */}
         {(!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
