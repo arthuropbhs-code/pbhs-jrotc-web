@@ -128,7 +128,7 @@ const AdminAnnouncements = () => {
 
       {/* DELETE CONFIRM */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl">
             <Trash2 size={40} className="text-red-500 mx-auto mb-6" />
             <h3 className="text-xl font-black uppercase italic mb-3 text-slate-900 dark:text-white">Delete Broadcast?</h3>

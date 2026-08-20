@@ -398,7 +398,7 @@ const SignUp = () => {
 
       <AnimatePresence>
         {linkData && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/90">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-slate-900 border border-yellow-500/20 p-10 rounded-[3rem] max-w-md w-full shadow-2xl text-center">
               <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-yellow-500">
                 <UserCheck size={40} />

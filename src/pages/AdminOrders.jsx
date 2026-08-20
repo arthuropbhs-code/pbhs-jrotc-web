@@ -403,7 +403,7 @@ const AdminOrders = () => {
 
       {/* ── Order delete confirmation ── */}
       {deleteConfirm.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-blue-100/20 dark:bg-slate-950/80 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-blue-100/20 dark:bg-slate-950/80 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 p-8 rounded-[2rem] max-w-sm w-full shadow-2xl relative overflow-hidden text-center">
             <div className="absolute top-0 left-0 w-full h-1 bg-red-500" />
             <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
@@ -421,7 +421,7 @@ const AdminOrders = () => {
 
       {/* ── Task delete confirmation ── */}
       {taskDeleteConf && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/90">
           <div className="bg-white dark:bg-slate-900 border border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl">
             <Trash2 size={40} className="text-red-500 mx-auto mb-6" />
             <h3 className="text-xl font-black uppercase italic mb-3 text-slate-900 dark:text-white">Delete Task?</h3>

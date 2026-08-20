@@ -708,7 +708,7 @@ const AdminHonorCompany = () => {
 
       {/* ═══ LOG MODAL ══════════════════════════════════════════════════════ */}
       {logOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 dark:border-white/5">
             <div className="flex items-center justify-between px-6 pt-6 pb-0 mb-5">
               <h2 className="text-sm font-black uppercase italic text-slate-900 dark:text-white flex items-center gap-2">

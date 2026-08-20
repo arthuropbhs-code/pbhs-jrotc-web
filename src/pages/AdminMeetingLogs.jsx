@@ -546,7 +546,7 @@ const AdminMeetingLogs = () => {
           CREATE / EDIT / VIEW MODAL
       ════════════════════════════════════════════════════════════════════════════ */}
       {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 bg-black/50 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 bg-black/50 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl shadow-2xl border border-blue-100 dark:border-white/5 my-auto">
 
             {/* Modal header */}

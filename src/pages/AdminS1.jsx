@@ -889,7 +889,7 @@ const AdminS1 = () => {
           CREATE MODAL  (form tracker only)
       ════════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'forms' && showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-blue-100 dark:border-white/5">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">

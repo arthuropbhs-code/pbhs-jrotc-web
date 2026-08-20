@@ -71,7 +71,7 @@ const FeedbackWidget = () => {
 
       {/* Modal */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/50">
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-white/5">
             <div className="flex items-center justify-between px-6 pt-6 pb-0 mb-4">
               <h2 className="text-base font-black uppercase italic tracking-tighter text-slate-900 dark:text-white flex items-center gap-2">

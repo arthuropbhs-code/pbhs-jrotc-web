@@ -419,16 +419,17 @@ const CalendarPage = () => {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   onClick={closeModal}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+                  className="fixed inset-0 bg-black/60 z-[9998]"
                 />
 
-                {/* Modal card */}
+                {/* Modal card — opacity+y only; scale omitted so the browser
+                    can animate on the compositor thread without a repaint. */}
                 <motion.div
                   key="modal-card"
-                  initial={{ opacity: 0, scale: 0.92, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.92, y: 20 }}
-                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 16 }}
+                  transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
                   className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
                 >
                   <div

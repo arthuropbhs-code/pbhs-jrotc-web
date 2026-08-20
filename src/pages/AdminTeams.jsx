@@ -312,7 +312,7 @@ const AdminTeams = () => {
 
       {/* CONFIRMATION MODAL */}
       {deleteConfirm.open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-10 rounded-[2.5rem] max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
             <ShieldAlert size={48} className="text-red-500 mx-auto mb-6" />
