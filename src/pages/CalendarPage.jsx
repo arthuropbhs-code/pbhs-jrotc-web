@@ -45,7 +45,8 @@ function eventCoversDay(ev, dayStr) {
 }
 
 // ── Blue/Gold computation ────────────────────────────────────────────────────
-// Counts weekday school days from anchorStr to targetStr, skipping noSchoolSet.
+// Counts Mon-Fri school days from anchorStr to targetStr, skipping noSchoolSet.
+// PBHS includes Fridays in the Blue/Gold rotation (all 5 weekdays count).
 // Both strings are YYYY-MM-DD. Returns -1 if target is before anchor.
 function countSchoolDays(anchorStr, targetStr, noSchoolSet) {
   const [ay, am, ad] = anchorStr.split('-').map(Number);
@@ -59,7 +60,7 @@ function countSchoolDays(anchorStr, targetStr, noSchoolSet) {
   while (curr < target) {
     curr.setDate(curr.getDate() + 1);
     const dow = curr.getDay();
-    if (dow === 0 || dow === 5 || dow === 6) continue;
+    if (dow === 0 || dow === 6) continue; // skip weekends only — Fridays count
     const ds = `${curr.getFullYear()}-${String(curr.getMonth()+1).padStart(2,'0')}-${String(curr.getDate()).padStart(2,'0')}`;
     if (!noSchoolSet.has(ds)) count++;
   }
@@ -75,7 +76,7 @@ const CalendarPage = () => {
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState(null); // null = all
-  const [anchorDate, setAnchorDate] = useState('2025-08-11'); // first Blue Day
+  const [anchorDate, setAnchorDate] = useState('2026-08-03'); // first Blue Day of 2026-2027
   const [hoveredDay, setHoveredDay] = useState(null);   // { dayStr, events, rect } | null
   const [selectedDay, setSelectedDay] = useState(null); // { dayStr, events } | null — click modal
 
@@ -138,7 +139,7 @@ const CalendarPage = () => {
     const m = currentDate.getMonth();
     for (let day = 1; day <= daysInMonth; day++) {
       const dow = new Date(y, m, day).getDay();
-      if (dow === 0 || dow === 5 || dow === 6) continue; // weekend + no-school Friday
+      if (dow === 0 || dow === 6) continue; // weekends only — Fridays count at PBHS
       const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       if (noSchoolDates.has(ds)) continue; // day off — no Blue/Gold
       const n = countSchoolDays(anchorDate, ds, noSchoolDates);
@@ -151,7 +152,7 @@ const CalendarPage = () => {
   const todayBlueGold = useMemo(() => {
     const today = new Date();
     const dow = today.getDay();
-    if (dow === 0 || dow === 5 || dow === 6) return null; // weekend + no-school Friday
+    if (dow === 0 || dow === 6) return null; // weekends only — Fridays show B/G at PBHS
     const ds = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     if (noSchoolDates.has(ds)) return null;
     const n = countSchoolDays(anchorDate, ds, noSchoolDates);

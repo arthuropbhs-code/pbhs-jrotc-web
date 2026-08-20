@@ -71,7 +71,7 @@ const AdminEvents = () => {
   const [saving, setSaving]           = useState(false);
 
   // ── Blue/Gold anchor date ─────────────────────────────────────────────────
-  const DEFAULT_ANCHOR = '2025-08-11'; // first Blue Day — update to match your school calendar
+  const DEFAULT_ANCHOR = '2026-08-03'; // first Blue Day of 2026-2027 (PBHS includes Mon–Fri)
   const [anchorDate, setAnchorDate]     = useState(DEFAULT_ANCHOR);
   const [anchorSaving, setAnchorSaving] = useState(false);
   const [anchorSaved,  setAnchorSaved]  = useState(false);
