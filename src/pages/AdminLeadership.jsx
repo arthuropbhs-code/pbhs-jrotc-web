@@ -265,7 +265,7 @@ const AdminLeadership = () => {
       <AnimatePresence>
         {showLeaderModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80" onClick={() => setShowLeaderModal(false)} />
+            <div className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80" onClick={() => setShowLeaderModal(false)} />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 md:p-10 rounded-[3rem] max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
@@ -343,7 +343,7 @@ const AdminLeadership = () => {
       <AnimatePresence>
         {showInstructorModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80" onClick={() => setShowInstructorModal(false)} />
+            <div className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80" onClick={() => setShowInstructorModal(false)} />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 md:p-10 rounded-[3rem] max-w-md w-full shadow-2xl">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">

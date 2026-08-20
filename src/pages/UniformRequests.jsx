@@ -517,7 +517,7 @@ const UniformRequests = () => {
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-950/80" />
+            <div onClick={() => setShowModal(false)} className="absolute inset-0 bg-slate-950/80" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-black uppercase italic tracking-tighter">Request for Issuance</h2>

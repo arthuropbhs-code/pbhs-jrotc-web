@@ -403,7 +403,7 @@ const CalendarPage = () => {
 
       {/* ── CLICK MODAL — full-screen overlay with full event details ── */}
       {createPortal(
-        <AnimatePresence>
+        <>
           {selectedDay && (() => {
             const { dayStr, events: dayEvs } = selectedDay;
             const label = new Date(dayStr + 'T00:00:00').toLocaleDateString('en-US', {
@@ -411,30 +411,17 @@ const CalendarPage = () => {
             });
             return (
               <>
-                {/* Backdrop */}
-                <motion.div
-                  key="modal-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                {/* Backdrop — instant, no animation cost */}
+                <div
                   onClick={closeModal}
-                  className="fixed inset-0 bg-black/60 z-[9998]"
+                  className="fixed inset-0 bg-black/70 z-[9998]"
                 />
 
-                {/* Modal card — opacity+y only; scale omitted so the browser
-                    can animate on the compositor thread without a repaint. */}
-                <motion.div
-                  key="modal-card"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 16 }}
-                  transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
-                >
+                {/* Modal card — CSS keyframe, runs on compositor (no JS/frame) */}
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="pointer-events-auto w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-2xl shadow-black/30 overflow-hidden"
+                    className="modal-enter pointer-events-auto w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-xl overflow-hidden"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between gap-4 px-7 pt-7 pb-5 border-b border-slate-100 dark:border-white/5">
@@ -515,11 +502,11 @@ const CalendarPage = () => {
                       </p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </>
             );
           })()}
-        </AnimatePresence>,
+        </>,
         document.body
       )}
 

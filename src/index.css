@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* ── Modal animation ─────────────────────────────────────────────────────────
+   CSS keyframe-driven entry: runs on the compositor thread with zero JS
+   overhead per frame. Used as a drop-in replacement for Framer Motion on
+   modal cards across the app — overlay is always instant (dark bg only). */
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@layer utilities {
+  .modal-enter {
+    animation: modal-in 130ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    will-change: opacity, transform;
+  }
+}
+
 /* Tailwind v4: override the built-in dark variant to use class-based detection
    instead of @media (prefers-color-scheme: dark). This wires dark: utilities
    to activate when an ancestor element carries the "dark" class — matching the

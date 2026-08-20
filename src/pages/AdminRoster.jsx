@@ -614,17 +614,12 @@ const AdminRoster = () => {
 
 
       {/* ── Add / Edit Modal ── */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+      {showModal && (
+          <div
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
             onClick={e => e.target === e.currentTarget && closeModal()}
           >
-            <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.16, ease: "easeOut" }}
-              className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl"
-            >
+            <div className="modal-enter bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-xl">
               <div className="p-6 border-b border-blue-100 dark:border-white/5 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
                 <h2 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white">
                   {editingId ? 'Edit Roster Entry' : 'Add Cadet'}
@@ -890,22 +885,14 @@ const AdminRoster = () => {
                   }
                 </button>
               </form>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* ── Delete Confirmation ── */}
-      <AnimatePresence>
         {deleteConf && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.16, ease: "easeOut" }}
-              className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 max-w-sm w-full text-center"
-            >
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div className="modal-enter bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
               <Trash2 className="mx-auto text-red-500 mb-4" size={32} />
               <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">Remove from Roster?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -919,23 +906,17 @@ const AdminRoster = () => {
                   Remove
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* ── Cadet History Modal ── */}
-      <AnimatePresence>
         {historyEntry && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          <div
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
             onClick={e => e.target === e.currentTarget && setHistoryEntry(null)}
           >
-            <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.16, ease: "easeOut" }}
-              className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl"
-            >
+            <div className="modal-enter bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-xl">
               {/* Header */}
               <div className="p-6 border-b border-blue-100 dark:border-white/5 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
@@ -1044,22 +1025,14 @@ const AdminRoster = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* ── Graduate Confirmation ── */}
-      <AnimatePresence>
         {graduateConf && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.16, ease: "easeOut" }}
-              className="bg-white dark:bg-slate-900 border border-green-200 dark:border-green-500/20 rounded-3xl p-8 max-w-sm w-full text-center"
-            >
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div className="modal-enter bg-white dark:bg-slate-900 border border-green-200 dark:border-green-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
               <GraduationCap className="mx-auto text-green-500 mb-4" size={32} />
               <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">Mark as Graduated?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -1073,10 +1046,9 @@ const AdminRoster = () => {
                   {graduating && <Loader2 size={12} className="animate-spin" />} Confirm
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* ── Toast ── */}
       <AnimatePresence>
