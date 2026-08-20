@@ -179,7 +179,6 @@ function rankCompanies(companies, getScore, higherBetter) {
   return [...valid, ...missing];
 }
 
-const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' };
 const MEDAL_CLS = {
   1: 'text-yellow-500', 2: 'text-slate-400', 3: 'text-amber-600',
 };
@@ -386,7 +385,7 @@ const AdminHonorCompany = () => {
             <Trophy className="text-yellow-600 dark:text-yellow-500" />
             <ScrambleText text="Honor Company" trigger="mount" />
           </h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-500/70 mt-2">🔒 Private — Staff only</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-red-500/70 mt-2">Private — Staff only</p>
         </div>
 
         {/* Tab bar */}
@@ -445,7 +444,7 @@ const AdminHonorCompany = () => {
                   return (
                     <div key={co} className="flex items-center gap-3">
                       <span className={`w-6 text-center text-sm font-black ${MEDAL_CLS[rank] || 'text-slate-400'}`}>
-                        {MEDAL[rank] || rank}
+                        {rank}
                       </span>
                       <span className="w-20 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
                       <div className="flex-1 h-5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -584,7 +583,7 @@ const AdminHonorCompany = () => {
                   return (
                     <div key={co} className="flex items-center gap-3">
                       <span className={`w-6 text-center text-sm font-black ${MEDAL_CLS[rank] || 'text-slate-400'}`}>
-                        {MEDAL[rank] || rank}
+                        {rank}
                       </span>
                       <span className="w-20 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
                       <div className="flex-1 h-5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -633,7 +632,7 @@ const AdminHonorCompany = () => {
                       <div className="px-5 pb-4 grid grid-cols-5 gap-1">
                         {eventRankings.map(({ co, points, rank }) => (
                           <div key={co} className="text-center">
-                            <div className="text-xs">{MEDAL[rank] || rank}</div>
+                            <div className={`text-xs font-black ${MEDAL_CLS[rank] || 'text-slate-400'}`}>{rank}</div>
                             <div className="text-[8px] uppercase font-bold text-slate-400">{co.slice(0,3)}</div>
                             <div className="text-[9px] font-black text-yellow-600 dark:text-yellow-500">{points}p</div>
                           </div>
@@ -704,7 +703,9 @@ const AdminHonorCompany = () => {
 
             {savedLog ? (
               <div className="px-6 pb-6 text-center py-8">
-                <div className="text-4xl mb-3">🏆</div>
+                <div className="w-12 h-12 bg-yellow-500/10 border border-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Trophy size={22} className="text-yellow-600 dark:text-yellow-500" />
+                </div>
                 <p className="font-black uppercase text-slate-900 dark:text-white">Points Logged!</p>
               </div>
             ) : (
