@@ -18,7 +18,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { db } from '../firebase';
 import {
-  collection, addDoc, updateDoc, doc, onSnapshot, setDoc,
+  collection, addDoc, updateDoc, doc, onSnapshot,
   query, where, serverTimestamp, getDocs, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
@@ -64,6 +64,42 @@ const STAFF_LEVEL = 70;
 
 // $2 = 1 flag, round down
 const toFlags = (amount) => Math.floor((amount || 0) / 2);
+
+// ── Flag requirements by roster position ───────────────────────────────────────
+// Squad Member: 30 | Squad Leader: 35 | Staff Assistants: 40
+// Platoon Sergeant: 45 | Platoon Leader: 50 | Company Leadership + MSG: 60 | Battalion: 80
+const FLAG_REQUIREMENTS_BY_POSITION = {
+  'Squad Member':             30,
+  'Squad Leader Assistant':   35,
+  'Squad Leader':             35,
+  'Company S1 Assistant':     40,
+  'Company S2 Assistant':     40,
+  'Company S3 Assistant':     40,
+  'Company S4 Assistant':     40,
+  'Company S5 Assistant':     40,
+  'Company S6 Assistant':     40,
+  'Company S7 Assistant':     40,
+  'Team Lead':                40,
+  'Platoon Sergeant':         45,
+  'Platoon Leader':           50,
+  'First Sergeant':           60,
+  'Master Sergeant':          60,
+  'Company XO':               60,
+  'Company Commander':        60,
+  'Battalion Staff (S-1)':    80,
+  'Battalion Staff (S-2)':    80,
+  'Battalion Staff (S-3)':    80,
+  'Battalion Staff (S-4)':    80,
+  'Battalion Staff (S-5)':    80,
+  'Battalion Staff (S-6)':    80,
+  'Battalion Staff (S-7)':    80,
+  'Sergeant Major':           80,
+  'Battalion XO':             80,
+  'Battalion CSM':            80,
+  'Battalion Commander':      80,
+};
+const DEFAULT_FLAG_REQUIREMENT = 30; // fallback for unknown positions
+const OCTOBER_WEEKS = 4; // October has 4 fundraising weeks
 
 const ic = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-all';
 const lc = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1 tracking-widest';
@@ -182,43 +218,41 @@ const AdminFundraiser = () => {
   }, [canViewFull, authLoading, filterCompany, activeCompany, canViewAll, role]);
 
   // ── Fundraiser goal + cross-company totals (full-access only) ────────────────
-  const [weeklyGoal,     setWeeklyGoal]     = useState(500);   // default $500/week
-  const [goalInput,      setGoalInput]      = useState('');
-  const [goalSaving,     setGoalSaving]     = useState(false);
-  const [goalSaved,      setGoalSaved]      = useState(false);
-  const [allEntries,     setAllEntries]     = useState([]);
+  const [allEntries,  setAllEntries]  = useState([]);
+  const [allRoster,   setAllRoster]   = useState([]); // full battalion roster for goal calc
 
   useEffect(() => {
     if (!canViewFull) return;
-    // Load goal setting
-    const unsubGoal = onSnapshot(doc(db, 'settings', 'fundraiserGoal'), snap => {
-      if (snap.exists() && snap.data().weeklyGoal != null) {
-        const g = snap.data().weeklyGoal;
-        setWeeklyGoal(g);
-        setGoalInput(String(g));
-      }
-    });
     // Load all entries for cross-company graph
     const unsubAll = onSnapshot(collection(db, 'fundraiserEntries'), snap => {
       setAllEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => { unsubGoal(); unsubAll(); };
+    // Load full roster so per-company goals can be computed from member positions
+    const unsubRoster = onSnapshot(
+      query(collection(db, 'roster')),
+      snap => setAllRoster(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    );
+    return () => { unsubAll(); unsubRoster(); };
   }, [canViewFull]);
 
-  const saveGoal = async () => {
-    const val = parseFloat(goalInput);
-    if (isNaN(val) || val <= 0) return;
-    setGoalSaving(true);
-    try {
-      await setDoc(doc(db, 'settings', 'fundraiserGoal'), { weeklyGoal: val }, { merge: true });
-      setWeeklyGoal(val);
-      setGoalSaved(true);
-      setTimeout(() => setGoalSaved(false), 2500);
-    } catch (err) { console.error('Goal save failed:', err); }
-    finally { setGoalSaving(false); }
-  };
+  // Per-company goals: sum each active member's flag requirement, divide by October weeks
+  const companyGoals = useMemo(() => {
+    const goals = {};
+    allRoster.filter(c => !c.graduated).forEach(cadet => {
+      const company = cadet.company;
+      if (!company) return;
+      const req = FLAG_REQUIREMENTS_BY_POSITION[cadet.position] ?? DEFAULT_FLAG_REQUIREMENT;
+      goals[company] = (goals[company] || 0) + req;
+    });
+    // Total flags needed → weekly flag goal
+    const weekly = {};
+    Object.keys(goals).forEach(co => {
+      weekly[co] = Math.ceil(goals[co] / OCTOBER_WEEKS);
+    });
+    return weekly; // flags per week per company
+  }, [allRoster]);
 
-  // Per-company totals (non-voided) for the graph
+  // Per-company totals (non-voided) for the graph — in dollars raised
   const companyNames = companies;
   const companyTotals = useMemo(() => {
     const totals = {};
@@ -511,52 +545,43 @@ const AdminFundraiser = () => {
                 <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest flex items-center gap-2">
                   <BarChart3 size={14} /> Company Performance
                 </h3>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Fallen Heroes Fundraiser — all companies</p>
-              </div>
-              {/* Goal setting */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Weekly Goal $</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={goalInput}
-                  onChange={e => setGoalInput(e.target.value)}
-                  className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-yellow-500/40 transition-colors"
-                />
-                <button
-                  onClick={saveGoal}
-                  disabled={goalSaving}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    goalSaved ? 'bg-green-500 text-white' : 'bg-yellow-500 hover:bg-yellow-400 text-slate-950'
-                  } disabled:opacity-50`}
-                >
-                  {goalSaving ? <Loader2 size={10} className="animate-spin" /> : goalSaved ? '✓' : 'Save'}
-                </button>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  Fallen Heroes Fundraiser — goals auto-calculated from roster (÷ {OCTOBER_WEEKS} weeks of October)
+                </p>
               </div>
             </div>
 
             {/* Legend */}
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
-                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Raised
+                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Raised ($)
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
-                <div className="w-3 h-3 rounded-sm bg-yellow-500/40 border-2 border-yellow-500" /> Goal
+                <div className="w-3 h-3 rounded-sm bg-yellow-500/40 border-2 border-yellow-500" /> Weekly Goal (roster-based)
               </div>
             </div>
 
             {/* Bars */}
             <div className="space-y-4">
               {companyNames.map(co => {
-                const actual = companyTotals[co] || 0;
-                const maxVal = Math.max(weeklyGoal, ...companyNames.map(c => companyTotals[c] || 0), 1);
-                const pct    = (actual / maxVal) * 100;
-                const gPct   = (weeklyGoal / maxVal) * 100;
-                const ahead  = actual >= weeklyGoal;
+                const actual      = companyTotals[co] || 0;
+                const goalFlags   = companyGoals[co] || 0;
+                const goalDollars = goalFlags * 2; // $2 = 1 flag
+                const maxVal      = Math.max(goalDollars, ...companyNames.map(c => companyTotals[c] || 0), 1);
+                const pct         = (actual    / maxVal) * 100;
+                const gPct        = (goalDollars / maxVal) * 100;
+                const ahead       = actual >= goalDollars && goalDollars > 0;
                 return (
                   <div key={co}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
+                        {goalFlags > 0 && (
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                            Goal: {goalFlags.toLocaleString()} flags/wk (${goalDollars.toLocaleString()})
+                          </span>
+                        )}
+                      </div>
                       <span className={`text-[10px] font-black ${ahead ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
                         ${actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         {ahead && ' ✓'}
@@ -569,10 +594,12 @@ const AdminFundraiser = () => {
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />
                       {/* Goal marker */}
-                      <div
-                        className="absolute inset-y-0 border-r-2 border-yellow-500"
-                        style={{ left: `${Math.min(gPct, 100)}%` }}
-                      />
+                      {goalDollars > 0 && (
+                        <div
+                          className="absolute inset-y-0 border-r-2 border-yellow-500"
+                          style={{ left: `${Math.min(gPct, 100)}%` }}
+                        />
+                      )}
                     </div>
                   </div>
                 );

@@ -36,7 +36,7 @@ import {
 } from 'firebase/firestore';
 import {
   Trophy, Plus, ChevronLeft, CheckCircle2, Clock,
-  X, ChevronDown, ChevronUp, AlertCircle,
+  X, ChevronDown, ChevronUp, AlertCircle, Unlock,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
@@ -215,6 +215,8 @@ const S1PromotionBoard = ({ userData, role, userLevel, myCompany, isBattalionLev
 
   // Submit feedback
   const [submitting, setSubmitting] = useState(false);
+  // Unlocking a company's submitted scores (S1 only)
+  const [unlocking,  setUnlocking]  = useState(null); // company string being unlocked
 
   // ── Subscribe: boards ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -445,6 +447,26 @@ const S1PromotionBoard = ({ userData, role, userLevel, myCompany, isBattalionLev
     await updateDoc(doc(db, 'promotionBoards', selectedBoard.id), { status: 'closed' });
   };
 
+  // S1 only: unlock (un-submit) a company's scores so the XO can make corrections
+  const handleUnlockCompany = async (company) => {
+    if (!selectedBoard || !isS1) return;
+    const ok = window.confirm(`Unlock ${company} Company's submitted scores? Their XO will be able to make changes again.`);
+    if (!ok) return;
+    setUnlocking(company);
+    try {
+      await updateDoc(doc(db, 'promotionBoards', selectedBoard.id), {
+        [`companyStatus.${company}.submitted`]:      false,
+        [`companyStatus.${company}.unlockedAt`]:     Timestamp.now(),
+        [`companyStatus.${company}.unlockedByName`]: userData?.fullName || '',
+      });
+    } catch (err) {
+      console.error('Unlock error:', err);
+      alert('Failed to unlock company scores.');
+    } finally {
+      setUnlocking(null);
+    }
+  };
+
   const openDetail = (board) => {
     setSelectedBoard(board);
     setView('detail');
@@ -530,18 +552,30 @@ const S1PromotionBoard = ({ userData, role, userLevel, myCompany, isBattalionLev
             </p>
             <div className="flex flex-wrap gap-2">
               {companyStatusSummary.map(cs => (
-                <div
-                  key={cs.company}
-                  className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border ${
-                    cs.submitted
-                      ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/5'
-                  }`}
-                >
-                  {cs.submitted ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                  {cs.company}
-                  {cs.submitted && cs.submittedByName && (
-                    <span className="font-normal opacity-70">— {cs.submittedByName}</span>
+                <div key={cs.company} className="flex items-center gap-1">
+                  <div
+                    className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border ${
+                      cs.submitted
+                        ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/5'
+                    }`}
+                  >
+                    {cs.submitted ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                    {cs.company}
+                    {cs.submitted && cs.submittedByName && (
+                      <span className="font-normal opacity-70">— {cs.submittedByName}</span>
+                    )}
+                  </div>
+                  {/* S1 can unlock a submitted company so the XO can correct scores */}
+                  {isS1 && cs.submitted && selectedBoard?.status === 'open' && (
+                    <button
+                      onClick={() => handleUnlockCompany(cs.company)}
+                      disabled={unlocking === cs.company}
+                      title={`Unlock ${cs.company} Company's scores`}
+                      className="p-1 rounded-full text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-all disabled:opacity-40"
+                    >
+                      <Unlock size={11} />
+                    </button>
                   )}
                 </div>
               ))}

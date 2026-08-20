@@ -451,7 +451,7 @@ const AdminUsers = () => {
     <div className="flex-1 p-6 md:p-10 w-full">
         <AdminPageHeader
           icon={UserCog}
-          title={`${isBattalionStaff ? 'Battalion' : (user?.company + ' Company')} Personnel`}
+          title="Accounts"
         />
         <div className="flex justify-end -mt-4 mb-8">
           <button

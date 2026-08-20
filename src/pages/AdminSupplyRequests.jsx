@@ -68,7 +68,12 @@ const SUPPLY_CATALOG = {
     { name: 'Highlighters',       unit: 'packs' },
     { name: 'Colored Markers',    unit: 'packs' },
   ],
+  // "Other" is handled specially in the form: the item and unit fields become free-text inputs.
+  'Other': [],
 };
+
+// Sentinel string that flags the "Other" category was selected
+const OTHER_CAT = 'Other';
 
 const PRIORITIES = ['Low', 'Medium', 'Urgent'];
 const ALL_STATUSES = ['Pending', 'Approved', 'Denied', 'Fulfilled'];
@@ -121,11 +126,17 @@ function SubmitForm({ userProfile }) {
   const [success, setSuccess] = useState(false);
   const [error, setError]   = useState('');
 
-  const categoryItems = form.category ? SUPPLY_CATALOG[form.category] || [] : [];
-  const isOther       = form.item === '__other__';
+  const isOtherCat    = form.category === OTHER_CAT;
+  const categoryItems = (!isOtherCat && form.category) ? SUPPLY_CATALOG[form.category] || [] : [];
+  const isOther       = isOtherCat || form.item === '__other__';
 
   function handleCategory(cat) {
-    setForm(f => ({ ...f, category: cat, item: '', unit: '', customItem: '' }));
+    // For the "Other" category, item + unit are free-text; pre-set sentinel values.
+    if (cat === OTHER_CAT) {
+      setForm(f => ({ ...f, category: cat, item: '__other__', unit: '', customItem: '' }));
+    } else {
+      setForm(f => ({ ...f, category: cat, item: '', unit: '', customItem: '' }));
+    }
   }
 
   function handleItem(itemName) {
@@ -234,40 +245,42 @@ function SubmitForm({ userProfile }) {
         </div>
       </div>
 
-      {/* Item */}
-      <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-          Item <span className="text-red-500">*</span>
-        </label>
-        <div className="relative">
-          <select
-            value={form.item}
-            onChange={e => handleItem(e.target.value)}
-            disabled={!form.category}
-            required
-            className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
-          >
-            <option value="">{form.category ? 'Select an item…' : 'Choose a category first'}</option>
-            {categoryItems.map(i => (
-              <option key={i.name} value={i.name}>{i.name}</option>
-            ))}
-            {form.category && <option value="__other__">Other (specify below)</option>}
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      {/* Item — dropdown for catalog categories; free-text for "Other" category */}
+      {!isOtherCat && (
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Item <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <select
+              value={form.item}
+              onChange={e => handleItem(e.target.value)}
+              disabled={!form.category}
+              required
+              className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+            >
+              <option value="">{form.category ? 'Select an item…' : 'Choose a category first'}</option>
+              {categoryItems.map(i => (
+                <option key={i.name} value={i.name}>{i.name}</option>
+              ))}
+              {form.category && <option value="__other__">Other (specify below)</option>}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Other item text */}
+      {/* Specify item — shown for "Other" catalog items OR the "Other" category */}
       {isOther && (
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Specify Item <span className="text-red-500">*</span>
+            {isOtherCat ? 'Item Description' : 'Specify Item'} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={form.customItem}
             onChange={e => setForm(f => ({ ...f, customItem: e.target.value }))}
-            placeholder="e.g. Correction Fluid, Scissors…"
+            placeholder={isOtherCat ? 'e.g. Extension cord, whiteboard eraser…' : 'e.g. Correction Fluid, Scissors…'}
             required
             className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
           />

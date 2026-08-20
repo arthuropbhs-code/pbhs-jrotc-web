@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 import OnboardingChecklist from '../components/OnboardingChecklist';
 import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import {
   ClipboardCheck,
@@ -25,12 +25,15 @@ const AdminDashboard = () => {
   const [requestCount, setRequestCount] = useState(0);
 
   useEffect(() => {
+    // Filter to today-or-future events so the dashboard never shows stale past events.
+    const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
     const eventsQuery = query(
-      collection(db, "events"), 
-      orderBy("date", "asc"), 
+      collection(db, "events"),
+      where("date", ">=", todayStr),
+      orderBy("date", "asc"),
       limit(3)
     );
-    
+
     const unsubEvents = onSnapshot(eventsQuery, (snapshot) => {
       setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => console.error("Events Sync Error:", error));
@@ -74,7 +77,7 @@ const AdminDashboard = () => {
   const canSeeStats      = isStaffOrS4; // all staff can see stats
 
   const staffOnboardingItems = [
-    ...(canSeePersonnel ? [{ id: 'personnel',  label: 'Explore Manage Personnel',  description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users',          linkText: 'Open' }] : []),
+    ...(canSeePersonnel ? [{ id: 'personnel',  label: 'Manage Accounts',           description: 'Review the roster, ranks, and pending account approvals.', link: '/admin/users',          linkText: 'Open' }] : []),
     ...(canSeeBroadcast ? [{ id: 'broadcast',  label: 'Send a Global Broadcast',    description: 'See how battalion-wide announcements work.',              link: '/admin/announcements', linkText: 'Open' }] : []),
     ...(canSeeNewsletter? [{ id: 'newsletter', label: 'Manage Newsletters',         description: 'Publish battalion newsletter issues for cadets to read.', link: '/admin/newsletters',   linkText: 'Open' }] : []),
     ...(canSeeLeadership? [{ id: 'leadership', label: 'Review Manage Leadership',   description: 'Command staff listing shown on the public site.',          link: '/admin/leadership',    linkText: 'Open' }] : []),
