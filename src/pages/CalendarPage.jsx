@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
@@ -75,6 +76,13 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState(null); // null = all
   const [anchorDate, setAnchorDate] = useState('2025-08-11'); // first Blue Day
+  const [hoveredDay, setHoveredDay] = useState(null); // { dayStr, events, rect } | null
+
+  const handleDayEnter = (e, dayStr, dayEvents) => {
+    if (!dayEvents.length) return;
+    setHoveredDay({ dayStr, events: dayEvents, rect: e.currentTarget.getBoundingClientRect() });
+  };
+  const handleDayLeave = () => setHoveredDay(null);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -264,11 +272,14 @@ const CalendarPage = () => {
                   <div
                     key={day}
                     style={baseCellStyle}
+                    onMouseEnter={(e) => handleDayEnter(e, dayStr, dayEvents)}
+                    onMouseLeave={handleDayLeave}
                     className={`aspect-square rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center relative group
+                      ${hasEvent ? 'cursor-pointer' : ''}
                       ${isToday
                         ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
                         : hasEvent
-                          ? 'border-slate-200 dark:border-white/10'
+                          ? 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
                           : 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 hover:border-slate-300 dark:hover:border-white/10'
                       }`}
                   >
@@ -372,6 +383,88 @@ const CalendarPage = () => {
           </div>
         </div>
       </div>
+
+      {/* ── HOVER TOOLTIP — rendered into document.body via portal so it's never clipped ── */}
+      {createPortal(
+        <AnimatePresence>
+          {hoveredDay && (() => {
+            const { dayStr, events, rect } = hoveredDay;
+            const W = 230;
+            const GAP = 10;
+            // Center the tooltip on the cell, clamp to viewport edges
+            let left = rect.left + rect.width / 2 - W / 2;
+            left = Math.max(8, Math.min(left, window.innerWidth - W - 8));
+            // Show above the cell if there's room (> 250px from top), else below
+            const showAbove = rect.top > 250;
+            const posStyle = showAbove
+              ? { bottom: window.innerHeight - rect.top + GAP }
+              : { top: rect.bottom + GAP };
+            const label = new Date(dayStr + 'T00:00:00').toLocaleDateString('en-US', {
+              weekday: 'short', month: 'short', day: 'numeric',
+            });
+            return (
+              <motion.div
+                key="cal-day-tooltip"
+                initial={{ opacity: 0, scale: 0.95, y: showAbove ? 6 : -6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: showAbove ? 6 : -6 }}
+                transition={{ duration: 0.14 }}
+                style={{ position: 'fixed', left, width: W, zIndex: 9999, ...posStyle }}
+                className="pointer-events-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl shadow-slate-300/30 dark:shadow-black/60 p-3"
+              >
+                {/* Date label */}
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 pb-2 border-b border-slate-100 dark:border-white/5">
+                  {label}
+                </p>
+
+                {/* Event list */}
+                <div className="space-y-2.5">
+                  {events.map(ev => (
+                    <div key={ev.id} className="flex gap-2 items-start">
+                      {/* Color stripe */}
+                      <div
+                        className="w-[3px] rounded-full flex-shrink-0 self-stretch"
+                        style={{ backgroundColor: TYPE_CELL_HEX[ev.type] || '#64748b' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-black text-slate-900 dark:text-white leading-snug">{ev.title}</p>
+                        <p className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: TYPE_CELL_HEX[ev.type] || '#94a3b8' }}>
+                          {ev.type}
+                        </p>
+                        {(ev.time || ev.location) && (
+                          <div className="mt-1 space-y-0.5">
+                            {ev.time && (
+                              <p className="text-[9px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                <Clock size={8} />{ev.time}
+                              </p>
+                            )}
+                            {ev.location && (
+                              <p className="text-[9px] text-slate-400 dark:text-slate-500 flex items-center gap-1 truncate">
+                                <MapPin size={8} />{ev.location}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Arrow indicator */}
+                <div
+                  className={`absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 rotate-45 ${
+                    showAbove
+                      ? 'bottom-[-5px] border-b border-r'
+                      : 'top-[-5px] border-t border-l'
+                  }`}
+                  style={{ left: Math.min(Math.max(rect.left + rect.width / 2 - left, 16), W - 16) }}
+                />
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };
