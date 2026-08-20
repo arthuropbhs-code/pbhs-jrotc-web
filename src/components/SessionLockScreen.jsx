@@ -119,6 +119,7 @@ const SessionLockScreen = ({ onUnlock }) => {
                 className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3.5 pr-10 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-all placeholder:text-slate-400"
               />
               <button type="button" onClick={() => setShowPw(v => !v)}
+                aria-label={showPw ? 'Hide password' : 'Show password'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-yellow-500 transition-colors">
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>

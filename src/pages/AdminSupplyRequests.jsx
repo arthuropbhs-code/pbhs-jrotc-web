@@ -438,7 +438,7 @@ function ActionModal({ request, onClose, adminName }) {
               {request.requestedByCompany ? ` · ${request.requestedByCompany} Co.` : ''}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
             <X size={16} />
           </button>
         </div>

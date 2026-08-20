@@ -240,7 +240,7 @@ const AdminNewsletters = () => {
                   <h2 className="text-lg font-black uppercase italic tracking-tighter">
                     {editingId ? 'Edit Issue' : 'New Issue'}
                   </h2>
-                  <button onClick={closeModal} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 transition-all">
+                  <button onClick={closeModal} aria-label="Close" className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 transition-all">
                     <X size={16} />
                   </button>
                 </div>
@@ -289,7 +289,7 @@ const AdminNewsletters = () => {
                     {form.fileUrl ? (
                       <div className="flex items-center justify-between bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl p-3">
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">{form.fileName || 'Uploaded PDF'}</span>
-                        <button type="button" onClick={() => setForm(f => ({ ...f, fileUrl: '', fileName: '' }))} className="text-slate-400 hover:text-red-500 transition-colors ml-3 shrink-0">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, fileUrl: '', fileName: '' }))} aria-label="Remove uploaded file" className="text-slate-400 hover:text-red-500 transition-colors ml-3 shrink-0">
                           <X size={14} />
                         </button>
                       </div>

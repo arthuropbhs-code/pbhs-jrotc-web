@@ -776,7 +776,7 @@ const S1PromotionBoard = ({ userData, role, userLevel, myCompany, isBattalionLev
               <h3 className="text-lg font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
                 New Promotion Board
               </h3>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+              <button onClick={() => setShowCreate(false)} aria-label="Cancel new board" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <X size={20} />
               </button>
             </div>

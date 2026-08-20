@@ -248,7 +248,7 @@ const ItemsTab = ({ user, userData, showToast }) => {
               className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-md shadow-2xl">
               <div className="p-6 border-b border-blue-100 dark:border-white/5 flex items-center justify-between">
                 <h2 className="font-black uppercase text-sm tracking-widest">{editing ? 'Edit Item' : 'Add Item'}</h2>
-                <button onClick={closeForm} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"><X size={18} /></button>
+                <button onClick={closeForm} aria-label="Close" className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"><X size={18} /></button>
               </div>
               <form onSubmit={handleSave} className="p-6 space-y-4">
                 <div>

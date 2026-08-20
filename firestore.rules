@@ -467,6 +467,99 @@ service cloud.firestore {
       allow delete: if isSignedIn() && myLevel() >= 80;
     }
 
+    // ── Supply Requests ───────────────────────────────────────────────────────
+    // Submit: company command (45+).
+    // Read:   admin (80+) reads all; submitter reads their own.
+    // Approve/fulfill/deny: admin (80+) only.
+    // Delete: admin (80+) only.
+    match /supplyRequests/{id} {
+      allow create: if isSignedIn() && myLevel() >= 45;
+      allow read: if isSignedIn() && (
+        myLevel() >= 80 ||
+        resource.data.requestedByUid == request.auth.uid
+      );
+      allow update, delete: if isSignedIn() && myLevel() >= 80;
+    }
+
+    // ── Promotion Boards ──────────────────────────────────────────────────────
+    // S1 adjutant creates, opens, closes, and unlocks boards.
+    // Company XO (50+) can update companyStatus (submit/un-submit their company).
+    // Staff (70+) and company command (45+) can read boards.
+    match /promotionBoards/{id} {
+      allow create: if isSignedIn() && (
+        userDoc().role == 's1_adjutant' || myLevel() >= 85
+      );
+      allow read: if isSignedIn() && myLevel() >= 45;
+      allow update: if isSignedIn() && (
+        userDoc().role == 's1_adjutant' || myLevel() >= 85 ||
+        // Company XO (50+) may only toggle companyStatus (submit/unlock their company).
+        (myLevel() >= 50 &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyStatus']))
+      );
+      allow delete: if isSignedIn() && (
+        userDoc().role == 's1_adjutant' || myLevel() >= 85
+      );
+    }
+
+    // ── Promotion Scores ──────────────────────────────────────────────────────
+    // Created by S1 in bulk when a board is opened.
+    // Company XO (50+) updates scores for their own company; staff (70+) for all.
+    // Read: company command (45+) for own company; staff (70+) for all.
+    // Delete: S1 adjutant or admin (85+).
+    match /promotionScores/{id} {
+      allow create: if isSignedIn() && (
+        userDoc().role == 's1_adjutant' || myLevel() >= 85
+      );
+      allow read: if isSignedIn() && myLevel() >= 45;
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 50 && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && (
+        userDoc().role == 's1_adjutant' || myLevel() >= 85
+      );
+    }
+
+    // ── Cadet Yearly History ──────────────────────────────────────────────────
+    // Year-end archive snapshots. Admin (80+) creates and writes; company
+    // command (45+) reads their own company's archived records.
+    match /cadetYearlyHistory/{id} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 80 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
+      allow create, update, delete: if isSignedIn() && myLevel() >= 80;
+    }
+
+    // ── Meeting Logs ──────────────────────────────────────────────────────────
+    // Battalion XO conducts and records meetings. S1 and Commander can view.
+    // Delete: battalion_xo only.
+    match /meetingLogs/{id} {
+      allow read: if isSignedIn() && (
+        userDoc().role in ['battalion_xo', 's1_adjutant', 'battalion_commander'] ||
+        myLevel() >= 85
+      );
+      allow create, update: if isSignedIn() && (
+        userDoc().role == 'battalion_xo' || myLevel() >= 85
+      );
+      allow delete: if isSignedIn() && (
+        userDoc().role == 'battalion_xo'
+      );
+    }
+
+    // ── Form Events & Form Submissions (Promotion Board import) ───────────────
+    // Written by an external integration (Google Forms / Cloud Function).
+    // The app reads these to auto-populate promotion board roster data.
+    // Read: S1 adjutant and staff (70+). Write: instructor level (95+) only.
+    match /formEvents/{id} {
+      allow read: if isSignedIn() && myLevel() >= 70;
+      allow write: if isSignedIn() && myLevel() >= 95;
+    }
+    match /formSubmissions/{id} {
+      allow read: if isSignedIn() && myLevel() >= 70;
+      allow write: if isSignedIn() && myLevel() >= 95;
+    }
+
     // Fallback — anything not matched above.
     match /{path=**} {
       allow read, write: if isSignedIn();

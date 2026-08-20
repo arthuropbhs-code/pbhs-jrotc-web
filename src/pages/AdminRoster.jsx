@@ -624,7 +624,7 @@ const AdminRoster = () => {
                 <h2 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white">
                   {editingId ? 'Edit Roster Entry' : 'Add Cadet'}
                 </h2>
-                <button onClick={closeModal} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+                <button onClick={closeModal} aria-label="Close" className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
                   <X size={18} />
                 </button>
               </div>
@@ -928,7 +928,7 @@ const AdminRoster = () => {
                     <h3 className="font-black text-slate-900 dark:text-white">{historyEntry.fullName}</h3>
                   </div>
                 </div>
-                <button onClick={() => setHistoryEntry(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5">
+                <button onClick={() => setHistoryEntry(null)} aria-label="Close" className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5">
                   <X size={18} />
                 </button>
               </div>

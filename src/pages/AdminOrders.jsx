@@ -219,7 +219,7 @@ const AdminOrders = () => {
         <div className="fixed top-8 right-8 z-[110] flex items-center gap-4 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right duration-300">
           <AlertTriangle size={20} />
           <p className="text-[10px] font-black uppercase tracking-widest">{errorMessage}</p>
-          <button onClick={() => setErrorMessage(null)} className="ml-4 hover:rotate-90 transition-transform">
+          <button onClick={() => setErrorMessage(null)} aria-label="Dismiss error" className="ml-4 hover:rotate-90 transition-transform">
             <X size={16} />
           </button>
         </div>

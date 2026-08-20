@@ -483,7 +483,7 @@ const AdminHonorCompany = () => {
                       {currentCategories.map(cat => (
                         <span key={cat} className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase">
                           {cat}
-                          <button onClick={() => removeCategory(cat)} className="text-slate-400 hover:text-red-500 transition-colors">
+                          <button onClick={() => removeCategory(cat)} aria-label={`Remove category ${cat}`} className="text-slate-400 hover:text-red-500 transition-colors">
                             <X size={10} />
                           </button>
                         </span>
@@ -543,6 +543,7 @@ const AdminHonorCompany = () => {
                             <td className="px-4 py-2.5">
                               {canAdmin && (
                                 <button onClick={() => deleteEntry(e.id)}
+                                  aria-label="Delete entry"
                                   className="text-slate-300 dark:text-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                                   <Trash2 size={13} />
                                 </button>
@@ -714,7 +715,7 @@ const AdminHonorCompany = () => {
               <h2 className="text-sm font-black uppercase italic text-slate-900 dark:text-white flex items-center gap-2">
                 <Plus size={15} className="text-yellow-500" /> Log Points
               </h2>
-              <button onClick={() => setLogOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+              <button onClick={() => setLogOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <X size={16} />
               </button>
             </div>

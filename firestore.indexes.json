@@ -23,6 +23,37 @@
         { "fieldPath": "company",  "order": "ASCENDING" },
         { "fieldPath": "fullName", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "supplyRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requestedByUid", "order": "ASCENDING"  },
+        { "fieldPath": "requestedAt",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "supplyRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requestedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "promotionScores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "boardId",  "order": "ASCENDING" },
+        { "fieldPath": "company",  "order": "ASCENDING" },
+        { "fieldPath": "cadetName","order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

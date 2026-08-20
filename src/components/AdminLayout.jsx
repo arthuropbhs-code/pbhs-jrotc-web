@@ -77,7 +77,7 @@ const FeedbackWidget = () => {
               <h2 className="text-base font-black uppercase italic tracking-tighter text-slate-900 dark:text-white flex items-center gap-2">
                 <MessageSquare size={18} className="text-yellow-500" /> Submit Feedback
               </h2>
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+              <button onClick={() => setOpen(false)} aria-label="Close feedback panel" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <X size={18} />
               </button>
             </div>
