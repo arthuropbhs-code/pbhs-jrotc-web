@@ -30,8 +30,7 @@ import {
   ImageIcon, RotateCcw, AlertTriangle, Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
-import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -94,19 +93,8 @@ const AdminS2 = () => {
   }
 
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="S2 " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Inspections" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              Intelligence · {ROLE_LABELS[role] || role}
-            </p>
-          </div>
-        </div>
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={Shield} title="S2 Inspections" meta={`Intelligence · ${ROLE_LABELS[role] || role}`} />
 
         {/* S2 management tabs */}
         {canManage && (
@@ -138,9 +126,6 @@ const AdminS2 = () => {
         {isAssistant && !canManage && (
           <MyInspectionsTab user={user} userData={userData} showToast={showToast} />
         )}
-
-        <Footer />
-      </main>
 
       <AnimatePresence>
         {toast && (

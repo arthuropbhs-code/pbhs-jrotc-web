@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc, onSnapshot, collection, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOME, DEFAULT_PHOTOS } from '../data/defaultPageContent';
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
 import {
-  FileText, ArrowLeft, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
+  FileText, Save, ChevronDown, CheckCircle2, Loader2, BookOpen, Info,
   Eye, EyeOff, LayoutDashboard, Plus, Trash2, Calendar, MapPin, Clock, Edit3, X, UploadCloud, ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const TABS = [
   { id: 'home',           label: 'Home' },
@@ -248,21 +248,10 @@ const AdminContent = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-4xl mx-auto">
 
-        {/* Header */}
-        <div className="mb-8">
-          <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-            <ArrowLeft size={14} /> Back to Command
-          </Link>
-          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <FileText className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Site Content" trigger="mount" />
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
-            Edits publish live immediately
-          </p>
-        </div>
+        <AdminPageHeader icon={FileText} title="Content" />
 
         {/* Tabs */}
         <div className="flex bg-slate-200/50 dark:bg-white/5 p-1 rounded-2xl w-fit border border-slate-200 dark:border-white/5 mb-8">
@@ -830,7 +819,6 @@ const AdminContent = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 };

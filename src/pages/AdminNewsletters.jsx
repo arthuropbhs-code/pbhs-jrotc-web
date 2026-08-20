@@ -5,14 +5,14 @@ import {
   onSnapshot, query, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
-  Newspaper, ArrowLeft, Plus, Trash2, Edit3, X,
+  Newspaper, Plus, Trash2, Edit3, X,
   Loader2, CheckCircle2, UploadCloud, Save, Eye, EyeOff,
 } from 'lucide-react';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadPdfToStorage } from '../utils/storageUpload';
 
@@ -142,27 +142,19 @@ const AdminNewsletters = () => {
   if (!isAuthorized && !authLoading) return <Navigate to="/admin/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 font-sans">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <div className="max-w-5xl mx-auto">
 
-        {/* Header */}
-        <header className="mb-10 space-y-6">
-          <Link to="/admin/dashboard" className="inline-flex items-center gap-2 text-slate-400 hover:text-yellow-500 text-[10px] font-black uppercase tracking-widest transition-colors">
-            <ArrowLeft size={14} /> Command Dashboard
-          </Link>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Newspaper className="text-yellow-500" size={36} />
-              <ScrambleText text="Newsletters" trigger="mount" />
-            </h1>
-            <button
-              onClick={openCreate}
-              className="flex items-center gap-2 bg-yellow-500 text-slate-950 font-black uppercase text-[10px] tracking-widest px-5 py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
-            >
-              <Plus size={14} /> New Issue
-            </button>
-          </div>
-        </header>
+        <AdminPageHeader icon={Newspaper} title="Newsletters" />
+
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-yellow-500 text-slate-950 font-black uppercase text-[10px] tracking-widest px-5 py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
+          >
+            <Plus size={14} /> New Issue
+          </button>
+        </div>
 
         {/* Status toast */}
         <AnimatePresence>
@@ -231,7 +223,6 @@ const AdminNewsletters = () => {
         </div>
       </div>
 
-      <Footer />
 
       {/* ── Create / Edit Modal ── */}
       <AnimatePresence>

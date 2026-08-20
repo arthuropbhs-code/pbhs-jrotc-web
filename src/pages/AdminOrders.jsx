@@ -16,15 +16,14 @@ import {
   orderBy, onSnapshot, deleteDoc, doc, limit,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Link } from 'react-router-dom';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { ROLE_HIERARCHY, STAFF_LEVEL, ADMIN_LEVEL } from '../constants';
 import {
-  Send, Bell, CheckCircle, ArrowLeft, Check, Trash2,
+  Send, Bell, CheckCircle, Check, Trash2,
   RefreshCcw, Clock, AlertTriangle, X, Target, ClipboardList,
   CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
 
 const AdminOrders = () => {
@@ -212,7 +211,8 @@ const AdminOrders = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-blue-50 dark:bg-slate-950 pt-12 pb-20 px-6 relative overflow-x-hidden transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={Send} title="Orders & Tasks" />
 
       {/* Error toast */}
       {errorMessage && (
@@ -226,9 +226,6 @@ const AdminOrders = () => {
       )}
 
       <div className="max-w-4xl mx-auto space-y-16">
-        <Link to="/admin/dashboard" className="flex items-center gap-2 text-blue-400 dark:text-slate-500 hover:text-yellow-500 transition-colors text-[10px] font-black uppercase tracking-[0.2em]">
-          <ArrowLeft size={14} /> Back to Command
-        </Link>
 
         {/* ── ISSUE ORDER ─────────────────────────────────────────────────────── */}
         <section>
@@ -403,7 +400,6 @@ const AdminOrders = () => {
         </section>
       </div>
 
-      <Footer />
 
       {/* ── Order delete confirmation ── */}
       {deleteConfirm.show && (

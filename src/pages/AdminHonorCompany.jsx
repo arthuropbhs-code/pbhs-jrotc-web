@@ -10,16 +10,16 @@ import {
   collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, Timestamp,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL, ADMIN_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import {
   Trophy, Plus, X, Trash2, ChevronDown, ChevronUp, Loader2,
-  ArrowLeft, Save, Medal, ClipboardList, Star, Settings,
+  Save, Medal, ClipboardList, Star, Settings,
   Timer, Users, Flag, RotateCcw,
 } from 'lucide-react';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -389,20 +389,10 @@ const AdminHonorCompany = () => {
   const maxOrgTotal = Math.max(1, ...Object.values(orgDayRankings.totalPts));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-10 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-5xl mx-auto">
 
-        {/* Header */}
-        <div className="mb-8">
-          <Link to="/admin/dashboard" className="text-slate-400 hover:text-yellow-600 dark:text-slate-500 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-            <ArrowLeft size={14} /> Back to Command
-          </Link>
-          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Trophy className="text-yellow-600 dark:text-yellow-500" />
-            <ScrambleText text="Honor Company" trigger="mount" />
-          </h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-500/70 mt-2">Private — Staff only</p>
-        </div>
+        <AdminPageHeader icon={Trophy} title="Honor Company" />
 
         {/* Tab bar */}
         <div className="flex gap-2 mb-6">
@@ -814,7 +804,6 @@ const AdminHonorCompany = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

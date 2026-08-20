@@ -3,14 +3,13 @@ import { db } from '../firebase';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useCompanies } from '../hooks/useCompanies';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
-  BarChart3, ArrowLeft, Loader2, Users, ClipboardCheck, Shirt, Shield, Tent,
+  BarChart3, Loader2, Users, ClipboardCheck, Shirt, Shield, Tent,
   TrendingUp, CheckCircle2, Clock, DollarSign, Flag,
 } from 'lucide-react';
-import Footer from '../components/Footer';
-import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const RANK_ORDER = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
 const LET_ORDER = ["LET 1", "LET 2", "LET 3", "LET 4"];
@@ -153,17 +152,10 @@ const AdminStats = () => {
   const fundraiserMaxVal = Math.max(weeklyGoal, ...Object.values(fundraiserByCompany), 1);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-6xl mx-auto">
 
-        <div className="mb-8">
-          <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-            <ArrowLeft size={14} /> Back to Command
-          </Link>
-          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <BarChart3 className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Battalion Stats" trigger="mount" />
-          </h1>
-        </div>
+        <AdminPageHeader icon={BarChart3} title="Battalion Stats" />
 
         {/* HEADLINE TILES */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -393,7 +385,6 @@ const AdminStats = () => {
           </SectionCard>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

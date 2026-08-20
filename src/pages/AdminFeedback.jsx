@@ -20,6 +20,7 @@ import {
   MessageSquare, Bug, Lightbulb, MessageCircle, Plus, X, Trash2,
   CheckCircle2, Clock, Loader2, ChevronDown, ChevronUp, Filter,
 } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Access ────────────────────────────────────────────────────────────────────
 const VIEW_ROLES = [
@@ -124,37 +125,25 @@ const AdminFeedback = () => {
   items.forEach(it => { if (counts[it.status] !== undefined) counts[it.status]++; });
 
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-5xl">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={MessageSquare} title="Feedback Hub" />
 
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white flex items-center gap-3">
-              <MessageSquare className="text-yellow-500" size={32} />
-              Feedback <span className="text-yellow-500">Hub</span>
-            </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mt-1 ml-11">
-              Bug reports · Feature requests · General feedback
-            </p>
-          </div>
-          {/* Status summary */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {Object.entries(counts).map(([status, n]) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(s => s === status ? 'All' : status)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                  filterStatus === status
-                    ? STATUS_META[status].color
-                    : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
-                }`}
-              >
-                {STATUS_META[status].icon}
-                {n} {status}
-              </button>
-            ))}
-          </div>
+        {/* Status summary */}
+        <div className="flex items-center gap-3 flex-shrink-0 mb-10">
+          {Object.entries(counts).map(([status, n]) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(s => s === status ? 'All' : status)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                filterStatus === status
+                  ? STATUS_META[status].color
+                  : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
+              }`}
+            >
+              {STATUS_META[status].icon}
+              {n} {status}
+            </button>
+          ))}
         </div>
 
         {/* Filter bar */}
@@ -275,7 +264,6 @@ const AdminFeedback = () => {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 };

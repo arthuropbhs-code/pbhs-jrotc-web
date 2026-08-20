@@ -1,24 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { Megaphone, Trash2, Send, CheckCircle, ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Megaphone, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { Link } from 'react-router-dom';
-import { ROLE_HIERARCHY, ADMIN_LEVEL, EVENT_TYPES } from '../constants';
-import Footer from '../components/Footer';
-import ScrambleText from '../components/ScrambleText';
+import { ROLE_HIERARCHY } from '../constants';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const AdminAnnouncements = () => {
   const { userData, role } = useAuth();
   const [text, setText] = useState('');
-  const [target, setTarget] = useState('All');
-  const [eventType, setEventType] = useState('Meeting');
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
   const [sent, setSent] = useState(false);
   const [existingAnnouncements, setExistingAnnouncements] = useState([]);
-  const [teams, setTeams] = useState([]);
 
   const userPower = ROLE_HIERARCHY[role] || 1;
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, issuerLevel }
@@ -27,32 +20,6 @@ const AdminAnnouncements = () => {
   const showToast = (type, msg) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 4000);
-  };
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(query(collection(db, "specialTeams"), orderBy("name", "asc")), (snap) => {
-      setTeams(snap.docs.map(d => d.data().name).filter(Boolean));
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const getAvailableTargets = () => {
-    const options = [{ label: 'All Battalion', value: 'All' }];
-    if (userPower >= 70) {
-      options.push(
-        { label: 'Battalion Staff', value: 'Staff' },
-        { label: 'Company XOs', value: 'XO' },
-        { label: 'Company Leadership', value: 'Leadership' },
-        { label: 'Company CCs', value: 'CC' },
-        { label: 'Company 1SGs', value: '1SG' }
-      );
-    }
-    if (userData?.officerTeams?.length > 0) {
-      userData.officerTeams.forEach(team => {
-        options.push({ label: `${team} Team Only`, value: team });
-      });
-    }
-    return options;
   };
 
   useEffect(() => {
@@ -65,26 +32,14 @@ const AdminAnnouncements = () => {
 
   const handleBroadcast = async (e) => {
     e.preventDefault();
-    if (eventType === 'Private Practice') {
-      const isTopLevel = userPower >= ADMIN_LEVEL;
-      const isTeamOfficer = userData?.officerTeams?.includes(selectedTeam);
-      if (!isTopLevel && !isTeamOfficer) {
-        alert("Unauthorized: You must be a Team Officer or Top 4 to schedule Private Practices.");
-        return;
-      }
-    }
-
     try {
       await addDoc(collection(db, "announcements"), {
         content: text,
         timestamp: serverTimestamp(),
         issuer: `${userData?.rank || ''} ${userData?.fullName || userData?.name || 'Staff'}`.trim(),
         issuerLevel: userPower,
-        target: target,
-        eventType: eventType,
-        team: eventType === 'Private Practice' ? selectedTeam : null,
+        target: 'All',
         active: true,
-        expiresAt: expiryDate ? new Date(expiryDate).getTime() : null,
       });
       setText('');
       setSent(true);
@@ -117,17 +72,10 @@ const AdminAnnouncements = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pt-24 px-6 pb-20 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-6xl mx-auto">
 
-        <div className="mb-8">
-          <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-500 transition-colors font-black uppercase text-[10px] tracking-widest mb-4">
-            <ArrowLeft size={14} /> Back to Command
-          </Link>
-          <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-            <Megaphone className="text-yellow-500" /> <ScrambleText text="Global Broadcast" trigger="mount" />
-          </h1>
-        </div>
+        <AdminPageHeader icon={Megaphone} title="Global Broadcast" />
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* CREATE ANNOUNCEMENT CARD */}
@@ -137,46 +85,6 @@ const AdminAnnouncements = () => {
             </h2>
 
             <form onSubmit={handleBroadcast} className="space-y-6">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Target Audience</label>
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:border-yellow-500 outline-none transition-all"
-                >
-                  {getAvailableTargets().map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Event Category</label>
-                  <select
-                    value={eventType}
-                    onChange={(e) => setEventType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:border-yellow-500 outline-none transition-all"
-                  >
-                    {EVENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Expiration</label>
-                  <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:border-yellow-500 outline-none" />
-                </div>
-              </div>
-
-              {eventType === 'Private Practice' && (
-                <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
-                  <label className="text-[10px] font-black uppercase text-yellow-500 ml-1">Team Assignment</label>
-                  <select required value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-yellow-500/30 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:border-yellow-500 outline-none">
-                    <option value="">Select Team...</option>
-                    {teams.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              )}
-
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Details</label>
                 <textarea required value={text} onChange={(e) => setText(e.target.value)} className="w-full h-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-slate-900 dark:text-white resize-none outline-none focus:border-yellow-500 transition-all" placeholder="Enter broadcast details..." />
@@ -217,7 +125,6 @@ const AdminAnnouncements = () => {
           </div>
         </div>
       </div>
-      <Footer />
 
       {/* DELETE CONFIRM */}
       {deleteConfirm && (

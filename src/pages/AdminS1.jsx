@@ -40,6 +40,7 @@ import {
   Search, ChevronDown, ChevronUp, BookUser, Upload,
   Mail, X, FileText, Paperclip, Trophy,
 } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, COMMAND_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import S1PromotionBoard from '../components/S1PromotionBoard';
@@ -604,8 +605,7 @@ const AdminS1 = () => {
       : 0;
 
     return (
-      <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-7xl">
+      <div className="flex-1 p-6 md:p-10 w-full">
 
           {/* ── Header ─────────────────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
@@ -764,7 +764,6 @@ const AdminS1 = () => {
               </div>
             )}
           </div>
-        </main>
       </div>
     );
   }
@@ -773,20 +772,11 @@ const AdminS1 = () => {
   // LIST VIEW
   // ════════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
+    <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader icon={ClipboardList} title="S1 Tracker" meta="Personnel &amp; Form Tracking" />
 
-        {/* ── Header ─────────────────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              S1 <span className="text-yellow-500">Tracker</span>
-            </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mt-1">
-              Personnel &amp; Form Tracking
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+        {/* ── Action bar ──────────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 justify-end -mt-4 mb-8">
             <Link
               to="/admin/roster"
               className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 text-slate-700 dark:text-slate-300 text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl hover:border-yellow-500/40 dark:hover:border-yellow-500/20 transition-colors"
@@ -801,7 +791,6 @@ const AdminS1 = () => {
                 <Plus size={14} /> New Form Event
               </button>
             )}
-          </div>
         </div>
 
         {/* ── Tab bar ─────────────────────────────────────────────────────────────── */}
@@ -895,8 +884,6 @@ const AdminS1 = () => {
             isS1={isS1}
           />
         )}
-
-      </main>
 
       {/* ════════════════════════════════════════════════════════════════════════════
           CREATE MODAL  (form tracker only)

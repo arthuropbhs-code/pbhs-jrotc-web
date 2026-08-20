@@ -28,8 +28,8 @@ import {
   Loader2, CheckCircle2, Search, ChevronDown, Eye, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -323,20 +323,11 @@ const AdminRoster = () => {
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={UserCircle} title="Battalion Roster" />
 
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Battalion " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Roster" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              All Cadets · With or Without Portal Accounts
-            </p>
-          </div>
+        {/* ── Header actions ── */}
+        <div className="flex items-center justify-end mb-8 gap-4 flex-wrap">
           {canEdit && (
             <button
               onClick={openCreate}
@@ -547,8 +538,6 @@ const AdminRoster = () => {
           </div>
         )}
 
-        <Footer />
-      </main>
 
       {/* ── Add / Edit Modal ── */}
       <AnimatePresence>

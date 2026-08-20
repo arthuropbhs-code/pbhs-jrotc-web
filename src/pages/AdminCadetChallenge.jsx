@@ -34,8 +34,8 @@ import {
   ChevronDown, Filter, User, ClipboardList, LayoutGrid,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -588,17 +588,8 @@ const AdminCadetChallenge = () => {
 
   if (!hasFullAccess) {
     return (
-      <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Cadet " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Challenge" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              My Fitness Records · {ROLE_LABELS[role] || 'Cadet'}
-            </p>
-          </div>
+      <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader icon={Activity} title="Cadet Challenge" />
 
           {myPersonalLoading ? (
             <div className="flex items-center justify-center py-24">
@@ -628,29 +619,14 @@ const AdminCadetChallenge = () => {
               })}
             </div>
           )}
-          <Footer />
-        </main>
       </div>
     );
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
-
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Cadet " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Challenge" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              Physical Fitness Records · {ROLE_LABELS[role] || role}
-            </p>
-          </div>
-        </div>
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={Activity} title="Cadet Challenge" />
 
         {/* Cycle tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
@@ -875,8 +851,6 @@ const AdminCadetChallenge = () => {
             now handled by the unified banner above the table. Nothing extra needed
             here — the TableView is the primary display for the filtered company.   */}
 
-        <Footer />
-      </main>
 
       {/* ── Entry/Edit Modal ── */}
       <AnimatePresence>

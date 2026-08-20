@@ -4,13 +4,13 @@ import {
   collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
-  FileText, ArrowLeft, Plus, Trash2, X, Loader2, CheckCircle2, UploadCloud, Download, File
+  FileText, Plus, Trash2, X, Loader2, CheckCircle2, UploadCloud, Download, File
 } from 'lucide-react';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadPdfSigned } from '../utils/cloudinarySignedUpload';
 
@@ -142,22 +142,12 @@ const AdminDocuments = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-4xl mx-auto">
 
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <FileText className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Documents & Regulations" trigger="mount" />
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
-              Published files appear on the public /documents page
-            </p>
-          </div>
+        <AdminPageHeader icon={FileText} title="Documents" />
+
+        <div className="flex justify-end mb-6">
           <button onClick={openAdd} className="bg-yellow-500 text-slate-950 font-black uppercase text-xs px-6 py-4 rounded-2xl hover:bg-yellow-400 transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/20">
             <Plus size={16} /> Upload Document
           </button>
@@ -271,7 +261,6 @@ const AdminDocuments = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 };

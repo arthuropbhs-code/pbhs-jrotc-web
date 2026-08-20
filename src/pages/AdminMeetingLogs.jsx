@@ -48,6 +48,7 @@ import {
   Eye, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Loader2,
 } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
@@ -381,20 +382,11 @@ const AdminMeetingLogs = () => {
   // RENDER
   // ════════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-5xl">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={NotepadText} title="Meeting Logs" />
 
-        {/* ── Header ─────────────────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white flex items-center gap-3">
-              <NotepadText className="text-yellow-500" size={32} />
-              Meeting <span className="text-yellow-500">Logs</span>
-            </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mt-1 ml-11">
-              Official Battalion Meeting Records
-            </p>
-          </div>
+        {/* ── Header actions ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-end gap-3 mb-10">
           <div className="flex items-center gap-3">
             {/* Sync status indicator */}
             {syncStatus !== 'idle' && (
@@ -549,7 +541,6 @@ const AdminMeetingLogs = () => {
             </div>
           </div>
         )}
-      </main>
 
       {/* ════════════════════════════════════════════════════════════════════════════
           CREATE / EDIT / VIEW MODAL

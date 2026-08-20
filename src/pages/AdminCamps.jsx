@@ -4,14 +4,14 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
-  Tent, ArrowLeft, Plus, Edit3, Trash2, X, Loader2, CheckCircle2, Users
+  Tent, Plus, Edit3, Trash2, X, Loader2, CheckCircle2, Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const initialCampForm = { name: '', date: '', location: '', notes: '', attendeeCount: '', attendeeNotes: '' };
 
@@ -92,18 +92,12 @@ const AdminCamps = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-4xl mx-auto">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Tent className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Camp Attendance" trigger="mount" />
-            </h1>
-          </div>
+        <AdminPageHeader icon={Tent} title="Camp Attendance" />
+
+        <div className="flex justify-end mb-6">
           <button onClick={openAdd} className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all">
             <Plus size={18} /> Log Camp
           </button>
@@ -230,7 +224,6 @@ const AdminCamps = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 };

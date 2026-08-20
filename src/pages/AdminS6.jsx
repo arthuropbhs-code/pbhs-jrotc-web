@@ -33,8 +33,7 @@ import {
   AlertTriangle, Bell, ImageIcon, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
-import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -102,19 +101,8 @@ const AdminS6 = () => {
   ].filter(t => !t.hidden);
 
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="S6 " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Checklist" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              Technology · {ROLE_LABELS[role] || role}
-            </p>
-          </div>
-        </div>
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={Laptop} title="S6 Checklist" meta={`Technology · ${ROLE_LABELS[role] || role}`} />
 
         {/* S6 Assistant: show today's checklist */}
         {isAssistant && !canManage && (
@@ -142,9 +130,6 @@ const AdminS6 = () => {
             {activeTab === 'history' && <HistoryTab user={user} userData={userData} showToast={showToast} canReview={canReview} />}
           </>
         )}
-
-        <Footer />
-      </main>
 
       <AnimatePresence>
         {toast && (

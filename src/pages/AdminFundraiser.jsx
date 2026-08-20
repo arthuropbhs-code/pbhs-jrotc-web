@@ -30,8 +30,8 @@ import {
   Users, ReceiptText, Ban, Heart, BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -366,19 +366,8 @@ const AdminFundraiser = () => {
     const displayName = userData?.fullName || userData?.name || 'Cadet';
 
     return (
-      <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-7xl">
-
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Fallen " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Heroes" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              My Fundraiser Progress · {ROLE_LABELS[role] || 'Cadet'}
-            </p>
-          </div>
+      <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader icon={DollarSign} title="Fundraiser" />
 
           {myDataLoading ? (
             <div className="flex items-center justify-center py-24">
@@ -456,38 +445,25 @@ const AdminFundraiser = () => {
             </>
           )}
 
-          <Footer />
-        </main>
       </div>
     );
   }
 
   // ── FULL VIEW (Transactions + Roster tabs) ────────────────────────────────────
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={DollarSign} title="Fundraiser" />
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Fallen " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Heroes" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              Fundraiser Tracking · {ROLE_LABELS[role] || role}
-            </p>
-          </div>
-
-          {canInput && activeCompany && (
+        {canInput && activeCompany && (
+          <div className="flex justify-end mb-6">
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
             >
               <Plus size={16} /> Log Payment
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
@@ -760,8 +736,6 @@ const AdminFundraiser = () => {
           )
         )}
 
-        <Footer />
-      </main>
 
       {/* ── Log Payment Modal ── */}
       <AnimatePresence>

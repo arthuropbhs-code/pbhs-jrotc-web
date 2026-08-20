@@ -13,9 +13,9 @@ import { db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import {
   Calendar, Plus, Edit3, Trash2, Save, X, Loader2,
-  MapPin, Clock, ArrowLeft, Info, Tag, Check,
+  MapPin, Clock, Info, Tag, Check,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const inputClass =
   'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-3 rounded-xl outline-none focus:border-yellow-500 text-sm font-bold text-slate-900 dark:text-white transition-colors';
@@ -269,34 +269,18 @@ const AdminEvents = () => {
   const formProps = { editingEvent, setField, saving, handleSave, setEditingEvent };
 
   return (
-    <div className="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-8">
-        <Link
-          to="/admin/dashboard"
-          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-colors mb-3"
-        >
-          <ArrowLeft size={13} /> Back to Dashboard
-        </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3 text-slate-900 dark:text-white">
-              <Calendar className="text-yellow-500" size={24} /> Calendar Events
-            </h1>
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
-              {events.length} event{events.length !== 1 ? 's' : ''} on the public calendar
-            </p>
-          </div>
-          {!editingEvent && (
-            <button
-              onClick={() => setEditingEvent({ ...BLANK })}
-              className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20 whitespace-nowrap"
-            >
-              <Plus size={14} /> New Event
-            </button>
-          )}
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <AdminPageHeader icon={Calendar} title="Calendar Events" />
+      {!editingEvent && (
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={() => setEditingEvent({ ...BLANK })}
+            className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20 whitespace-nowrap"
+          >
+            <Plus size={14} /> New Event
+          </button>
         </div>
-      </div>
+      )}
 
       {/* Blue/Gold schedule settings */}
       <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-5 mb-6">

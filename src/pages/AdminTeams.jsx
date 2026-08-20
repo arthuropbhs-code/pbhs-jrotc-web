@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import {
   Save, Trash2, Edit3, ShieldAlert,
-  ArrowLeft, Mail, CheckCircle2, Users, Plus, Loader2,
+  Mail, CheckCircle2, Users, Plus, Loader2,
   Target, ListChecks, UploadCloud, ImageOff
 } from 'lucide-react';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
-import Footer from '../components/Footer';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
-import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const AdminTeams = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
@@ -169,7 +168,7 @@ const AdminTeams = () => {
   if (!isAuthorized && !dataLoading) return <Navigate to="/admin/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 font-sans relative selection:bg-yellow-500/30">
+    <div className="flex-1 p-6 md:p-10 w-full relative">
       
       {/* STATUS TOAST */}
       {showStatus && (
@@ -183,19 +182,8 @@ const AdminTeams = () => {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto p-6 md:p-12 pt-24">
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <Link to="/admin/dashboard" className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
-            <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter flex items-center gap-4">
-              <ShieldAlert className="text-yellow-600 dark:text-yellow-500" size={36} />
-              <ScrambleText text="Manage " trigger="mount" /><span className="text-yellow-600 dark:text-yellow-500"><ScrambleText text="Teams" trigger="mount" /></span>
-            </h1>
-          </div>
-          
-        </header>
+      <div className="max-w-6xl mx-auto">
+        <AdminPageHeader icon={ShieldAlert} title="Manage Teams" />
 
         <div className="grid lg:grid-cols-3 gap-12 animate-in fade-in slide-in-from-bottom-2">
             <div className="lg:col-span-2 space-y-8">
@@ -321,8 +309,6 @@ const AdminTeams = () => {
             </div>
           </div>
       </div>
-
-      <Footer />
 
       {/* CONFIRMATION MODAL */}
       {deleteConfirm.open && (

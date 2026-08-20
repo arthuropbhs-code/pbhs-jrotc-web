@@ -43,8 +43,7 @@ import {
   Filter, Send, Lock, Unlock, AlertTriangle, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
-import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── Sizing constants ───────────────────────────────────────────────────────────
 
@@ -502,17 +501,8 @@ const AdminUniformSizes = () => {
     ) : null;
 
     return (
-      <div className="flex-1 text-slate-900 dark:text-slate-100">
-        <main className="p-6 md:p-10 max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Uniform " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Sizes" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              My Sizes · {ROLE_LABELS[role] || 'Cadet'}
-            </p>
-          </div>
+      <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader icon={Shirt} title="Uniform Sizes" meta={`My Sizes · ${ROLE_LABELS[role] || 'Cadet'}`} />
 
           {myPersonalLoading ? (
             <div className="flex items-center justify-center py-24">
@@ -553,37 +543,24 @@ const AdminUniformSizes = () => {
               </div>
             </div>
           )}
-          <Footer />
-        </main>
       </div>
     );
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
-
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
-              <ScrambleText text="Uniform " trigger="mount" />
-              <span className="text-yellow-500"><ScrambleText text="Sizes" trigger="mount" /></span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mt-1">
-              Size Tracking · {ROLE_LABELS[role] || role}
-            </p>
-          </div>
-          {canEdit && (
+    <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader icon={Shirt} title="Uniform Sizes" meta={`Size Tracking · ${ROLE_LABELS[role] || role}`} />
+        {canEdit && (
+          <div className="flex justify-end -mt-4 mb-8">
             <button
               onClick={openCreate}
               className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
             >
               <Plus size={16} /> Add / Update Cadet
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Company filter */}
         {canViewAll && (
@@ -741,9 +718,6 @@ const AdminUniformSizes = () => {
             </table>
           </div>
         )}
-
-        <Footer />
-      </main>
 
       {/* ── Add/Edit Modal ── */}
       <AnimatePresence>

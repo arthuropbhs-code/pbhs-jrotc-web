@@ -5,15 +5,15 @@ import {
   addDoc, serverTimestamp, deleteDoc, getDocs
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import {
-  UserCog, Search, ArrowLeft, CheckCircle2,
+  UserCog, Search, CheckCircle2,
   Loader2, UserPlus, User, X, Edit3, KeyRound, Ban, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, JROTC_POSITIONS } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
-import Footer from '../components/Footer';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { RosterRowSkeleton } from '../components/Skeleton';
 
 // Requires the military roster convention: "LASTNAME, FIRSTNAME" (each side
@@ -448,23 +448,18 @@ const AdminUsers = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="flex-1 text-slate-900 dark:text-slate-100">
-      <main className="p-6 md:p-10 max-w-7xl">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <UserCog className="text-yellow-600 dark:text-yellow-500" /> {isBattalionStaff ? 'Battalion' : user?.company + ' Company'} Personnel
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => { setFormData(initialFormState); setShowAddModal(true); }}
-              className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all"
-            >
-              <UserPlus size={18} /> New Entry
-            </button>
-          </div>
+    <div className="flex-1 p-6 md:p-10 w-full">
+        <AdminPageHeader
+          icon={UserCog}
+          title={`${isBattalionStaff ? 'Battalion' : (user?.company + ' Company')} Personnel`}
+        />
+        <div className="flex justify-end -mt-4 mb-8">
+          <button
+            onClick={() => { setFormData(initialFormState); setShowAddModal(true); }}
+            className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all"
+          >
+            <UserPlus size={18} /> New Entry
+          </button>
         </div>
 
         {personnel.some(p => p.approved === false) && (
@@ -542,8 +537,6 @@ const AdminUsers = () => {
              </div>
           ))}
         </div>
-      </main>
-
       {/* Add/Edit Modal */}
       <AnimatePresence>
         {(showAddModal || editingRecord) && (
@@ -778,7 +771,6 @@ const AdminUsers = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 };

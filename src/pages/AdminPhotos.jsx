@@ -10,17 +10,17 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
-  Image, ArrowLeft, Plus, Trash2, GripVertical, Save,
+  Image, Plus, Trash2, GripVertical, Save,
   Loader2, CheckCircle2, AlertCircle, UploadCloud, ExternalLink, X
 } from 'lucide-react';
-import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { DEFAULT_PHOTOS } from '../data/defaultPageContent';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const emptyAlbum = () => ({
   id: Date.now(),
@@ -138,22 +138,12 @@ const AdminPhotos = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-4xl mx-auto">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Image className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Photo Gallery" trigger="mount" />
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">
-              Albums appear on the public /photos page · Drag to reorder
-            </p>
-          </div>
+        <AdminPageHeader icon={Image} title="Photo Gallery" />
+
+        <div className="flex justify-end mb-6">
           <button onClick={openAdd} className="bg-yellow-500 text-slate-950 px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 transition-all">
             <Plus size={18} /> Add Album
           </button>
@@ -327,7 +317,6 @@ const AdminPhotos = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

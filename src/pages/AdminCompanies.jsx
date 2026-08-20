@@ -8,16 +8,16 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
-  Building2, ArrowLeft, Plus, Trash2, GripVertical,
+  Building2, Plus, Trash2, GripVertical,
   Loader2, CheckCircle2, AlertCircle, Save, FolderOpen, Eye, EyeOff
 } from 'lucide-react';
 import { DEFAULT_VISIBILITY } from '../hooks/usePageVisibility';
-import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const DEFAULT_COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"];
 const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
@@ -200,24 +200,10 @@ const AdminCompanies = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-blue-50 dark:bg-slate-950 flex flex-col transition-colors duration-300">
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
+    <div className="flex-1 p-6 md:p-10 w-full">
+      <div className="max-w-2xl mx-auto w-full">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Link to="/admin/dashboard" className="p-2 rounded-xl hover:bg-blue-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors">
-            <ArrowLeft size={18} />
-          </Link>
-          <div>
-            <h1 className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Building2 size={20} className="text-yellow-500" />
-              <ScrambleText text="Customization" trigger="mount" />
-            </h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-widest mt-0.5">
-              Company names · Document categories · Page visibility
-            </p>
-          </div>
-        </div>
+        <AdminPageHeader icon={Building2} title="Companies" />
 
         {/* Status toast */}
         <AnimatePresence>
@@ -502,7 +488,6 @@ const AdminCompanies = () => {
           </p>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

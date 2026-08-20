@@ -4,17 +4,17 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
-  Users, GraduationCap, ArrowLeft, Plus, Edit3, Trash2, X, Loader2,
+  Users, GraduationCap, Plus, Edit3, Trash2, X, Loader2,
   CheckCircle2, UploadCloud
 } from 'lucide-react';
-import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useCompanies } from '../hooks/useCompanies';
 import ScrambleText from '../components/ScrambleText';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 // COMPANIES is now built from useCompanies() inside the component.
 const INSTRUCTOR_TYPES = ["SAI", "AI"];
@@ -159,20 +159,10 @@ const AdminLeadership = () => {
   if (!isAuthorized) return <Navigate to="/admin/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
+    <div className="flex-1 p-6 md:p-10 w-full">
       <div className="max-w-6xl mx-auto">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <Link to="/admin/dashboard" className="text-slate-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4">
-              <ArrowLeft size={14} /> Back to Command
-            </Link>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter flex items-center gap-3">
-              <Users className="text-yellow-600 dark:text-yellow-500" /> <ScrambleText text="Battalion Leadership" trigger="mount" />
-            </h1>
-          </div>
-        </div>
+        <AdminPageHeader icon={Users} title="Leadership" />
 
         {/* Tabs */}
         <div className="flex bg-slate-200/50 dark:bg-white/5 p-1 rounded-2xl w-fit border border-slate-200 dark:border-white/5 mb-8">
@@ -390,7 +380,6 @@ const AdminLeadership = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 };
