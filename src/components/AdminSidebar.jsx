@@ -40,6 +40,8 @@ import {
   MessageSquare,
   Trophy,
   X,
+  ShoppingCart,
+  History,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -50,6 +52,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const { userData, role, loading } = useAuth();
   const location = useLocation();
   const [requestCount, setRequestCount] = useState(0);
+  const [supplyCount,  setSupplyCount]  = useState(0);
   // Whether the Sergeant Major is listed on at least one special team (gates Teams link)
   const [isOnTeam, setIsOnTeam] = useState(false);
 
@@ -60,6 +63,16 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
     });
     return () => unsub();
   }, []);
+
+  // Pending supply requests count — shown to admins (ADMIN_LEVEL 80+) only
+  useEffect(() => {
+    const currentRole  = role;
+    const currentLevel = ROLE_HIERARCHY[currentRole] || 0;
+    if (currentLevel < ADMIN_LEVEL) return;
+    const q    = query(collection(db, 'supplyRequests'), where('status', '==', 'Pending'));
+    const unsub = onSnapshot(q, snap => setSupplyCount(snap.size), () => {});
+    return () => unsub();
+  }, [role]);
 
   // Check team membership for Sergeant Major (Teams link shown only if they're on one)
   useEffect(() => {
@@ -243,6 +256,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {isStaffOrS4 && role !== 's1_adjutant' && (role !== 'sergeant_major' || isOnTeam) && navLink('/admin/teams', <Users size={18} />, 'Teams')}
             {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
+            {navLink('/admin/cadet-history', <History size={18} />, 'Cadet History')}
 
             {/* ── PROGRAMS ────────────────────────── */}
             {groupLabel('Programs')}
@@ -272,6 +286,25 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
               </Link>
             )}
             {canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
+            {/* Supply Requests — Company Leadership+ submit; admin badge shows pending count */}
+            <Link
+              to="/admin/supply-requests"
+              onClick={onClose}
+              className={`flex items-center justify-between p-3 rounded-xl font-bold text-sm transition-all ${
+                isActive('/admin/supply-requests')
+                  ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ShoppingCart size={18} /> Supply Requests
+              </div>
+              {isTopFour && supplyCount > 0 && (
+                <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-black">
+                  {supplyCount}
+                </span>
+              )}
+            </Link>
 
             {/* ── PUBLISHING ──────────────────────── */}
             {(role === 's5_public_affairs' || role === 's6_technology' || (isTopFour && !isRestrictedCmd) || isStaffOrS4) && groupLabel('Publishing')}

@@ -15,17 +15,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, where, serverTimestamp,
+  onSnapshot, query, orderBy, where, serverTimestamp, getDocs,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { useCompanies } from '../hooks/useCompanies';
 import {
-  ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL,
+  ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL,
   JROTC_RANKS, JROTC_POSITIONS,
 } from '../constants';
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
   Loader2, CheckCircle2, Search, ChevronDown, Eye, RefreshCw,
+  History, GraduationCap, Trophy, Tent, BookOpen, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
@@ -113,6 +114,16 @@ const AdminRoster = () => {
   const [saving,      setSaving]      = useState(false);
   const [deleteConf,  setDeleteConf]  = useState(null);
   const [toast,       setToast]       = useState(null);
+
+  // ── Cadet History (view archived years) ────────────────────────────────────
+  const [historyEntry,   setHistoryEntry]   = useState(null); // entry being viewed
+  const [historyRecords, setHistoryRecords] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(null); // expanded year key
+
+  // ── Graduate cadet ─────────────────────────────────────────────────────────
+  const [graduateConf, setGraduateConf] = useState(null);
+  const [graduating,   setGraduating]   = useState(false);
 
   // ── data subscriptions ────────────────────────────────────────────────────
 
@@ -299,6 +310,47 @@ const AdminRoster = () => {
       showToast('Entry removed');
     } catch {
       showToast('Delete failed');
+    }
+  };
+
+  // ── Cadet History helpers ─────────────────────────────────────────────────
+
+  const openHistory = async (entry) => {
+    setHistoryEntry(entry);
+    setHistoryRecords([]);
+    setHistoryExpanded(null);
+    setHistoryLoading(true);
+    try {
+      const q    = query(collection(db, 'cadetYearlyHistory'), where('rosterId', '==', entry.id));
+      const snap = await getDocs(q);
+      const records = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.schoolYear || '').localeCompare(a.schoolYear || ''));
+      setHistoryRecords(records);
+      if (records.length > 0) setHistoryExpanded(records[0].schoolYear);
+    } catch (err) {
+      console.error('History load failed:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // ── Graduate helpers ──────────────────────────────────────────────────────
+
+  const handleGraduate = async () => {
+    if (!graduateConf) return;
+    setGraduating(true);
+    try {
+      await updateDoc(doc(db, 'roster', graduateConf.id), {
+        graduated:   true,
+        graduatedAt: serverTimestamp(),
+      });
+      setGraduateConf(null);
+      showToast(`${graduateConf.fullName} marked as graduated`);
+    } catch {
+      showToast('Update failed');
+    } finally {
+      setGraduating(false);
     }
   };
 
@@ -513,22 +565,44 @@ const AdminRoster = () => {
 
                       {/* Actions — hidden for read-only roles (S1/S3 assistants) */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {canEdit && (
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
+                          {/* History — visible to any staff/command viewer */}
+                          {(canManageAll || canManageOwn) && (
                             <button
-                              onClick={() => openEdit(entry)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+                              onClick={() => openHistory(entry)}
+                              title="View cadet history"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
                             >
-                              <Edit3 size={14} />
+                              <History size={14} />
                             </button>
+                          )}
+                          {canEdit && (
+                            <>
+                              <button
+                                onClick={() => openEdit(entry)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                          {/* Graduate — admin only, only for non-graduated cadets */}
+                          {userLevel >= ADMIN_LEVEL && !entry.graduated && (
                             <button
-                              onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                              onClick={() => setGraduateConf({ id: entry.id, fullName: entry.fullName })}
+                              title="Mark as graduated"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all"
                             >
-                              <Trash2 size={14} />
+                              <GraduationCap size={14} />
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -843,6 +917,160 @@ const AdminRoster = () => {
                 </button>
                 <button onClick={handleDelete} className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase transition-all">
                   Remove
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Cadet History Modal ── */}
+      <AnimatePresence>
+        {historyEntry && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={e => e.target === e.currentTarget && setHistoryEntry(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-blue-100 dark:border-white/5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                    <History size={18} className="text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Cadet History</p>
+                    <h3 className="font-black text-slate-900 dark:text-white">{historyEntry.fullName}</h3>
+                  </div>
+                </div>
+                <button onClick={() => setHistoryEntry(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {historyLoading ? (
+                  <div className="flex items-center gap-3 text-slate-400 py-8">
+                    <Loader2 size={18} className="animate-spin" /> Loading history…
+                  </div>
+                ) : historyRecords.length === 0 ? (
+                  <div className="text-center py-12">
+                    <History size={32} className="mx-auto text-slate-200 dark:text-slate-700 mb-3" />
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No archived records yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Year-end archives will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {historyRecords.map(rec => (
+                      <div key={rec.id} className="border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
+                        {/* Year header */}
+                        <button
+                          onClick={() => setHistoryExpanded(historyExpanded === rec.schoolYear ? null : rec.schoolYear)}
+                          className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-black text-sm text-slate-900 dark:text-white">{rec.schoolYear}</span>
+                            <span className="text-xs text-slate-500">{rec.rank} · {rec.company ? `${rec.company} Co.` : '—'}</span>
+                          </div>
+                          <ChevronRight size={14} className={`text-slate-400 transition-transform ${historyExpanded === rec.schoolYear ? 'rotate-90' : ''}`} />
+                        </button>
+
+                        {/* Expanded details */}
+                        {historyExpanded === rec.schoolYear && (
+                          <div className="px-4 py-4 space-y-4">
+                            {/* Basics */}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Position</p>
+                                <p className="text-slate-700 dark:text-slate-200">{rec.position || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5 flex items-center gap-1"><BookOpen size={9} /> LET Level</p>
+                                <p className="text-slate-700 dark:text-slate-200">{rec.letLevel || '—'}</p>
+                              </div>
+                            </div>
+
+                            {/* Challenge Scores */}
+                            {rec.scores && (
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1"><Trophy size={9} /> Challenge Scores</p>
+                                {rec.scores.medicalExempt ? (
+                                  <p className="text-xs text-slate-400 italic">Medical exemption</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {[
+                                      { l: 'Push-Ups',  v: rec.scores.pushUps },
+                                      { l: 'Sit-Ups',   v: rec.scores.sitUps },
+                                      { l: 'Shuttle',   v: rec.scores.shuttleRun },
+                                      { l: '1 Mile',    v: rec.scores.oneMile },
+                                      { l: 'S&R',       v: rec.scores.sitNReach },
+                                    ].filter(i => i.v != null && i.v !== '').map(({ l, v }) => (
+                                      <span key={l} className="inline-flex flex-col items-center bg-slate-100 dark:bg-white/5 rounded-xl px-3 py-1.5 min-w-[52px]">
+                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wide">{l}</span>
+                                        <span className="text-sm font-black text-slate-800 dark:text-slate-200">{v}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Awards */}
+                            {rec.awards && (
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1"><Trophy size={9} /> Awards</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{rec.awards}</p>
+                              </div>
+                            )}
+
+                            {/* Camp */}
+                            {rec.campNotes && (
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1"><Tent size={9} /> Camp Attendance</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{rec.campNotes}</p>
+                              </div>
+                            )}
+
+                            <p className="text-[10px] text-slate-400">Archived {rec.archivedByName ? `by ${rec.archivedByName}` : ''} · {rec.archivedAt?.toDate ? rec.archivedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Graduate Confirmation ── */}
+      <AnimatePresence>
+        {graduateConf && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-green-200 dark:border-green-500/20 rounded-3xl p-8 max-w-sm w-full text-center"
+            >
+              <GraduationCap className="mx-auto text-green-500 mb-4" size={32} />
+              <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">Mark as Graduated?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                <strong>{graduateConf.fullName}</strong> will be marked as graduated. Their roster entry will remain for historical reference but will be excluded from future year-end archives.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setGraduateConf(null)} className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 font-black text-xs uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                  Cancel
+                </button>
+                <button onClick={handleGraduate} disabled={graduating} className="flex-1 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                  {graduating && <Loader2 size={12} className="animate-spin" />} Confirm
                 </button>
               </div>
             </motion.div>

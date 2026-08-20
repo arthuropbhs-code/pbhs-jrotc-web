@@ -70,6 +70,8 @@ const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
 const AdminEvents         = lazy(() => import('./pages/AdminEvents'));
 const AdminFeedback       = lazy(() => import('./pages/AdminFeedback'));
 const AdminHonorCompany   = lazy(() => import('./pages/AdminHonorCompany'));
+const AdminSupplyRequests = lazy(() => import('./pages/AdminSupplyRequests'));
+const AdminCadetHistory   = lazy(() => import('./pages/AdminCadetHistory'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -434,6 +436,24 @@ const AppContent = () => {
               element={
                 <ProtectedRoute minLevel={STAFF_LEVEL}>
                   <AdminHonorCompany />
+                </ProtectedRoute>
+              }
+            />
+            {/* Company Leadership+ can submit; admin can approve/deny/fulfill */}
+            <Route
+              path="/admin/supply-requests"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <AdminSupplyRequests />
+                </ProtectedRoute>
+              }
+            />
+            {/* Company Leadership+ can view; admin can archive and delete */}
+            <Route
+              path="/admin/cadet-history"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <AdminCadetHistory />
                 </ProtectedRoute>
               }
             />
