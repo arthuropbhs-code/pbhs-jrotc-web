@@ -221,7 +221,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
         </Link>
 
         {navLink('/admin/dashboard', <LayoutDashboard size={18} />, 'Dashboard')}
-        {isStaffOrS4 && navLink('/admin/events', <CalendarDays size={18} />, 'Calendar Events')}
 
         {loading ? (
           <div className="space-y-2 mt-2">
@@ -232,6 +231,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           <>
             {/* ── COMMAND ─────────────────────────── */}
             {groupLabel('Command')}
+            {isStaffOrS4 && navLink('/admin/events', <CalendarDays size={18} />, 'Calendar Events')}
             {isStaffOrS4 && navLink('/admin/orders', <PlusSquare size={18} />, 'Orders & Tasks')}
             {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
