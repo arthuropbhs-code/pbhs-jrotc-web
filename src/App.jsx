@@ -415,7 +415,7 @@ const AppContent = () => {
             {/* Calendar Events — all authenticated staff can create/edit/delete events */}
             <Route
               path="/admin/events"
-              element={<ProtectedRoute><AdminEvents /></ProtectedRoute>}
+              element={<ProtectedRoute minLevel={STAFF_LEVEL}><AdminEvents /></ProtectedRoute>}
             />
 
             {/* Feedback Hub — any staff can submit (via floating button); view gated by role */}

@@ -221,7 +221,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
         </Link>
 
         {navLink('/admin/dashboard', <LayoutDashboard size={18} />, 'Dashboard')}
-        {navLink('/admin/events', <CalendarDays size={18} />, 'Calendar Events')}
+        {isStaffOrS4 && navLink('/admin/events', <CalendarDays size={18} />, 'Calendar Events')}
 
         {loading ? (
           <div className="space-y-2 mt-2">
