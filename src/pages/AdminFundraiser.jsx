@@ -219,7 +219,7 @@ const AdminFundraiser = () => {
   };
 
   // Per-company totals (non-voided) for the graph
-  const companyNames = ['Uniform', 'Victor', 'Whiskey', 'X-Ray', 'Yankee'];
+  const companyNames = companies;
   const companyTotals = useMemo(() => {
     const totals = {};
     allEntries.filter(e => !e.voided).forEach(e => {

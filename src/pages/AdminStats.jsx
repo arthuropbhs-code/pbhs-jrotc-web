@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { useCompanies } from '../hooks/useCompanies';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
@@ -10,8 +11,6 @@ import {
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
-
-const FUNDRAISER_COMPANIES = ['Uniform', 'Victor', 'Whiskey', 'X-Ray', 'Yankee'];
 
 const RANK_ORDER = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
 const LET_ORDER = ["LET 1", "LET 2", "LET 3", "LET 4"];
@@ -59,6 +58,7 @@ const SectionCard = ({ icon: Icon, title, children }) => (
 
 const AdminStats = () => {
   const { role, loading: authLoading } = useAuth();
+  const { companies: FUNDRAISER_COMPANIES } = useCompanies();
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
 
   const [users, setUsers] = useState([]);

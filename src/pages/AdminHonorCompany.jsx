@@ -12,18 +12,18 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL, ADMIN_LEVEL } from '../constants';
+import { useCompanies } from '../hooks/useCompanies';
 import {
   Trophy, Plus, X, Trash2, ChevronDown, ChevronUp, Loader2,
   ArrowLeft, Save, Medal, ClipboardList, Star, Settings,
-  Timer, Users, Flag,
+  Timer, Users, Flag, RotateCcw,
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COMPANIES = ['Uniform', 'Victor', 'Whiskey', 'X-Ray', 'Yankee'];
-const QUARTERS  = ['Q1', 'Q2', 'Q3'];
+const QUARTERS = ['Q1', 'Q2', 'Q3'];
 
 const DEFAULT_CATEGORIES = {
   q1Categories: ['Late Info', 'Attendance', 'Cadets in Band', 'S4 Survey', 'Harvest Drive'],
@@ -187,6 +187,7 @@ const MEDAL_CLS = {
 
 const AdminHonorCompany = () => {
   const { role, userData, loading: authLoading } = useAuth();
+  const { companies: COMPANIES } = useCompanies();
   const myLevel   = () => ROLE_HIERARCHY[role] || 0;
   const isAuth    = myLevel() >= STAFF_LEVEL;
   const canLog    = myLevel() >= STAFF_LEVEL;
@@ -196,6 +197,7 @@ const AdminHonorCompany = () => {
   const [activeTab,     setActiveTab]     = useState('quarterly');
   const [quarter,       setQuarter]       = useState('Q1');
   const [orgYear,       setOrgYear]       = useState(new Date().getFullYear());
+  const [resettingOrg,  setResettingOrg]  = useState(false);
 
   // ── Firestore data ────────────────────────────────────────────────────────
   const [settings,    setSettings]    = useState(DEFAULT_CATEGORIES);
@@ -361,6 +363,20 @@ const AdminHonorCompany = () => {
 
   const setDraftField = (co, field, val) =>
     setEventDraft(d => ({ ...d, [co]: { ...(d[co] || {}), [field]: val } }));
+
+  const resetOrgDay = async () => {
+    if (!canAdmin || !window.confirm(`Clear all Org Day scores for ${orgYear}? This cannot be undone.`)) return;
+    setResettingOrg(true);
+    try {
+      await deleteDoc(doc(db, 'settings', `orgDay_${orgYear}`));
+      setExpandedEvent(null);
+      setEventDraft({});
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setResettingOrg(false);
+    }
+  };
 
   // ── Guards ────────────────────────────────────────────────────────────────
   if (authLoading || (dataLoading && isAuth)) {
@@ -566,9 +582,21 @@ const AdminHonorCompany = () => {
                   {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
-              <p className="text-[10px] font-black uppercase text-slate-400">
-                April 1 · {COMPANIES.length} Companies · {ORG_DAY_EVENTS.length} Events
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] font-black uppercase text-slate-400">
+                  April 1 · {COMPANIES.length} Companies · {ORG_DAY_EVENTS.length} Events
+                </p>
+                {canAdmin && (
+                  <button
+                    onClick={resetOrgDay}
+                    disabled={resettingOrg}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/20 text-red-500/70 hover:bg-red-500/10 hover:text-red-500 transition-all disabled:opacity-50"
+                  >
+                    {resettingOrg ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                    Reset {orgYear}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Final standings */}
