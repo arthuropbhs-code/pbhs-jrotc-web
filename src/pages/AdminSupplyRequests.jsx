@@ -11,6 +11,7 @@ import {
   Send, Filter,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
+import { useAuth } from '../hooks/useAuth';
 import { ROLE_HIERARCHY } from '../constants';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -582,9 +583,11 @@ function RequestRow({ req, isAdmin, onAction, currentUid }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function AdminSupplyRequests({ user }) {
-  const role  = user?.role  || '';
+export default function AdminSupplyRequests() {
+  const { userData, role } = useAuth();
   const level = ROLE_HIERARCHY[role] ?? 0;
+  // Build a user object matching the shape SubmitForm + listeners expect
+  const user = userData;
 
   const isAdmin   = level >= ADMIN_LEVEL;
   const canSubmit = level >= COMMAND_LEVEL;

@@ -10,6 +10,7 @@ import {
   GraduationCap, Plus,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
+import { useAuth } from '../hooks/useAuth';
 import { ROLE_HIERARCHY } from '../constants';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -441,8 +442,9 @@ function EditRecordModal({ record, onClose }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function AdminCadetHistory({ user }) {
-  const role  = user?.role  || '';
+export default function AdminCadetHistory() {
+  const { userData, role } = useAuth();
+  const user  = userData;
   const level = ROLE_HIERARCHY[role] ?? 0;
 
   const isAdmin = level >= ADMIN_LEVEL;
