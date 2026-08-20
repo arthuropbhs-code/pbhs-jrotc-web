@@ -37,6 +37,8 @@ import {
   ClipboardList,
   NotepadText,
   CalendarDays,
+  MessageSquare,
+  Trophy,
   X,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
@@ -86,7 +88,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const isRestrictedCmd = role === 'sergeant_major' || role === 'battalion_commander' || role === 'battalion_csm';
 
   // Roles allowed to access Uniform Items (mirrors App.jsx allowedRoles + adminLevel override)
-  const UNIFORM_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
+  const UNIFORM_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant', 's4_logistics'];
   const canSeeUniforms = UNIFORM_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   // Roles allowed to access Cadet Challenge (S1/S3 assistants + command and above)
@@ -94,11 +96,11 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const canSeeChallenge = CHALLENGE_ROLES.includes(role) || userLevel >= COMMAND_LEVEL;
 
   // Fundraiser — company command + S1/S3 adjutants + staff view all
-  const FUNDRAISER_ROLES = ['company_commander', 'company_xo', 'company_1sg', 's1_adjutant', 's3_operations'];
+  const FUNDRAISER_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant', 's1_adjutant', 's3_operations'];
   const canSeeFundraiser = FUNDRAISER_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
 
   // Uniform Sizes — S4 assistants + company command + S4 logistics
-  const UNIFORM_SIZES_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 's4_logistics'];
+  const UNIFORM_SIZES_ROLES = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant', 's4_logistics'];
   const canSeeUniformSizes = UNIFORM_SIZES_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   // Full Cadet Challenge management access (input roles + view-all roles)
@@ -134,6 +136,10 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   // Meeting Logs — Battalion XO (edit), S1 Adjutant (view), Battalion Commander (view)
   const MEETING_LOG_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
   const canSeeMeetingLogs = MEETING_LOG_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+
+  // Feedback Hub — S5, S6, battalion top 3 (XO/CSM/BC), instructors
+  const FEEDBACK_VIEW_ROLES = ['s5_public_affairs', 's6_technology', 'battalion_xo', 'battalion_csm', 'battalion_commander'];
+  const canSeeFeedback = FEEDBACK_VIEW_ROLES.includes(role) || userLevel >= 95;
 
   const isActive = (path) => location.pathname === path;
 
@@ -244,6 +250,10 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {/* Meeting Logs: XO edits; S1 + BC view */}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
+            {/* Feedback Hub: S5/S6/top3/instructors */}
+            {canSeeFeedback && navLink('/admin/feedback', <MessageSquare size={18} />, 'Feedback Hub')}
+            {/* Honor Company: staff only (private scoreboard) */}
+            {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
             {/* Personnel: S1 + S6 + XO/BC/CSM (not SGM) */}
             {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Personnel')}
             {/* Teams: all staff except S1; SGM only if listed on a team */}

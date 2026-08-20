@@ -68,6 +68,8 @@ const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
 const AdminS1             = lazy(() => import('./pages/AdminS1'));
 const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
 const AdminEvents         = lazy(() => import('./pages/AdminEvents'));
+const AdminFeedback       = lazy(() => import('./pages/AdminFeedback'));
+const AdminHonorCompany   = lazy(() => import('./pages/AdminHonorCompany'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -392,7 +394,7 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={[
                   's1_adjutant', 's3_operations', 'battalion_xo',
-                  'company_s1_assistant', 'company_xo', 'company_1sg',
+                  'company_s1_assistant', 'company_xo', 'company_1sg', 'company_master_sergeant',
                   'company_commander', 'company_s3_assistant',
                 ]}>
                   <AdminS1 />
@@ -414,6 +416,26 @@ const AppContent = () => {
             <Route
               path="/admin/events"
               element={<ProtectedRoute><AdminEvents /></ProtectedRoute>}
+            />
+
+            {/* Feedback Hub — any staff can submit (via floating button); view gated by role */}
+            <Route
+              path="/admin/feedback"
+              element={
+                <ProtectedRoute allowedRoles={['s5_public_affairs', 's6_technology', 'battalion_xo', 'battalion_csm', 'battalion_commander']}>
+                  <AdminFeedback />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Honor Company — private scoreboard, staff only */}
+            <Route
+              path="/admin/honor-company"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminHonorCompany />
+                </ProtectedRoute>
+              }
             />
           </Route>
 

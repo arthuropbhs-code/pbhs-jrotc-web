@@ -446,6 +446,27 @@ service cloud.firestore {
       );
     }
 
+    // ── Feedback Hub ─────────────────────────────────────────────────────────────
+    // Any signed-in user can submit. View/update gated to S5/S6/top3/instructors.
+    match /feedback/{id} {
+      allow create: if isSignedIn();
+      allow read, update: if isSignedIn() && (
+        userDoc().role in ['s5_public_affairs', 's6_technology',
+                           'battalion_xo', 'battalion_csm', 'battalion_commander'] ||
+        myLevel() >= 95
+      );
+      allow delete: if isSignedIn() && myLevel() >= 95;
+    }
+
+    // ── Honor Company Entries ─────────────────────────────────────────────────
+    // Staff (70+) only — private competition tracking.
+    match /honorCompanyEntries/{id} {
+      allow read:   if isSignedIn() && myLevel() >= 70;
+      allow create: if isSignedIn() && myLevel() >= 70;
+      allow update: if isSignedIn() && myLevel() >= 70;
+      allow delete: if isSignedIn() && myLevel() >= 80;
+    }
+
     // Fallback — anything not matched above.
     match /{path=**} {
       allow read, write: if isSignedIn();

@@ -24,6 +24,7 @@ export const ROLE_HIERARCHY = {
   'company_commander': 55,
   'company_xo': 50,
   'company_1sg': 45,
+  'company_master_sergeant': 45,
 
   // Tier: Company Staff Assistants (Level 35)
   'company_s1_assistant': 35,
@@ -64,6 +65,7 @@ export const ROLE_LABELS = {
   company_commander: 'Company Commander',
   company_xo: 'Company XO',
   company_1sg: 'Company First Sergeant',
+  company_master_sergeant: 'Company Master Sergeant',
   company_s1_assistant: 'Company S1 Assistant',
   company_s2_assistant: 'Company S2 Assistant',
   company_s3_assistant: 'Company S3 Assistant',
@@ -116,6 +118,7 @@ export const JROTC_POSITIONS = [
   'Company S6 Assistant',
   'Company S7 Assistant',
   'First Sergeant',
+  'Master Sergeant',
   'Company XO',
   'Company Commander',
   'Battalion Staff (S-1)',

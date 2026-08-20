@@ -196,6 +196,8 @@ const AdminMeetingLogs = () => {
   // ── Access flags ─────────────────────────────────────────────────────────────
   const isAuthorized = CAN_VIEW_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
   const canEdit      = CAN_EDIT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  // Delete is restricted to XO only — instructors and BC can edit but not delete
+  const canDelete    = role === 'battalion_xo';
 
   // ── Data state ────────────────────────────────────────────────────────────────
   const [logs,       setLogs]       = useState([]);
@@ -517,26 +519,26 @@ const AdminMeetingLogs = () => {
                             <Eye size={10} /> View
                           </button>
                           {canEdit && (
-                            <>
-                              <button
-                                onClick={() => openEdit(log)}
-                                title="Edit"
-                                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-yellow-600 dark:hover:text-yellow-500 bg-yellow-50/50 dark:bg-slate-800 hover:bg-yellow-100 dark:hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-all"
-                              >
-                                <Pencil size={10} /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(log)}
-                                disabled={deleting === log.id}
-                                title="Delete"
-                                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-red-600 dark:text-slate-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 px-2 py-1.5 rounded-lg transition-all disabled:opacity-40"
-                              >
-                                {deleting === log.id
-                                  ? <Loader2 size={10} className="animate-spin" />
-                                  : <Trash2 size={10} />
-                                }
-                              </button>
-                            </>
+                            <button
+                              onClick={() => openEdit(log)}
+                              title="Edit"
+                              className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-yellow-600 dark:hover:text-yellow-500 bg-yellow-50/50 dark:bg-slate-800 hover:bg-yellow-100 dark:hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-all"
+                            >
+                              <Pencil size={10} /> Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(log)}
+                              disabled={deleting === log.id}
+                              title="Delete"
+                              className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-red-600 dark:text-slate-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 px-2 py-1.5 rounded-lg transition-all disabled:opacity-40"
+                            >
+                              {deleting === log.id
+                                ? <Loader2 size={10} className="animate-spin" />
+                                : <Trash2 size={10} />
+                              }
+                            </button>
                           )}
                         </div>
                       </td>

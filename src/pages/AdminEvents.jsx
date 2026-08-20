@@ -60,7 +60,7 @@ const TypeBadge = ({ type }) => {
   );
 };
 
-const BLANK = { title: '', date: '', type: '', location: '', time: '', description: '' };
+const BLANK = { title: '', date: '', endDate: '', type: '', location: '', time: '', description: '' };
 
 const AdminEvents = () => {
   const { userData } = useAuth();
@@ -114,6 +114,8 @@ const AdminEvents = () => {
       const payload = {
         title:       editingEvent.title.trim(),
         date:        editingEvent.date,
+        endDate:     editingEvent.endDate && editingEvent.endDate > editingEvent.date
+                       ? editingEvent.endDate : '',
         type:        editingEvent.type        || '',
         location:    editingEvent.location.trim(),
         time:        editingEvent.time.trim(),
@@ -168,17 +170,33 @@ const AdminEvents = () => {
             onChange={e => setField('title', e.target.value)}
             placeholder="e.g. Military Ball 2025–2026"
             autoFocus={isNew}
+            onKeyDown={e => e.stopPropagation()}
           />
         </div>
         <div>
-          <label className={labelClass}>Date *</label>
+          <label className={labelClass}>Start Date *</label>
           <input
             className={inputClass}
             type="date"
             value={editingEvent.date}
             onChange={e => setField('date', e.target.value)}
+            onKeyDown={e => e.stopPropagation()}
           />
         </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>End Date <span className="normal-case font-medium text-slate-300 dark:text-slate-600">(optional — for multi-day events)</span></label>
+          <input
+            className={inputClass}
+            type="date"
+            value={editingEvent.endDate || ''}
+            min={editingEvent.date || ''}
+            onChange={e => setField('endDate', e.target.value)}
+            onKeyDown={e => e.stopPropagation()}
+          />
+        </div>
+        <div /> {/* spacer */}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
@@ -187,6 +205,7 @@ const AdminEvents = () => {
             className={inputClass}
             value={editingEvent.type}
             onChange={e => setField('type', e.target.value)}
+            onKeyDown={e => e.stopPropagation()}
           >
             <option value="">— Select —</option>
             {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -199,6 +218,7 @@ const AdminEvents = () => {
             value={editingEvent.location}
             onChange={e => setField('location', e.target.value)}
             placeholder="e.g. PBHS Gymnasium"
+            onKeyDown={e => e.stopPropagation()}
           />
         </div>
         <div>
@@ -208,6 +228,7 @@ const AdminEvents = () => {
             value={editingEvent.time}
             onChange={e => setField('time', e.target.value)}
             placeholder="e.g. 6:00 PM"
+            onKeyDown={e => e.stopPropagation()}
           />
         </div>
       </div>
@@ -360,7 +381,7 @@ const AdminEvents = () => {
                   </div>
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                      {ev.date}
+                      {ev.date}{ev.endDate && ev.endDate !== ev.date ? ` – ${ev.endDate}` : ''}
                     </span>
                     {ev.location && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
@@ -393,6 +414,7 @@ const AdminEvents = () => {
                         id:          ev.id,
                         title:       ev.title,
                         date:        ev.date,
+                        endDate:     ev.endDate     || '',
                         type:        ev.type        || '',
                         location:    ev.location    || '',
                         time:        ev.time        || '',

@@ -18,7 +18,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { db } from '../firebase';
 import {
-  collection, addDoc, updateDoc, doc, onSnapshot,
+  collection, addDoc, updateDoc, doc, onSnapshot, setDoc,
   query, where, serverTimestamp, getDocs, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
@@ -27,7 +27,7 @@ import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
   DollarSign, Flag, Plus, X, Loader2, CheckCircle2,
   Filter, Banknote, FileText, Smartphone, ShoppingCart,
-  Users, ReceiptText, Ban, Heart,
+  Users, ReceiptText, Ban, Heart, BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
@@ -39,10 +39,10 @@ import ScrambleText from '../components/ScrambleText';
 const FULL_ACCESS_ROLES = [
   's1_adjutant', 's3_operations',
   'battalion_xo', 'battalion_csm', 'battalion_commander',
-  'company_commander', 'company_xo', 'company_1sg',
+  'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
 ];
 
-const COMPANY_INPUT_ROLES = ['company_commander', 'company_xo', 'company_1sg'];
+const COMPANY_INPUT_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant'];
 const BN_INPUT_ROLES      = ['s1_adjutant', 's3_operations'];
 
 const PAYMENT_TYPES = [
@@ -180,6 +180,53 @@ const AdminFundraiser = () => {
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canViewFull, authLoading, filterCompany, activeCompany, canViewAll, role]);
+
+  // ── Fundraiser goal + cross-company totals (full-access only) ────────────────
+  const [weeklyGoal,     setWeeklyGoal]     = useState(500);   // default $500/week
+  const [goalInput,      setGoalInput]      = useState('');
+  const [goalSaving,     setGoalSaving]     = useState(false);
+  const [goalSaved,      setGoalSaved]      = useState(false);
+  const [allEntries,     setAllEntries]     = useState([]);
+
+  useEffect(() => {
+    if (!canViewFull) return;
+    // Load goal setting
+    const unsubGoal = onSnapshot(doc(db, 'settings', 'fundraiserGoal'), snap => {
+      if (snap.exists() && snap.data().weeklyGoal != null) {
+        const g = snap.data().weeklyGoal;
+        setWeeklyGoal(g);
+        setGoalInput(String(g));
+      }
+    });
+    // Load all entries for cross-company graph
+    const unsubAll = onSnapshot(collection(db, 'fundraiserEntries'), snap => {
+      setAllEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => { unsubGoal(); unsubAll(); };
+  }, [canViewFull]);
+
+  const saveGoal = async () => {
+    const val = parseFloat(goalInput);
+    if (isNaN(val) || val <= 0) return;
+    setGoalSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'fundraiserGoal'), { weeklyGoal: val }, { merge: true });
+      setWeeklyGoal(val);
+      setGoalSaved(true);
+      setTimeout(() => setGoalSaved(false), 2500);
+    } catch (err) { console.error('Goal save failed:', err); }
+    finally { setGoalSaving(false); }
+  };
+
+  // Per-company totals (non-voided) for the graph
+  const companyNames = ['Uniform', 'Victor', 'Whiskey', 'X-Ray', 'Yankee'];
+  const companyTotals = useMemo(() => {
+    const totals = {};
+    allEntries.filter(e => !e.voided).forEach(e => {
+      if (e.company) totals[e.company] = (totals[e.company] || 0) + (e.amount || 0);
+    });
+    return totals;
+  }, [allEntries]);
 
   // ── Full-view: roster subscription ───────────────────────────────────────────
   useEffect(() => {
@@ -476,6 +523,84 @@ const AdminFundraiser = () => {
                 {myCompany && !companies.includes(myCompany) && <option key={myCompany}>{myCompany}</option>}
                 {companies.map(c => <option key={c}>{c}</option>)}
               </select>
+            </div>
+          </div>
+        )}
+
+        {/* ── Company Performance Graph (full-access only) ─────────────────── */}
+        {canViewFull && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-6 mb-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+              <div>
+                <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                  <BarChart3 size={14} /> Company Performance
+                </h3>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Fallen Heroes Fundraiser — all companies</p>
+              </div>
+              {/* Goal setting */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Weekly Goal $</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={goalInput}
+                  onChange={e => setGoalInput(e.target.value)}
+                  className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-yellow-500/40 transition-colors"
+                />
+                <button
+                  onClick={saveGoal}
+                  disabled={goalSaving}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    goalSaved ? 'bg-green-500 text-white' : 'bg-yellow-500 hover:bg-yellow-400 text-slate-950'
+                  } disabled:opacity-50`}
+                >
+                  {goalSaving ? <Loader2 size={10} className="animate-spin" /> : goalSaved ? '✓' : 'Save'}
+                </button>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
+                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Raised
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
+                <div className="w-3 h-3 rounded-sm bg-yellow-500/40 border-2 border-yellow-500" /> Goal
+              </div>
+            </div>
+
+            {/* Bars */}
+            <div className="space-y-4">
+              {companyNames.map(co => {
+                const actual = companyTotals[co] || 0;
+                const maxVal = Math.max(weeklyGoal, ...companyNames.map(c => companyTotals[c] || 0), 1);
+                const pct    = (actual / maxVal) * 100;
+                const gPct   = (weeklyGoal / maxVal) * 100;
+                const ahead  = actual >= weeklyGoal;
+                return (
+                  <div key={co}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
+                      <span className={`text-[10px] font-black ${ahead ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                        ${actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {ahead && ' ✓'}
+                      </span>
+                    </div>
+                    <div className="relative h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                      {/* Actual bar */}
+                      <div
+                        className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                      {/* Goal marker */}
+                      <div
+                        className="absolute inset-y-0 border-r-2 border-yellow-500"
+                        style={{ left: `${Math.min(gPct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

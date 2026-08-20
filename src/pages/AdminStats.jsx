@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
   BarChart3, ArrowLeft, Loader2, Users, ClipboardCheck, Shirt, Shield, Tent,
-  TrendingUp, CheckCircle2, Clock
+  TrendingUp, CheckCircle2, Clock, DollarSign, Flag,
 } from 'lucide-react';
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
+
+const FUNDRAISER_COMPANIES = ['Uniform', 'Victor', 'Whiskey', 'X-Ray', 'Yankee'];
 
 const RANK_ORDER = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
 const LET_ORDER = ["LET 1", "LET 2", "LET 3", "LET 4"];
@@ -66,6 +68,8 @@ const AdminStats = () => {
   const [uniformRequests, setUniformRequests] = useState([]);
   const [teams, setTeams] = useState([]);
   const [camps, setCamps] = useState([]);
+  const [fundraiserEntries, setFundraiserEntries] = useState([]);
+  const [weeklyGoal, setWeeklyGoal] = useState(500);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -77,7 +81,11 @@ const AdminStats = () => {
       onSnapshot(collection(db, "events"), snap => setEvents(snap.docs.map(d => d.data()))),
       onSnapshot(collection(db, "uniform_requests"), snap => setUniformRequests(snap.docs.map(d => d.data()))),
       onSnapshot(collection(db, "specialTeams"), snap => setTeams(snap.docs.map(d => d.data()))),
-      onSnapshot(collection(db, "camps"), snap => setCamps(snap.docs.map(d => d.data())))
+      onSnapshot(collection(db, "camps"), snap => setCamps(snap.docs.map(d => d.data()))),
+      onSnapshot(collection(db, "fundraiserEntries"), snap => setFundraiserEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(doc(db, "settings", "fundraiserGoal"), snap => {
+        if (snap.exists()) setWeeklyGoal(snap.data().weeklyGoal || 500);
+      }),
     ];
     return () => unsubs.forEach(u => u());
   }, [isAuthorized]);
@@ -131,6 +139,18 @@ const AdminStats = () => {
   // --- CAMP ATTENDANCE ---
   const totalAttendanceRecords = camps.reduce((sum, c) => sum + (c.attendeeCount ?? c.attendees?.length ?? 0), 0);
   const mostRecentCamp = [...camps].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+  // --- FUNDRAISER ---
+  const activeEntries = fundraiserEntries.filter(e => e.status !== 'voided');
+  const fundraiserTotal = activeEntries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const fundraiserFlags = activeEntries.reduce((s, e) => s + Math.floor((Number(e.amount) || 0) / 2), 0);
+  const fundraiserByCompany = Object.fromEntries(
+    FUNDRAISER_COMPANIES.map(co => [
+      co,
+      activeEntries.filter(e => e.company === co).reduce((s, e) => s + (Number(e.amount) || 0), 0),
+    ])
+  );
+  const fundraiserMaxVal = Math.max(weeklyGoal, ...Object.values(fundraiserByCompany), 1);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-6 md:p-12 pt-24 font-sans transition-colors duration-300">
@@ -310,6 +330,66 @@ const AdminStats = () => {
             ) : (
               <p className="text-slate-400 dark:text-slate-600 text-xs italic">No camps logged yet.</p>
             )}
+          </SectionCard>
+
+          {/* FUNDRAISER PERFORMANCE */}
+          <SectionCard icon={DollarSign} title="Fallen Heroes Fundraiser">
+            {/* Summary tiles */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                <p className="text-xl font-black text-slate-900 dark:text-white leading-none">
+                  ${fundraiserTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Total Raised</p>
+              </div>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-center gap-3">
+                <Flag size={18} className="text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
+                <div>
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none">{fundraiserFlags.toLocaleString()}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 mt-1">Total Flags</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-500">
+                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Raised
+              </div>
+              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-500">
+                <div className="w-3 h-3 rounded-sm border-2 border-yellow-500" /> Goal (${weeklyGoal.toLocaleString()})
+              </div>
+            </div>
+
+            {/* Per-company bars */}
+            <div className="space-y-4">
+              {FUNDRAISER_COMPANIES.map(co => {
+                const actual = fundraiserByCompany[co] || 0;
+                const pct  = (actual / fundraiserMaxVal) * 100;
+                const gPct = (weeklyGoal / fundraiserMaxVal) * 100;
+                const ahead = actual >= weeklyGoal;
+                return (
+                  <div key={co}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
+                      <span className={`text-[10px] font-black ${ahead ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                        ${actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{ahead && ' ✓'}
+                      </span>
+                    </div>
+                    <div className="relative h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                      <div
+                        className="absolute inset-y-0 border-r-2 border-yellow-500"
+                        style={{ left: `${Math.min(gPct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </SectionCard>
         </div>
       </div>

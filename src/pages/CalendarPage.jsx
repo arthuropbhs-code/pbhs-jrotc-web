@@ -8,6 +8,41 @@ import { TYPE_COLORS } from './AdminEvents';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
 
+// ── Category → cell background hex (for inline style on grid cells) ──────────
+const TYPE_CELL_HEX = {
+  Training:            '#3b82f6',
+  Competition:         '#eab308',
+  Ceremony:            '#a855f7',
+  'Field Trip':        '#22c55e',
+  Meeting:             '#94a3b8',
+  Social:              '#ec4899',
+  Fundraiser:          '#10b981',
+  'Community Service': '#14b8a6',
+  Inspection:          '#f97316',
+  'No School':         '#ef4444',
+  Other:               '#64748b',
+};
+
+// Returns an inline style object for a calendar cell based on its event categories
+function cellStyle(cats) {
+  if (cats.length === 0) return {};
+  const hex = (c) => TYPE_CELL_HEX[c] || '#64748b';
+  if (cats.length === 1) return { backgroundColor: `${hex(cats[0])}22` };
+  // Two+ categories: diagonal stripe pattern
+  const h1 = hex(cats[0]);
+  const h2 = hex(cats[1]);
+  return {
+    background: `repeating-linear-gradient(135deg,${h1}25,${h1}25 5px,${h2}25 5px,${h2}25 10px)`,
+  };
+}
+
+// Returns true if an event covers a given YYYY-MM-DD string
+function eventCoversDay(ev, dayStr) {
+  if (!ev.date) return false;
+  const end = ev.endDate && ev.endDate > ev.date ? ev.endDate : ev.date;
+  return ev.date <= dayStr && end >= dayStr;
+}
+
 // ── Blue/Gold computation ────────────────────────────────────────────────────
 // Counts weekday school days from anchorStr to targetStr, skipping noSchoolSet.
 // Both strings are YYYY-MM-DD. Returns -1 if target is before anchor.
@@ -104,13 +139,23 @@ const CalendarPage = () => {
   // Unique categories present across ALL events (stable as months change)
   const activeTypes = [...new Set(events.map(e => e.type).filter(Boolean))].sort();
 
-  // Events in the current month, optionally filtered by type
-  const monthEvents = events.filter(e => {
-    if (!e.date) return false;
-    const d = new Date(e.date.replace(/-/g, '/'));
-    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
-  });
-  const visibleEvents = selectedType ? monthEvents.filter(e => e.type === selectedType) : monthEvents;
+  // Events visible in the current month — includes multi-day events that span into it
+  const monthEvents = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const mStart = `${y}-${m}-01`;
+    const mEnd   = `${y}-${m}-${String(daysInMonth).padStart(2, '0')}`;
+    return events.filter(e => {
+      if (!e.date) return false;
+      const eventEnd = (e.endDate && e.endDate > e.date) ? e.endDate : e.date;
+      return e.date <= mEnd && eventEnd >= mStart;
+    });
+  }, [events, currentDate, daysInMonth]);
+
+  const visibleEvents = useMemo(
+    () => selectedType ? monthEvents.filter(e => e.type === selectedType) : monthEvents,
+    [monthEvents, selectedType]
+  );
 
   return (
     /* pt-48 ensures clearance from global nav bar */
@@ -200,43 +245,55 @@ const CalendarPage = () => {
               {[...Array(daysInMonth)].map((_, i) => {
                 const day = i + 1;
                 const today = new Date();
-                
-                const isToday = 
-                  day === today.getDate() && 
-                  currentDate.getMonth() === today.getMonth() && 
+                const y = currentDate.getFullYear();
+                const m = currentDate.getMonth() + 1;
+                const dayStr = `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+                const isToday =
+                  day === today.getDate() &&
+                  currentDate.getMonth() === today.getMonth() &&
                   currentDate.getFullYear() === today.getFullYear();
 
-                const hasEvent = visibleEvents.some(e => {
-                  if (!e.date) return false;
-                  const eventDate = new Date(e.date.replace(/-/g, '/'));
-                  return eventDate.getDate() === day;
-                });
+                const dayEvents = visibleEvents.filter(e => eventCoversDay(e, dayStr));
+                const hasEvent  = dayEvents.length > 0;
+                const dayCats   = [...new Set(dayEvents.map(e => e.type).filter(Boolean))];
+
+                const baseCellStyle = isToday ? {} : cellStyle(dayCats);
 
                 return (
-                  <div 
-                    key={day} 
+                  <div
+                    key={day}
+                    style={baseCellStyle}
                     className={`aspect-square rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center relative group
-                      ${isToday 
-                        ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]' 
-                        : hasEvent 
-                          ? 'border-yellow-500/40 bg-yellow-500/5' 
+                      ${isToday
+                        ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+                        : hasEvent
+                          ? 'border-slate-200 dark:border-white/10'
                           : 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-black/20 hover:border-slate-300 dark:hover:border-white/10'
                       }`}
                   >
-                    <span className={`text-sm font-black 
-                      ${isToday ? 'text-blue-600 dark:text-blue-400' : hasEvent ? 'text-yellow-600 dark:text-yellow-500' : 'text-slate-300 dark:text-slate-600'}`}
+                    <span className={`text-sm font-black
+                      ${isToday ? 'text-blue-600 dark:text-blue-400' : hasEvent ? 'text-slate-800 dark:text-white' : 'text-slate-300 dark:text-slate-600'}`}
                     >
                       {day}
                     </span>
-                    
+
                     {isToday && (
                       <span className="absolute top-2 text-[7px] font-black uppercase tracking-widest text-blue-500 animate-pulse">
                         Today
                       </span>
                     )}
 
-                    {hasEvent && !isToday && (
-                      <div className="absolute bottom-2 w-1.5 h-1.5 bg-yellow-500 rounded-full shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                    {hasEvent && !isToday && dayCats.length > 0 && (
+                      <div className="absolute bottom-1.5 flex gap-0.5">
+                        {dayCats.slice(0, 3).map(cat => (
+                          <div
+                            key={cat}
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: TYPE_CELL_HEX[cat] || '#64748b' }}
+                          />
+                        ))}
+                      </div>
                     )}
 
                     {blueGoldMap.get(day) && (
@@ -271,7 +328,9 @@ const CalendarPage = () => {
                   >
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-yellow-600 dark:bg-yellow-500" />
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-tighter">{event.date}</p>
+                      <p className="text-[10px] font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-tighter">
+                        {event.date}{event.endDate && event.endDate !== event.date ? ` – ${event.endDate}` : ''}
+                      </p>
                       {event.type && (
                         <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${TYPE_COLORS[event.type] || TYPE_COLORS.Other}`}>
                           <Tag size={8} /> {event.type}
