@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Clock, ArrowLeft, Tag, X } from 'lucide-react';
 import { TYPE_COLORS } from './AdminEvents';
 import { usePageMeta } from '../hooks/usePageMeta';
 import Reveal from '../components/Reveal';
@@ -76,13 +76,28 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState(null); // null = all
   const [anchorDate, setAnchorDate] = useState('2025-08-11'); // first Blue Day
-  const [hoveredDay, setHoveredDay] = useState(null); // { dayStr, events, rect } | null
+  const [hoveredDay, setHoveredDay] = useState(null);   // { dayStr, events, rect } | null
+  const [selectedDay, setSelectedDay] = useState(null); // { dayStr, events } | null — click modal
 
   const handleDayEnter = (e, dayStr, dayEvents) => {
-    if (!dayEvents.length) return;
+    if (!dayEvents.length || selectedDay) return;
     setHoveredDay({ dayStr, events: dayEvents, rect: e.currentTarget.getBoundingClientRect() });
   };
   const handleDayLeave = () => setHoveredDay(null);
+
+  const handleDayClick = (dayStr, dayEvents) => {
+    if (!dayEvents.length) return;
+    setHoveredDay(null);
+    setSelectedDay({ dayStr, events: dayEvents });
+  };
+  const closeModal = () => setSelectedDay(null);
+
+  // Close modal on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') closeModal(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -274,6 +289,7 @@ const CalendarPage = () => {
                     style={baseCellStyle}
                     onMouseEnter={(e) => handleDayEnter(e, dayStr, dayEvents)}
                     onMouseLeave={handleDayLeave}
+                    onClick={() => handleDayClick(dayStr, dayEvents)}
                     className={`aspect-square rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center relative group
                       ${hasEvent ? 'cursor-pointer' : ''}
                       ${isToday
@@ -383,6 +399,127 @@ const CalendarPage = () => {
           </div>
         </div>
       </div>
+
+      {/* ── CLICK MODAL — full-screen overlay with full event details ── */}
+      {createPortal(
+        <AnimatePresence>
+          {selectedDay && (() => {
+            const { dayStr, events: dayEvs } = selectedDay;
+            const label = new Date(dayStr + 'T00:00:00').toLocaleDateString('en-US', {
+              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+            });
+            return (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  key="modal-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={closeModal}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+                />
+
+                {/* Modal card */}
+                <motion.div
+                  key="modal-card"
+                  initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="pointer-events-auto w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-2xl shadow-black/30 overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-4 px-7 pt-7 pb-5 border-b border-slate-100 dark:border-white/5">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                          {dayEvs.length} {dayEvs.length === 1 ? 'Event' : 'Events'}
+                        </p>
+                        <h3 className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                          {label}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={closeModal}
+                        className="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex-shrink-0"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Event list */}
+                    <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[60vh] overflow-y-auto">
+                      {dayEvs.map((ev) => (
+                        <div key={ev.id} className="px-7 py-5 flex gap-4">
+                          {/* Color bar */}
+                          <div
+                            className="w-1 rounded-full flex-shrink-0 self-stretch"
+                            style={{ backgroundColor: TYPE_CELL_HEX[ev.type] || '#64748b' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            {/* Type badge */}
+                            {ev.type && (
+                              <span
+                                className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border mb-2"
+                                style={{
+                                  color: TYPE_CELL_HEX[ev.type] || '#64748b',
+                                  borderColor: `${TYPE_CELL_HEX[ev.type] || '#64748b'}40`,
+                                  backgroundColor: `${TYPE_CELL_HEX[ev.type] || '#64748b'}15`,
+                                }}
+                              >
+                                <Tag size={7} /> {ev.type}
+                              </span>
+                            )}
+                            <h4 className="font-black text-slate-900 dark:text-white tracking-tight leading-snug mb-2">
+                              {ev.title}
+                            </h4>
+                            {/* Date range */}
+                            <p className="text-[10px] font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-tight mb-2">
+                              {ev.date}{ev.endDate && ev.endDate !== ev.date ? ` — ${ev.endDate}` : ''}
+                            </p>
+                            <div className="space-y-1.5">
+                              {ev.time && (
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                  <Clock size={12} className="flex-shrink-0" />
+                                  <span className="text-[11px] font-bold uppercase">{ev.time}</span>
+                                </div>
+                              )}
+                              {ev.location && (
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                  <MapPin size={12} className="flex-shrink-0" />
+                                  <span className="text-[11px] font-bold uppercase">{ev.location}</span>
+                                </div>
+                              )}
+                            </div>
+                            {ev.description && (
+                              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+                                {ev.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer hint */}
+                    <div className="px-7 py-4 border-t border-slate-100 dark:border-white/5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-300 dark:text-slate-700">
+                        Press Esc or click outside to close
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            );
+          })()}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* ── HOVER TOOLTIP — rendered into document.body via portal so it's never clipped ── */}
       {createPortal(
