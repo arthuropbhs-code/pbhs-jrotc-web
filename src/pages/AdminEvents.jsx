@@ -62,6 +62,119 @@ const TypeBadge = ({ type }) => {
 
 const BLANK = { title: '', date: '', endDate: '', type: '', location: '', time: '', description: '' };
 
+// ── EventForm is defined at MODULE level so React never unmounts/remounts it
+// on parent re-renders (which would steal focus on every keystroke).
+const EventForm = ({ editingEvent, setField, saving, handleSave, setEditingEvent, isNew = false }) => (
+  <div className={`bg-white dark:bg-slate-900/40 border rounded-2xl p-5 space-y-3 ${
+    isNew ? 'border-yellow-500/30' : 'border-slate-200 dark:border-white/5'
+  }`}>
+    {isNew && (
+      <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">
+        New Event
+      </h3>
+    )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label className={labelClass}>Title *</label>
+        <input
+          className={inputClass}
+          value={editingEvent.title}
+          onChange={e => setField('title', e.target.value)}
+          placeholder="e.g. Military Ball 2025–2026"
+          autoFocus={isNew}
+          onKeyDown={e => e.stopPropagation()}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Start Date *</label>
+        <input
+          className={inputClass}
+          type="date"
+          value={editingEvent.date}
+          onChange={e => setField('date', e.target.value)}
+          onKeyDown={e => e.stopPropagation()}
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label className={labelClass}>End Date <span className="normal-case font-medium text-slate-300 dark:text-slate-600">(optional — for multi-day events)</span></label>
+        <input
+          className={inputClass}
+          type="date"
+          value={editingEvent.endDate || ''}
+          min={editingEvent.date || ''}
+          onChange={e => setField('endDate', e.target.value)}
+          onKeyDown={e => e.stopPropagation()}
+        />
+      </div>
+      <div /> {/* spacer */}
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label className={labelClass}>Category</label>
+        <select
+          className={inputClass}
+          value={editingEvent.type}
+          onChange={e => setField('type', e.target.value)}
+          onKeyDown={e => e.stopPropagation()}
+        >
+          <option value="">— Select —</option>
+          {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelClass}>Location</label>
+        <input
+          className={inputClass}
+          value={editingEvent.location}
+          onChange={e => setField('location', e.target.value)}
+          placeholder="e.g. PBHS Gymnasium"
+          onKeyDown={e => e.stopPropagation()}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Time</label>
+        <input
+          className={inputClass}
+          value={editingEvent.time}
+          onChange={e => setField('time', e.target.value)}
+          placeholder="e.g. 6:00 PM"
+          onKeyDown={e => e.stopPropagation()}
+        />
+      </div>
+    </div>
+    <div>
+      <label className={labelClass}>Description</label>
+      <textarea
+        className={`${inputClass} resize-none`}
+        rows={3}
+        value={editingEvent.description}
+        onChange={e => setField('description', e.target.value)}
+        placeholder="Optional details — dress code, what to bring, special instructions, etc."
+      />
+    </div>
+    <div className="flex gap-2 pt-1">
+      <button
+        disabled={saving || !editingEvent.title || !editingEvent.date}
+        onClick={handleSave}
+        className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-all shadow-lg shadow-yellow-500/20"
+      >
+        {saving
+          ? <Loader2 size={14} className="animate-spin" />
+          : <Save size={14} />}
+        {isNew ? 'Add Event' : 'Save'}
+      </button>
+      <button
+        onClick={() => setEditingEvent(null)}
+        className="flex items-center gap-2 px-5 py-2.5 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase rounded-xl hover:opacity-70 transition-all"
+      >
+        <X size={14} /> Cancel
+      </button>
+    </div>
+  </div>
+);
+
 const AdminEvents = () => {
   const { userData } = useAuth();
 
@@ -152,116 +265,8 @@ const AdminEvents = () => {
   // ── Form helper ───────────────────────────────────────────────────────────
   const setField = (key, val) => setEditingEvent(ev => ({ ...ev, [key]: val }));
 
-  const EventForm = ({ isNew = false }) => (
-    <div className={`bg-white dark:bg-slate-900/40 border rounded-2xl p-5 space-y-3 ${
-      isNew ? 'border-yellow-500/30' : 'border-slate-200 dark:border-white/5'
-    }`}>
-      {isNew && (
-        <h3 className="text-xs font-black text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">
-          New Event
-        </h3>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className={labelClass}>Title *</label>
-          <input
-            className={inputClass}
-            value={editingEvent.title}
-            onChange={e => setField('title', e.target.value)}
-            placeholder="e.g. Military Ball 2025–2026"
-            autoFocus={isNew}
-            onKeyDown={e => e.stopPropagation()}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Start Date *</label>
-          <input
-            className={inputClass}
-            type="date"
-            value={editingEvent.date}
-            onChange={e => setField('date', e.target.value)}
-            onKeyDown={e => e.stopPropagation()}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className={labelClass}>End Date <span className="normal-case font-medium text-slate-300 dark:text-slate-600">(optional — for multi-day events)</span></label>
-          <input
-            className={inputClass}
-            type="date"
-            value={editingEvent.endDate || ''}
-            min={editingEvent.date || ''}
-            onChange={e => setField('endDate', e.target.value)}
-            onKeyDown={e => e.stopPropagation()}
-          />
-        </div>
-        <div /> {/* spacer */}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className={labelClass}>Category</label>
-          <select
-            className={inputClass}
-            value={editingEvent.type}
-            onChange={e => setField('type', e.target.value)}
-            onKeyDown={e => e.stopPropagation()}
-          >
-            <option value="">— Select —</option>
-            {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Location</label>
-          <input
-            className={inputClass}
-            value={editingEvent.location}
-            onChange={e => setField('location', e.target.value)}
-            placeholder="e.g. PBHS Gymnasium"
-            onKeyDown={e => e.stopPropagation()}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Time</label>
-          <input
-            className={inputClass}
-            value={editingEvent.time}
-            onChange={e => setField('time', e.target.value)}
-            placeholder="e.g. 6:00 PM"
-            onKeyDown={e => e.stopPropagation()}
-          />
-        </div>
-      </div>
-      <div>
-        <label className={labelClass}>Description</label>
-        <textarea
-          className={`${inputClass} resize-none`}
-          rows={3}
-          value={editingEvent.description}
-          onChange={e => setField('description', e.target.value)}
-          placeholder="Optional details — dress code, what to bring, special instructions, etc."
-        />
-      </div>
-      <div className="flex gap-2 pt-1">
-        <button
-          disabled={saving || !editingEvent.title || !editingEvent.date}
-          onClick={handleSave}
-          className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-slate-950 font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-all shadow-lg shadow-yellow-500/20"
-        >
-          {saving
-            ? <Loader2 size={14} className="animate-spin" />
-            : <Save size={14} />}
-          {isNew ? 'Add Event' : 'Save'}
-        </button>
-        <button
-          onClick={() => setEditingEvent(null)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase rounded-xl hover:opacity-70 transition-all"
-        >
-          <X size={14} /> Cancel
-        </button>
-      </div>
-    </div>
-  );
+  // Shared props bundle passed down to the module-level EventForm
+  const formProps = { editingEvent, setField, saving, handleSave, setEditingEvent };
 
   return (
     <div className="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full">
@@ -341,7 +346,7 @@ const AdminEvents = () => {
       </div>
 
       {/* New-event form (shown above the list) */}
-      {editingEvent && !editingEvent.id && <div className="mb-4"><EventForm isNew /></div>}
+      {editingEvent && !editingEvent.id && <div className="mb-4"><EventForm {...formProps} isNew /></div>}
 
       {/* Event list */}
       <div className="space-y-3">
@@ -363,7 +368,7 @@ const AdminEvents = () => {
             className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden"
           >
             {editingEvent?.id === ev.id ? (
-              <div className="p-5"><EventForm /></div>
+              <div className="p-5"><EventForm {...formProps} /></div>
             ) : (
               <div className="flex items-center gap-4 p-5">
                 {/* Date badge */}
