@@ -62,12 +62,14 @@ const TermsOfService = () => {
         </Section>
 
         <Section n="3" title="Acceptable Use">
+          <p>By using this site, you agree to comply with the <strong className="text-slate-900 dark:text-white">Broward County Public Schools Student Code of Conduct</strong> (SBBC Policy 5.8) and the <strong className="text-slate-900 dark:text-white">PBHS JROTC Standard Operating Procedures (SOP)</strong> in all your interactions with this portal. These existing rules apply to your conduct here just as they do in any other school-connected setting.</p>
           <p>You agree not to:</p>
           <p>&bull; Impersonate another person or misrepresent your rank, position, or role.</p>
           <p>&bull; Submit false or fabricated data — including uniform requests, supply requests, physical fitness scores, fundraiser records, or promotion board evaluations.</p>
           <p>&bull; Attempt to access, view, or modify data outside the scope your role permits — for example, accessing another company's roster or records when your role is scoped to your own company.</p>
           <p>&bull; Attempt to bypass account security features, including the CAPTCHA, two-factor authentication, or the account approval workflow.</p>
           <p>&bull; Upload content that is inappropriate, harassing, or unrelated to battalion business.</p>
+          <p>&bull; Disclose, share, copy, or distribute any cadet's personal information — including names, contact information, fitness scores, uniform sizes, fundraiser data, or promotion records — to any person or party not authorized by their role within the portal. Information you access through this site is for official battalion use only and must not be shared outside that context.</p>
           <p>&bull; Use information available through this site (like the roster or contact information) for anything outside official battalion purposes.</p>
         </Section>
 
