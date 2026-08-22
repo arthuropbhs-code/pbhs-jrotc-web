@@ -42,6 +42,7 @@ import {
   X,
   ShoppingCart,
   History,
+  Tag,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -234,6 +235,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
         </Link>
 
         {navLink('/admin/dashboard', <LayoutDashboard size={18} />, 'Dashboard')}
+        {navLink('/admin/changelog', <Tag size={18} />, 'Version History')}
 
         {loading ? (
           <div className="space-y-2 mt-2">

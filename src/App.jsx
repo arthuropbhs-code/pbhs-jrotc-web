@@ -73,6 +73,7 @@ const AdminFeedback       = lazy(() => import('./pages/AdminFeedback'));
 const AdminHonorCompany   = lazy(() => import('./pages/AdminHonorCompany'));
 const AdminSupplyRequests = lazy(() => import('./pages/AdminSupplyRequests'));
 const AdminCadetHistory   = lazy(() => import('./pages/AdminCadetHistory'));
+const AdminChangelog      = lazy(() => import('./pages/AdminChangelog'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -463,6 +464,12 @@ const AppContent = () => {
                   <AdminCadetHistory />
                 </ProtectedRoute>
               }
+            />
+
+            {/* Version History — read-only, open to every authenticated portal user */}
+            <Route
+              path="/admin/changelog"
+              element={<ProtectedRoute><AdminChangelog /></ProtectedRoute>}
             />
           </Route>
 
