@@ -57,12 +57,21 @@
          by a pre-loaded Enterprise global. -->
 
     <!-- Google Analytics 4 -->
+    <!-- The script tag is loaded here so the gtag() function is available
+         immediately (Firebase Analytics relies on it at runtime), but the
+         config call explicitly disables the automatic page_view event and
+         enables IP anonymization. No tracking data is actually sent until
+         the user accepts cookies via the CookieConsent banner, at which
+         point firebase.js loads the Firebase Analytics SDK and takes over. -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-NRPL3SVRX9"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-NRPL3SVRX9');
+      gtag('config', 'G-NRPL3SVRX9', {
+        send_page_view: false,
+        anonymize_ip: true
+      });
     </script>
   </head>
   <body>

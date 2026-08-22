@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Scale } from 'lucide-react';
 import { usePageMeta } from '../hooks/usePageMeta';
 
-const EFFECTIVE_DATE = "August 1, 2026";
+const EFFECTIVE_DATE = "August 22, 2026";
 
 const Section = ({ n, title, children }) => (
   <section className="mb-12">
@@ -57,14 +57,16 @@ const TermsOfService = () => {
 
         <Section n="2" title="Your Account">
           <p>You're responsible for keeping your password confidential and for all activity under your account. Provide accurate information when registering and keep your profile up to date.</p>
-          <p>Don't share your login with anyone else, and don't attempt to access another cadet's account.</p>
+          <p>Don't share your login with anyone else, and don't attempt to access another cadet's account or any data outside the scope your role permits.</p>
+          <p>Staff-level accounts (battalion staff, company command, and above) are required to set up two-factor authentication (2FA) as part of the account onboarding process. This is a security requirement, not optional. Accounts that do not complete 2FA setup will be restricted from accessing staff functions until it is enabled.</p>
         </Section>
 
         <Section n="3" title="Acceptable Use">
           <p>You agree not to:</p>
           <p>&bull; Impersonate another person or misrepresent your rank, position, or role.</p>
-          <p>&bull; Submit false uniform requests or misuse any admin/logistics tool.</p>
-          <p>&bull; Attempt to bypass account security features, including the CAPTCHA or approval workflow.</p>
+          <p>&bull; Submit false or fabricated data — including uniform requests, supply requests, physical fitness scores, fundraiser records, or promotion board evaluations.</p>
+          <p>&bull; Attempt to access, view, or modify data outside the scope your role permits — for example, accessing another company's roster or records when your role is scoped to your own company.</p>
+          <p>&bull; Attempt to bypass account security features, including the CAPTCHA, two-factor authentication, or the account approval workflow.</p>
           <p>&bull; Upload content that is inappropriate, harassing, or unrelated to battalion business.</p>
           <p>&bull; Use information available through this site (like the roster or contact information) for anything outside official battalion purposes.</p>
         </Section>
