@@ -235,7 +235,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
         </Link>
 
         {navLink('/admin/dashboard', <LayoutDashboard size={18} />, 'Dashboard')}
-        {navLink('/admin/changelog', <Tag size={18} />, 'Version History')}
 
         {loading ? (
           <div className="space-y-2 mt-2">
@@ -389,6 +388,11 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {!canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
           </div>
         )}
+        {/* ── PORTAL ──────────────────────────────── */}
+        <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
+          {groupLabel('Portal')}
+          {navLink('/admin/changelog', <Tag size={18} />, 'Version History')}
+        </div>
       </nav>
 
       <button
