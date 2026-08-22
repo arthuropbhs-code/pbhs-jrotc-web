@@ -6,6 +6,7 @@ import { useIdleLogout } from './hooks/useIdleLogout';
 import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL } from './constants';
 import { canAccessRoute } from './lib/authz';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { setAnalyticsAdminMode } from './firebase';
 
 // --- COMPONENTS ---
 // Navbar/Footer stay eager: they render on almost every route, so splitting
@@ -141,6 +142,12 @@ const AppContent = () => {
   // you were, instead of at the top.
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Disable GA collection on every /admin/* route, re-enable on public pages.
+  // No-ops if analytics hasn't loaded yet (user hasn't accepted cookies).
+  useEffect(() => {
+    setAnalyticsAdminMode(location.pathname.startsWith('/admin'));
   }, [location.pathname]);
 
   // Logic to hide Navbar and Footer on Admin pages

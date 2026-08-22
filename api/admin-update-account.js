@@ -188,6 +188,73 @@ async function findShadowRecord(accessToken, projectId, email) {
   };
 }
 
+// Purges physical measurement records and unlinks the roster entry after an
+// account is deleted. Runs fire-and-forget (non-fatal) — the Auth account
+// and users doc are already gone by the time this is called.
+//
+// What gets deleted:  uniformSizes documents (physical measurements — most
+//   sensitive personal data, no operational value once the cadet is gone).
+// What gets retained: cadetChallengeRecords, fundraiserEntries — operational
+//   records retained per the site's Privacy Policy as battalion history.
+// What gets unlinked: the roster entry has its linkedUid field removed so it
+//   no longer points to a deleted auth account, but the cadet's historical
+//   record (name, rank, company) stays intact for the battalion.
+async function purgePersonalData(accessToken, projectId, targetUid) {
+  const fsBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+
+  // 1. Find the cadet's roster doc by linkedUid.
+  const rosterQueryRes = await fetch(`${fsBase}:runQuery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'roster' }],
+        where: { fieldFilter: { field: { fieldPath: 'linkedUid' }, op: 'EQUAL', value: { stringValue: targetUid } } },
+        limit: 1,
+      },
+    }),
+  });
+  if (!rosterQueryRes.ok) return;
+
+  const rosterRows = await rosterQueryRes.json();
+  const rosterHit  = Array.isArray(rosterRows) ? rosterRows.find((r) => r.document) : null;
+
+  if (rosterHit) {
+    const rosterDocName = rosterHit.document.name;
+    const rosterDocId   = rosterDocName.split('/').pop();
+
+    // 2. Unlink the roster entry — remove linkedUid field only (cadet history stays).
+    //    Firestore REST: field in updateMask but absent from body = delete the field.
+    await fetch(`${rosterDocName}?updateMask.fieldPaths=linkedUid`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: {} }),
+    }).catch(() => {});
+
+    // 3. Find and delete uniformSizes docs for this cadet.
+    const sizesRes = await fetch(`${fsBase}:runQuery`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'uniformSizes' }],
+          where: { fieldFilter: { field: { fieldPath: 'cadetId' }, op: 'EQUAL', value: { stringValue: rosterDocId } } },
+        },
+      }),
+    });
+    if (sizesRes.ok) {
+      const sizeRows = await sizesRes.json();
+      if (Array.isArray(sizeRows)) {
+        await Promise.all(
+          sizeRows
+            .filter((r) => r.document)
+            .map((r) => fetch(r.document.name, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }).catch(() => {}))
+        );
+      }
+    }
+  }
+}
+
 // All transactional emails are sent via Resend (https://resend.com).
 // RESEND_API_KEY must be set in Vercel env vars.
 // The sending domain (pbhsjrotc.com) must be verified in the Resend dashboard
@@ -767,6 +834,14 @@ export default async function handler(req, res) {
         const data = await identityRes.json();
         throw new Error(data.error?.message || 'Failed to delete the account');
       }
+
+      // Fire-and-forget: purge physical measurement data (uniformSizes) and
+      // unlink the roster entry. Non-fatal — the account is already gone.
+      // cadetChallengeRecords and fundraiserEntries are retained per policy
+      // as operational battalion history.
+      purgePersonalData(accessToken, projectId, targetUid).catch((err) =>
+        console.warn('Post-deletion cleanup failed (non-fatal):', err)
+      );
 
       return res.status(200).json({ success: true });
     }

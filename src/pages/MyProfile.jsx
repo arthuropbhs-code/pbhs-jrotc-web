@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials } from '../utils/getInitials';
 import { db, auth } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, query, collection, where, orderBy } from 'firebase/firestore';
 import {
   signOut,
   multiFactor,
@@ -13,7 +13,7 @@ import {
 } from 'firebase/auth';
 import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff, BookOpen, Calendar } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff, BookOpen, Calendar, FileText, Activity, DollarSign, Shirt } from 'lucide-react';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useThemeContext } from '../contexts/ThemeContext';
 import ScrambleText from '../components/ScrambleText';
@@ -51,6 +51,65 @@ const MyProfile = () => {
   const [dossier, setDossier] = useState({ bio: '', practiceDays: '' });
   const [dossierSaving, setDossierSaving] = useState(false);
   const [dossierSaved, setDossierSaved] = useState(false);
+
+  // My Records — read-only view of the cadet's own operational records
+  const [myRecords, setMyRecords] = useState(null); // null = loading, {} = loaded
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function fetchMyRecords() {
+      try {
+        // Step 1: find this user's roster document via linkedUid
+        const rosterSnap = await getDocs(
+          query(collection(db, 'roster'), where('linkedUid', '==', user.uid))
+        );
+        const rosterDoc = rosterSnap.docs[0];
+        const rosterDocId = rosterDoc?.id ?? null;
+
+        // Step 2: fetch all three record types concurrently
+        const [sizesSnap, fitnessSnap, fundraiserSnap] = await Promise.all([
+          rosterDocId
+            ? getDocs(query(collection(db, 'uniformSizes'), where('cadetId', '==', rosterDocId)))
+            : Promise.resolve({ docs: [] }),
+          rosterDocId
+            ? getDocs(query(collection(db, 'cadetChallengeRecords'), where('cadetId', '==', rosterDocId)))
+            : Promise.resolve({ docs: [] }),
+          getDocs(query(collection(db, 'fundraiserEntries'), where('linkedUid', '==', user.uid))),
+        ]);
+
+        if (cancelled) return;
+
+        // Uniform sizes — take the most recent/only record
+        const sizeRecord = sizesSnap.docs[0]?.data() ?? null;
+
+        // Cadet Challenge — group by cycle, show all cycles with data
+        const fitnessByCycle = {};
+        fitnessSnap.docs.forEach((d) => {
+          const r = d.data();
+          const cycle = r.cycleNum ?? r.cycle ?? '?';
+          fitnessByCycle[cycle] = r;
+        });
+
+        // Fundraiser — sum total and count entries
+        let fundraiserTotal = 0;
+        let fundraiserCount = 0;
+        fundraiserSnap.docs.forEach((d) => {
+          const r = d.data();
+          fundraiserTotal += parseFloat(r.amount) || 0;
+          fundraiserCount += 1;
+        });
+
+        setMyRecords({ sizeRecord, fitnessByCycle, fundraiserTotal, fundraiserCount });
+      } catch (err) {
+        console.warn('My Records fetch failed:', err);
+        if (!cancelled) setMyRecords({});
+      }
+    }
+
+    fetchMyRecords();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // Persisted across retries so we can .clear() before creating a new instance.
   const enrollRecaptchaRef = useRef(null);
@@ -435,6 +494,115 @@ const MyProfile = () => {
           <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest mt-6 pt-6 border-t border-slate-100 dark:border-white/5">
             Rank, role, and unit assignment are managed by battalion staff. Contact S1 to request a change.
           </p>
+        </div>
+
+        {/* MY RECORDS */}
+        <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl p-8 shadow-sm dark:shadow-none mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <FileText size={16} className="text-yellow-500" />
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">My Records</h2>
+          </div>
+
+          {myRecords === null ? (
+            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-600 text-xs font-bold">
+              <Loader2 size={14} className="animate-spin" /> Loading your records…
+            </div>
+          ) : (
+            <div className="space-y-6">
+
+              {/* Fundraiser */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign size={13} className="text-slate-400 dark:text-slate-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Fallen Heroes Fundraiser</span>
+                </div>
+                {myRecords.fundraiserCount > 0 ? (
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Total Raised</p>
+                      <p className="text-sm font-black text-yellow-500">${myRecords.fundraiserTotal.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Entries</p>
+                      <p className="text-sm font-bold">{myRecords.fundraiserCount}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-slate-600 font-bold">No fundraiser entries recorded yet.</p>
+                )}
+              </div>
+
+              {/* Cadet Challenge */}
+              <div className="pt-4 border-t border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity size={13} className="text-slate-400 dark:text-slate-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Cadet Challenge Fitness</span>
+                </div>
+                {Object.keys(myRecords.fitnessByCycle ?? {}).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(myRecords.fitnessByCycle)
+                      .sort(([a], [b]) => Number(a) - Number(b))
+                      .map(([cycle, r]) => (
+                        <div key={cycle} className="bg-slate-50 dark:bg-black/30 rounded-2xl p-4">
+                          <p className="text-[9px] font-black uppercase text-yellow-500 tracking-widest mb-3">Cycle {cycle}</p>
+                          {r.medicalExempt ? (
+                            <p className="text-xs text-slate-400 font-bold">Medical exemption on file.</p>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {[
+                                ['Push-Ups', r.pushUps],
+                                ['Sit-Ups', r.sitUps],
+                                ['Shuttle Run', r.shuttleRun ? `${r.shuttleRun}s` : null],
+                                ['One Mile', r.oneMile],
+                                ['Sit-N-Reach', r.sitNReach ? `${r.sitNReach} cm` : null],
+                              ].map(([label, val]) => val != null && val !== '' ? (
+                                <div key={label}>
+                                  <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-0.5">{label}</p>
+                                  <p className="text-sm font-bold">{val}</p>
+                                </div>
+                              ) : null)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-slate-600 font-bold">No fitness records on file yet.</p>
+                )}
+              </div>
+
+              {/* Uniform Sizes */}
+              <div className="pt-4 border-t border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Shirt size={13} className="text-slate-400 dark:text-slate-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Uniform Sizes on File</span>
+                </div>
+                {myRecords.sizeRecord ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      ['Class B Shirt', myRecords.sizeRecord.classB_shirt],
+                      ['Class B Pants', myRecords.sizeRecord.classB_pants],
+                      ['PT Shirt', myRecords.sizeRecord.pt_shirt],
+                      ['Shoes', myRecords.sizeRecord.shoes],
+                      ['Company Shirt', myRecords.sizeRecord.co_shirt],
+                      ['Class A Jacket', myRecords.sizeRecord.classA_jacket],
+                    ].map(([label, val]) => val ? (
+                      <div key={label}>
+                        <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-0.5">{label}</p>
+                        <p className="text-sm font-bold">{val}</p>
+                      </div>
+                    ) : null)}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-slate-600 font-bold">No uniform sizes on file yet.</p>
+                )}
+              </div>
+
+              <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest pt-4 border-t border-slate-100 dark:border-white/5">
+                To request a correction or deletion of any record above, contact <a href="mailto:info@pbhsjrotc.com" className="text-yellow-500 hover:underline">info@pbhsjrotc.com</a>.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* PERSONNEL DOSSIER */}

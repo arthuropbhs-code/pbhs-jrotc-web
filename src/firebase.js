@@ -23,6 +23,10 @@ let auth;
 let db;
 let storage;
 
+// Held after analytics loads so setAnalyticsAdminMode can toggle collection
+// on route changes without re-importing the module each time.
+let analyticsInstance = null;
+
 // Gate: analytics never loads until the user has actually accepted cookies
 // via the CookieConsent banner - loading GA unconditionally on every visit
 // (what this used to do) is exactly the thing a consent banner exists to
@@ -45,7 +49,13 @@ function loadAnalytics() {
       isSupported().then((supported) => {
         if (!supported) return;
         try {
-          getAnalytics(app);
+          analyticsInstance = getAnalytics(app);
+          // Apply initial admin-mode check — if the user accepted cookies while
+          // already on an admin page, disable collection immediately.
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+            const { setAnalyticsCollectionEnabled } = await import("firebase/analytics");
+            setAnalyticsCollectionEnabled(analyticsInstance, false);
+          }
         } catch (error) {
           console.warn("Firebase Analytics failed to initialize:", error);
         }
@@ -87,6 +97,18 @@ try {
   }
 } catch (error) {
   console.error("Firebase failed to initialize cleanly:", error);
+}
+
+// Called by App.jsx on every route change. Disables GA collection while the
+// user is on any /admin/* page, re-enables it on public pages. No-ops
+// gracefully if analytics hasn't loaded yet (consent not given).
+export function setAnalyticsAdminMode(isAdmin) {
+  if (!analyticsInstance) return;
+  import("firebase/analytics")
+    .then(({ setAnalyticsCollectionEnabled }) => {
+      setAnalyticsCollectionEnabled(analyticsInstance, !isAdmin);
+    })
+    .catch(() => {});
 }
 
 // Export services safely so your pages don't crash when opening the site
