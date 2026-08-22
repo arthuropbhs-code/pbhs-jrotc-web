@@ -65,7 +65,7 @@ const TermsOfService = () => {
           <p>By using this site, you agree to comply with the <strong className="text-slate-900 dark:text-white">Broward County Public Schools Student Code of Conduct</strong> (SBBC Policy 5.8) and the <strong className="text-slate-900 dark:text-white">PBHS JROTC Standard Operating Procedures (SOP)</strong> in all your interactions with this portal. These existing rules apply to your conduct here just as they do in any other school-connected setting.</p>
           <p>You agree not to:</p>
           <p>&bull; Impersonate another person or misrepresent your rank, position, or role.</p>
-          <p>&bull; Submit false or fabricated data — including uniform requests, supply requests, physical fitness scores, fundraiser records, or promotion board evaluations.</p>
+          <p>&bull; Submit false or fabricated data — including uniform requests, supply requests, physical fitness scores, fundraiser records, or promotion board evaluations — or otherwise misuse any portal tool or feature.</p>
           <p>&bull; Attempt to access, view, or modify data outside the scope your role permits — for example, accessing another company's roster or records when your role is scoped to your own company.</p>
           <p>&bull; Attempt to bypass account security features, including the CAPTCHA, two-factor authentication, or the account approval workflow.</p>
           <p>&bull; Upload content that is inappropriate, harassing, or unrelated to battalion business.</p>
