@@ -45,7 +45,7 @@ function loadAnalytics() {
   // measurementId/appId shouldn't be able to break anything else on the
   // page just because analytics couldn't start.
   import("firebase/analytics")
-    .then(({ getAnalytics, isSupported }) =>
+    .then(({ getAnalytics, isSupported, setAnalyticsCollectionEnabled }) =>
       isSupported().then((supported) => {
         if (!supported) return;
         try {
@@ -53,7 +53,6 @@ function loadAnalytics() {
           // Apply initial admin-mode check — if the user accepted cookies while
           // already on an admin page, disable collection immediately.
           if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
-            const { setAnalyticsCollectionEnabled } = await import("firebase/analytics");
             setAnalyticsCollectionEnabled(analyticsInstance, false);
           }
         } catch (error) {
