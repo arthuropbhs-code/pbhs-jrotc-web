@@ -264,7 +264,7 @@ const CalendarPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-start">
 
           {/* MAIN CALENDAR GRID */}
-          <div className="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl shadow-slate-200/40 dark:shadow-none">
+          <div className="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/40 dark:shadow-none">
             <div className="grid grid-cols-7 mb-6">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                 <div key={d} className="text-center text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em]">{d}</div>
@@ -299,7 +299,7 @@ const CalendarPage = () => {
                     onMouseEnter={(e) => handleDayEnter(e, dayStr, dayEvents)}
                     onMouseLeave={handleDayLeave}
                     onClick={() => handleDayClick(dayStr, dayEvents)}
-                    className={`aspect-square rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center relative group
+                    className={`aspect-square rounded-2xl border transition-colors duration-200 flex flex-col items-center justify-center relative group
                       ${hasEvent ? 'cursor-pointer' : ''}
                       ${isToday
                         ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
@@ -358,7 +358,7 @@ const CalendarPage = () => {
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }} 
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: Math.min(idx * 0.05, 0.3) }}
                     key={event.id} 
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 p-6 rounded-[2rem] relative overflow-hidden group hover:border-yellow-500/30 transition-all shadow-lg shadow-slate-200/40 dark:shadow-none"
                   >

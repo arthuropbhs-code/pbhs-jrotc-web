@@ -175,7 +175,7 @@ const Leadership = () => {
              <div className="flex flex-col gap-4 w-full">
                <div className="bg-white dark:bg-slate-900 border border-yellow-500/30 p-6 rounded-2xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
                    <div className="w-16 h-16 rounded-full border-2 border-yellow-500/50 overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-800">
-                     <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover" />
+                     <img src={csm.portrait} alt={csm.name} className="w-full h-full object-cover" loading="lazy" />
                    </div>
                    <div>
                      <p className="text-[10px] font-black tracking-widest text-yellow-500 uppercase">{csm.role}</p>
@@ -190,7 +190,7 @@ const Leadership = () => {
                    {sgmMembers.map((sgmItem, index) => (
                      <div key={index} className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-4 rounded-xl w-full transition-all hover:-translate-y-1 text-left flex items-center gap-4">
                          <div className="w-12 h-12 rounded-full border border-slate-200 dark:border-white/10 overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-800">
-                           <img src={sgmItem.portrait || "/covers/placeholder.webp"} alt={sgmItem.name} className="w-full h-full object-cover" />
+                           <img src={sgmItem.portrait || "/covers/placeholder.webp"} alt={sgmItem.name} className="w-full h-full object-cover" loading="lazy" />
                          </div>
                          <div>
                            <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">{sgmItem.role || "Sergeant Major"}</p>
@@ -227,7 +227,7 @@ const Leadership = () => {
                   <div key={i} className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 border-l-4 border-l-yellow-600 p-5 flex justify-between items-center group rounded-xl">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full border border-yellow-600/30 overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-800">
-                        <img src={s.portrait || "/covers/placeholder.webp"} alt={s.name} className="w-full h-full object-cover" />
+                        <img src={s.portrait || "/covers/placeholder.webp"} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">{s.role}</p>
@@ -272,7 +272,7 @@ const Leadership = () => {
 const CommandBox = ({ data, variant }) => (
   <motion.div whileHover={{ y: -5 }} className={`${variant === 'gold' ? 'bg-yellow-500 text-slate-950 shadow-[0_0_40px_rgba(234,179,8,0.2)]' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'} p-6 rounded-2xl w-full relative transition-all flex items-center gap-5 text-left`}>
   <div className={`w-20 h-20 rounded-full border-2 overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-800 ${variant === 'gold' ? 'border-slate-900' : 'border-yellow-500/50'}`}>
-    <img src={data.portrait} alt={data.name} className="w-full h-full object-cover" />
+    <img src={data.portrait} alt={data.name} className="w-full h-full object-cover" loading="lazy" />
   </div>
   <div>
     <p className={`text-[10px] font-black tracking-[0.2em] uppercase mb-1 ${variant === 'gold' ? 'text-slate-800' : 'text-yellow-500'}`}>

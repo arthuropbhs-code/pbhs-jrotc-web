@@ -57,8 +57,9 @@ const Photos = () => {
                 {album.coverImage ? (
                   <img
                     src={album.coverImage}
-                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-[transform,opacity] duration-300 ease-out"
                     alt={album.title}
+                    loading="lazy"
                     onError={(e) => { e.target.src = "https://via.placeholder.com/400x500?text=Image+Missing"; }}
                   />
                 ) : (
@@ -77,7 +78,7 @@ const Photos = () => {
                 </div>
                 <h3 className="text-3xl font-black text-white uppercase italic mb-6 tracking-tight">{album.title}</h3>
 
-                <div className="inline-flex items-center gap-3 text-[10px] font-black text-white uppercase tracking-widest bg-white/5 backdrop-blur-md border border-white/10 px-5 py-3 rounded-xl group-hover:bg-[oklch(79.5%_0.184_86.047)] group-hover:text-slate-950 transition-all duration-300">
+                <div className="inline-flex items-center gap-3 text-[10px] font-black text-white uppercase tracking-widest bg-white/5 border border-white/10 px-5 py-3 rounded-xl group-hover:bg-[oklch(79.5%_0.184_86.047)] group-hover:text-slate-950 transition-colors duration-300">
                   View External Album <ExternalLink size={14} />
                 </div>
               </div>
