@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="10"   label="Releases"    />
-        <Stat value="200+" label="Commits"     />
-        <Stat value="22"   label="Role Levels" />
-        <Stat value="208d" label="In Dev"      />
-        <Stat value="v1.6" label="Current"     />
+        <Stat value="11"     label="Releases"    />
+        <Stat value="200+"   label="Commits"     />
+        <Stat value="22"     label="Role Levels" />
+        <Stat value="210d"   label="In Dev"      />
+        <Stat value="v1.6.6" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -445,9 +445,16 @@ const AdminChangelog = () => {
         <Patch version="v1.6.4" date="Aug 22" title="Build fix" changes={<>
           <C type="fix">Build error resolved: <code className="font-mono text-[10px]">await import()</code> removed from non-async <code className="font-mono text-[10px]">.then()</code> callback in <code className="font-mono text-[10px]">firebase.js</code> — <code className="font-mono text-[10px]">setAnalyticsCollectionEnabled</code> now destructured from the outer import instead</C>
         </>} />
-        <Patch version="v1.6.5" date="Aug 22" title="Version History page" isCurrent changes={<>
+        <Patch version="v1.6.5" date="Aug 22" title="Version History page" changes={<>
           <C type="feat">This page — <code className="font-mono text-[10px]">/admin/changelog</code> — added to the portal with full patch-level history</C>
           <C type="feat">"Version History" link added to admin sidebar (visible to all authenticated users)</C>
+        </>} />
+        <Patch version="v1.6.6" date="Aug 24" title="5 bug fixes" isCurrent changes={<>
+          <C type="fix">Company Executive Officers no longer appear in "Meet the Top 3" on the homepage — XO/Battalion XO roles now require an empty company field to match</C>
+          <C type="fix">Zulu Company removed from the public Company Leadership tab — it is the battalion HQ placeholder, not a line company</C>
+          <C type="fix">Blue/Gold day system now supports an <code className="font-mono text-[10px]">endDate</code> field in <code className="font-mono text-[10px]">settings/blueGoldCalendar</code>; B/G labels and the header badge disappear automatically after school year ends</C>
+          <C type="fix">Calendar agenda no longer stretches the calendar grid row when it has more events than the calendar is tall — grid columns now size independently</C>
+          <C type="perf">Home page animation lag reduced: hero transition cut from 1.5 s to 0.7 s, ScrambleText render load halved, hero image loads at high priority</C>
         </>} />
       </Minor>
 

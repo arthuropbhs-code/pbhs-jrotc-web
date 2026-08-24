@@ -346,13 +346,13 @@ const CalendarPage = () => {
           </div>
 
           {/* SIDEBAR AGENDA */}
-          <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-6">
+          <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Monthly Agenda</h3>
               <div className="h-px flex-1 bg-slate-200 dark:bg-white/5 ml-4" />
             </div>
 
-            <div className="space-y-4 max-h-[700px] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {visibleEvents.map((event, idx) => (
                   <motion.div 
