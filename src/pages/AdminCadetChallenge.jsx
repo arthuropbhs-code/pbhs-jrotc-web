@@ -391,6 +391,9 @@ const AdminCadetChallenge = () => {
         cycleNumber:      selectedCycle,
         cadetId:          form.cadetId   || 'manual',
         cadetName:        form.cadetName.trim(),
+        // linkedUid lets Firestore rules gate personal reads by the cadet's own
+        // Auth UID without a 2-hop join through the roster collection.
+        linkedUid:        cadetRosterEntry?.linkedUid || null,
         pushUps:       form.medicalExempt ? null : (form.pushUps   !== '' ? Number(form.pushUps)   : null),
         sitUps:        form.medicalExempt ? null : (form.sitUps    !== '' ? Number(form.sitUps)    : null),
         shuttleRun:    form.medicalExempt ? null : (form.shuttleRun !== '' ? parseFloat(form.shuttleRun) : null),

@@ -99,7 +99,7 @@ const ic  = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:bo
 const lc  = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1 tracking-widest';
 
 const EMPTY_FORM = {
-  cadetId: '', cadetName: '', gender: '',
+  cadetId: '', cadetName: '', gender: '', linkedUid: '',
   classBShirtSize: '',
   classBPantsSize: '',
   ptShirtSize: '',
@@ -309,6 +309,7 @@ const AdminUniformSizes = () => {
       cadetId:    uid,
       cadetName:  cadet.fullName || '',
       gender,
+      linkedUid:  cadet.linkedUid || '',
       hasClassA:  false,  // will be overridden below if leadership
       // Reset size fields for new cadet (or keep existing if re-editing)
     }));
@@ -356,6 +357,9 @@ const AdminUniformSizes = () => {
         cadetId:          form.cadetId,
         cadetName:        form.cadetName,
         gender:           form.gender || '',
+        // Stored so Firestore rules can gate personal reads by Auth UID without
+        // a 2-hop roster lookup (cadetId is a roster doc ID, not an Auth UID).
+        linkedUid:        form.linkedUid || null,
         classBShirtSize:  form.classBShirtSize  || null,
         classBPantsSize:  form.classBPantsSize  || null,
         ptShirtSize:      form.ptShirtSize      || null,

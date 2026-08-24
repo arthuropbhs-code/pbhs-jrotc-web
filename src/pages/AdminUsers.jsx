@@ -71,7 +71,10 @@ const AdminUsers = () => {
   const canManageLoginFor = (targetRole) =>
     EMAIL_MANAGER_ROLES.includes(role) && (ROLE_HIERARCHY[targetRole] || 0) < userLevel;
 
-  const ROLE_OPTIONS = Object.entries(ROLE_LABELS);
+  // Only show roles strictly below the current user's own level — prevents
+  // privilege-cloning (setting someone to your own or a higher role).
+  const ROLE_OPTIONS = Object.entries(ROLE_LABELS)
+    .filter(([slug]) => (ROLE_HIERARCHY[slug] || 0) < userLevel);
   const { companiesWithBattalion: COMPANIES } = useCompanies();
 
   // Dropdown Constants

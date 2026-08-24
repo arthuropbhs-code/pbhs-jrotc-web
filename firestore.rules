@@ -26,7 +26,7 @@ service cloud.firestore {
         'battalion_commander': 90, 'battalion_xo': 85, 'battalion_csm': 85, 'sergeant_major': 80,
         's1_adjutant': 70, 's2_intelligence': 70, 's3_operations': 70, 's4_logistics': 70,
         's5_public_affairs': 70, 's6_technology': 70, 's7_special_projects': 70,
-        'company_commander': 55, 'company_xo': 50, 'company_1sg': 45,
+        'company_commander': 55, 'company_xo': 50, 'company_1sg': 45, 'company_master_sergeant': 45,
         'company_s1_assistant': 35, 'company_s2_assistant': 35, 'company_s3_assistant': 35,
         'company_s4_assistant': 35, 'company_s5_assistant': 35, 'company_s6_assistant': 35, 'company_s7_assistant': 35,
         'platoon_leader': 25, 'platoon_sergeant': 20,
@@ -88,7 +88,12 @@ service cloud.firestore {
 
       allow create, delete: if isSignedIn() && isAdmin();
       allow update: if isSignedIn() && (
-        isAdmin() ||
+        // Admins may update any field, but cannot elevate a role to their own
+        // level or above — prevents privilege-cloning attacks.
+        (isAdmin() && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          roleLevel(request.resource.data.role) < myLevel()
+        )) ||
         (request.auth.uid == userId &&
          !request.resource.data.diff(resource.data).affectedKeys().hasAny([
            'role', 'company', 'platoon', 'squad', 'rank',
@@ -118,11 +123,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && myLevel() >= resource.data.issuerLevel;
     }
 
-    // Public calendar — readable without auth. Any signed-in staff can write
-    // (mirrors /admin/events which is open to all authenticated users).
+    // Public calendar — readable without auth. Staff tier (70+) can write;
+    // this matches the /admin/events ProtectedRoute minLevel gate.
     match /events/{id} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && myLevel() >= 70;
     }
 
     // Internal orders feed — not public.
@@ -219,10 +224,11 @@ service cloud.firestore {
     // Admin-configurable settings: company names, document categories,
     // page visibility toggle (settings/pageVisibility is read pre-auth by
     // the public nav, so read must be public).
-    // blueGoldCalendar anchor date is writable by any signed-in staff via /admin/events.
+    // Write gated to staff tier (70+) — cadets and company leadership cannot
+    // vandalize global config like company names or the Blue/Gold anchor date.
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && myLevel() >= 70;
     }
 
     // Battalion Roster — source of truth for all cadets regardless of portal account.
@@ -294,9 +300,16 @@ service cloud.firestore {
     // Their records are stored under company='Zulu' but must also be readable
     // and writable by Alpha's S1 assistant (via secondaryCompany match).
     match /cadetChallengeRecords/{docId} {
-      // Read open to all signed-in users so cadets can query their own records
-      // by cadetId (roster doc ID) for the personal view. UI enforces scoping.
-      allow read: if isSignedIn();
+      // Staff (70+) sees all; company assistants (35+) see own company;
+      // battalion members readable via secondaryCompany match;
+      // cadets can read their own record via linkedUid (personal profile view).
+      // linkedUid is written to new records by AdminCadetChallenge at create time.
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company) ||
+        (myLevel() >= 35 && resource.data.secondaryCompany == userDoc().company) ||
+        resource.data.linkedUid == request.auth.uid
+      );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 35 && request.resource.data.company == userDoc().company) ||
@@ -387,13 +400,16 @@ service cloud.firestore {
     // ── Fundraiser Entries (Fallen Heroes) ───────────────────────────────────
     // create — company command (45+) for own company; s1_adjutant + s3_operations
     //          (70+) and higher for any company.
-    // read   — any signed-in user: full-access roles see all, everyone else
-    //          queries by their own cadetId/cadetName in the component.
-    //          Entries also store linkedUid so future rules can gate by uid.
-    // update — company command reads own company; staff (70+) reads all (void).
+    // read   — staff (70+) sees all; company command sees own company; cadets
+    //          can read their own entry via linkedUid (personal profile view).
+    // update — company command for own company; staff (70+) for all.
     // delete — staff (70+) only.
     match /fundraiserEntries/{entryId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        resource.data.linkedUid == request.auth.uid
+      );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 45 && request.resource.data.company == userDoc().company)
@@ -411,9 +427,15 @@ service cloud.firestore {
     // Read:  company command (45+) reads own company; logistics/admin (70+) reads all.
     // Delete: logistics/admin (70+) only.
     match /uniformSizes/{docId} {
-      // Read open to all signed-in users so cadets can query their own size record
-      // by cadetId (roster doc ID) for the personal view. UI enforces scoping.
-      allow read: if isSignedIn();
+      // Staff (70+) sees all; company command + S4 assistant sees own company;
+      // cadets can read their own record via linkedUid (personal profile view).
+      // linkedUid is written to new records by AdminUniformSizes at create time.
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
+        (userDoc().role == 'company_s4_assistant' && resource.data.company == userDoc().company) ||
+        resource.data.linkedUid == request.auth.uid
+      );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 45 && request.resource.data.company == userDoc().company) ||
@@ -504,13 +526,17 @@ service cloud.firestore {
     // ── Promotion Scores ──────────────────────────────────────────────────────
     // Created by S1 in bulk when a board is opened.
     // Company XO (50+) updates scores for their own company; staff (70+) for all.
-    // Read: company command (45+) for own company; staff (70+) for all.
+    // Read: staff (70+) sees all; company command (45+) sees own company only
+    //       so commanders cannot compare scores against other companies.
     // Delete: S1 adjutant or admin (85+).
     match /promotionScores/{id} {
       allow create: if isSignedIn() && (
         userDoc().role == 's1_adjutant' || myLevel() >= 85
       );
-      allow read: if isSignedIn() && myLevel() >= 45;
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && resource.data.company == userDoc().company)
+      );
       allow update: if isSignedIn() && (
         myLevel() >= 70 ||
         (myLevel() >= 50 && resource.data.company == userDoc().company)
@@ -560,9 +586,10 @@ service cloud.firestore {
       allow write: if isSignedIn() && myLevel() >= 95;
     }
 
-    // Fallback — anything not matched above.
+    // Fallback — deny everything not covered by an explicit rule above.
+    // Every new collection MUST get its own match block before it can be used.
     match /{path=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }

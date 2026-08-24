@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="12"     label="Releases"    />
+        <Stat value="13"     label="Releases"    />
         <Stat value="274"    label="Commits"     />
         <Stat value="22"     label="Role Levels" />
         <Stat value="210d"   label="In Dev"      />
-        <Stat value="v1.6.7" label="Current"     />
+        <Stat value="v1.6.8" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -459,13 +459,22 @@ const AdminChangelog = () => {
           <C type="fix">Agenda event cards are never clipped mid-card — removed the fixed-height scroll container so all cards are always fully visible and the page scrolls naturally</C>
           <C type="perf">Home page animation lag reduced: hero transition cut from 1.5 s to 0.7 s, ScrambleText render load halved, hero image loads at high priority</C>
         </>} />
-        <Patch version="v1.6.7" date="Aug 24" title="Performance pass" isCurrent changes={<>
+        <Patch version="v1.6.7" date="Aug 24" title="Performance pass" changes={<>
           <C type="perf">Leadership portraits now lazy-load — all four image slots (BC, XO/CSM, SGM, staff officers) deferred until near the viewport; previously all pulled from Firebase Storage on page load regardless of scroll position</C>
           <C type="perf">Photo Gallery album covers now lazy-load; hover image transition scoped from <code className="font-mono text-[10px]">transition-all duration-700</code> (watched 60+ CSS properties for 700 ms) to <code className="font-mono text-[10px]">transition-[transform,opacity] duration-300</code></C>
           <C type="perf">Removed <code className="font-mono text-[10px]">backdrop-blur-md</code> from the calendar grid card (sat on a solid background — sampled nothing, just burned a GPU compositing layer) and from Photos album buttons (9 layers on one page)</C>
           <C type="perf">Calendar day-cell hover narrowed from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code> — 31 cells × all CSS properties was the main hover jank source on the events page</C>
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
+        </>} />
+        <Patch version="v1.6.8" date="Aug 24" title="Security audit — 7 fixes" isCurrent changes={<>
+          <C type="sec">Firestore wildcard fallback changed from <code className="font-mono text-[10px]">if isSignedIn()</code> to <code className="font-mono text-[10px]">if false</code> — any collection without an explicit rule is now deny-all rather than fully open to all signed-in users</C>
+          <C type="sec"><code className="font-mono text-[10px]">settings/{'{'}settingId{'}'}</code> write now requires staff tier (70+) — cadets and company leadership could previously overwrite company names, the Blue/Gold anchor date, and page visibility settings</C>
+          <C type="sec"><code className="font-mono text-[10px]">events/{'{'}id{'}'}</code> write now requires staff tier (70+) — any signed-in cadet could previously create, modify, or delete public calendar events</C>
+          <C type="sec"><code className="font-mono text-[10px]">cadetChallengeRecords</code>, <code className="font-mono text-[10px]">uniformSizes</code>, and <code className="font-mono text-[10px]">fundraiserEntries</code> reads tightened from open-to-all-signed-in to company-scoped; cadets can still read their own records via <code className="font-mono text-[10px]">linkedUid</code> (now written at create time)</C>
+          <C type="sec">Role assignment dropdown in User Management now only shows roles strictly below the editor's own level — prevents privilege-cloning attacks; matching ceiling check added to the Firestore <code className="font-mono text-[10px]">users</code> update rule</C>
+          <C type="sec">Promotion board scores read narrowed from all-command-tier to company-scoped — company commanders can no longer query scores for other companies via the Firestore client</C>
+          <C type="sec"><code className="font-mono text-[10px]">company_master_sergeant</code> role added to Firestore <code className="font-mono text-[10px]">roleLevel()</code> map at level 45 — was missing, causing that role to resolve to level 0 at the database layer despite being level 45 in the app</C>
         </>} />
       </Minor>
 
