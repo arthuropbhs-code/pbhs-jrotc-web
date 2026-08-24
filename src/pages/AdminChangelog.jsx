@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="11"     label="Releases"    />
+        <Stat value="12"     label="Releases"    />
         <Stat value="200+"   label="Commits"     />
         <Stat value="22"     label="Role Levels" />
         <Stat value="210d"   label="In Dev"      />
-        <Stat value="v1.6.6" label="Current"     />
+        <Stat value="v1.6.7" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -451,13 +451,21 @@ const AdminChangelog = () => {
           <C type="fix">Changelog page content was rendering too far left — wrapped in correct padding layer since AdminLayout's <code className="font-mono text-[10px]">&lt;Outlet /&gt;</code> provides none</C>
           <C type="fix">Sidebar link was appearing ungrouped at the top between Dashboard and Command; moved to a labeled "Portal" section above the logout button</C>
         </>} />
-        <Patch version="v1.6.6" date="Aug 24" title="5 bug fixes" isCurrent changes={<>
+        <Patch version="v1.6.6" date="Aug 24" title="5 bug fixes" changes={<>
           <C type="fix">Company Executive Officers no longer appear in "Meet the Top 3" on the homepage — XO/Battalion XO roles now require an empty company field to match</C>
           <C type="fix">Zulu Company removed from the public Company Leadership tab — it is the battalion HQ placeholder, not a line company</C>
           <C type="fix">Blue/Gold day system now supports an <code className="font-mono text-[10px]">endDate</code> field in <code className="font-mono text-[10px]">settings/blueGoldCalendar</code>; B/G labels and the header badge disappear automatically after school year ends</C>
           <C type="fix">Calendar agenda no longer stretches the calendar grid row when it has more events than the calendar is tall — grid columns now size independently with <code className="font-mono text-[10px]">items-start</code></C>
           <C type="fix">Agenda event cards are never clipped mid-card — removed the fixed-height scroll container so all cards are always fully visible and the page scrolls naturally</C>
           <C type="perf">Home page animation lag reduced: hero transition cut from 1.5 s to 0.7 s, ScrambleText render load halved, hero image loads at high priority</C>
+        </>} />
+        <Patch version="v1.6.7" date="Aug 24" title="Performance pass" isCurrent changes={<>
+          <C type="perf">Leadership portraits now lazy-load — all four image slots (BC, XO/CSM, SGM, staff officers) deferred until near the viewport; previously all pulled from Firebase Storage on page load regardless of scroll position</C>
+          <C type="perf">Photo Gallery album covers now lazy-load; hover image transition scoped from <code className="font-mono text-[10px]">transition-all duration-700</code> (watched 60+ CSS properties for 700 ms) to <code className="font-mono text-[10px]">transition-[transform,opacity] duration-300</code></C>
+          <C type="perf">Removed <code className="font-mono text-[10px]">backdrop-blur-md</code> from the calendar grid card (sat on a solid background — sampled nothing, just burned a GPU compositing layer) and from Photos album buttons (9 layers on one page)</C>
+          <C type="perf">Calendar day-cell hover narrowed from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code> — 31 cells × all CSS properties was the main hover jank source on the events page</C>
+          <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
+          <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
       </Minor>
 
