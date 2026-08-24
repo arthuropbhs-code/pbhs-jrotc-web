@@ -77,6 +77,7 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState(null); // null = all
   const [anchorDate, setAnchorDate] = useState('2026-08-03'); // first Blue Day of 2026-2027
+  const [blueGoldEndDate, setBlueGoldEndDate] = useState('');  // last day to show B/G (from Firestore)
   const [hoveredDay, setHoveredDay] = useState(null);   // { dayStr, events, rect } | null
   const [selectedDay, setSelectedDay] = useState(null); // { dayStr, events } | null — click modal
 
@@ -109,10 +110,13 @@ const CalendarPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // Load anchor date from admin settings
+  // Load anchor date (and optional end date) from admin settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'blueGoldCalendar'), (snap) => {
-      if (snap.exists() && snap.data().anchorDate) setAnchorDate(snap.data().anchorDate);
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.anchorDate) setAnchorDate(data.anchorDate);
+      if (data.endDate)    setBlueGoldEndDate(data.endDate);
     });
     return () => unsub();
   }, []);
@@ -132,7 +136,8 @@ const CalendarPage = () => {
     [events]
   );
 
-  // Map of day-of-month → 'blue' | 'gold' for the current month view
+  // Map of day-of-month → 'blue' | 'gold' for the current month view.
+  // Stops showing B/G labels after blueGoldEndDate (end of school year).
   const blueGoldMap = useMemo(() => {
     const map = new Map();
     const y = currentDate.getFullYear();
@@ -141,23 +146,26 @@ const CalendarPage = () => {
       const dow = new Date(y, m, day).getDay();
       if (dow === 0 || dow === 5 || dow === 6) continue; // skip weekends + Fridays
       const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (blueGoldEndDate && ds > blueGoldEndDate) continue; // after school year ends
       if (noSchoolDates.has(ds)) continue; // day off — no Blue/Gold
       const n = countSchoolDays(anchorDate, ds, noSchoolDates);
       if (n >= 0) map.set(day, n % 2 === 0 ? 'blue' : 'gold');
     }
     return map;
-  }, [anchorDate, currentDate, daysInMonth, noSchoolDates]);
+  }, [anchorDate, blueGoldEndDate, currentDate, daysInMonth, noSchoolDates]);
 
-  // Today's Blue/Gold status for the header badge
+  // Today's Blue/Gold status for the header badge.
+  // Returns null after blueGoldEndDate so the badge hides once school is out.
   const todayBlueGold = useMemo(() => {
     const today = new Date();
     const dow = today.getDay();
     if (dow === 0 || dow === 5 || dow === 6) return null; // no school: weekends + Fridays
     const ds = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    if (blueGoldEndDate && ds > blueGoldEndDate) return null;
     if (noSchoolDates.has(ds)) return null;
     const n = countSchoolDays(anchorDate, ds, noSchoolDates);
     return n >= 0 ? (n % 2 === 0 ? 'blue' : 'gold') : null;
-  }, [anchorDate, noSchoolDates]);
+  }, [anchorDate, blueGoldEndDate, noSchoolDates]);
 
   // --- CATEGORY FILTER ---
   // Unique categories present across ALL events (stable as months change)
@@ -253,7 +261,7 @@ const CalendarPage = () => {
           </Reveal>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-start">
 
           {/* MAIN CALENDAR GRID */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl shadow-slate-200/40 dark:shadow-none">
@@ -338,13 +346,13 @@ const CalendarPage = () => {
           </div>
 
           {/* SIDEBAR AGENDA */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-6">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Monthly Agenda</h3>
               <div className="h-px flex-1 bg-slate-200 dark:bg-white/5 ml-4" />
             </div>
-            
-            <div className="space-y-4">
+
+            <div className="space-y-4 max-h-[700px] overflow-y-auto pr-1">
               <AnimatePresence mode="popLayout">
                 {visibleEvents.map((event, idx) => (
                   <motion.div 

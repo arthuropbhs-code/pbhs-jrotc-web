@@ -87,7 +87,10 @@ const Leadership = () => {
 
   // --- 3. DYNAMIC COMPANY GENERATOR ---
   // Derived from useCompanies() → matches AdminLeadership's format exactly.
-  const companyNames = rawCompanies.map(c => `${c} Company`);
+  // Zulu is the battalion HQ placeholder company — exclude it from the public Company Leadership tab
+  const companyNames = rawCompanies
+    .filter(c => c.toLowerCase() !== 'zulu')
+    .map(c => `${c} Company`);
 
   const companies = companyNames.map((companyName) => {
     const companyMembers = cmsEntries.filter((item) => {

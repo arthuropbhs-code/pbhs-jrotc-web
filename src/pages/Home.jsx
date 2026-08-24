@@ -68,6 +68,7 @@ const Home = () => {
             name: meta.name.toUpperCase(),
             role: meta.role ? meta.role.trim() : '',
             rank: meta.rank || '',
+            company: meta.company ? meta.company.trim().toLowerCase() : '',
             image: meta.portrait || '/covers/default.webp',
             quote: meta.quote || 'Ready to lead and excel.'
           };
@@ -79,13 +80,15 @@ const Home = () => {
         return roleStr.toLowerCase().replace(/[\s-_]/g, '');
       };
 
-      // Filter down specifically to the Top 3 command elements using unified sanitization
+      // Filter down specifically to the Top 3 command elements using unified sanitization.
+      // XO/Battalion XO roles must NOT have a company assignment — company Executive Officers
+      // share the same role string and should not appear here.
       const filteredTopThree = leadersList.filter(l => {
         const cleanRole = sanitizeRole(l.role);
+        const hasCompany = l.company && l.company !== '' && l.company !== 'none';
         return (
           cleanRole === 'battalioncommander' ||
-          cleanRole === 'executiveofficer' ||
-          cleanRole === 'battalionxo' ||
+          ((cleanRole === 'executiveofficer' || cleanRole === 'battalionxo') && !hasCompany) ||
           cleanRole === 'commandsergeantmajor'
         );
       });
@@ -139,16 +142,17 @@ const Home = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
-            initial={{ opacity: 0, scale: 1.1 }}
+            initial={{ opacity: 0, scale: 1.05 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.5 }}
+            transition={{ duration: 0.7 }}
             className="absolute inset-0 z-0"
           >
-            <img 
-              src={slides[currentIndex].url} 
+            <img
+              src={slides[currentIndex].url}
               alt={[slides[currentIndex].title, slides[currentIndex].subtitle].filter(Boolean).join(' ') || 'PBHS JROTC Tornado Battalion'}
               className="w-full h-full object-cover"
+              fetchpriority={currentIndex === 0 ? 'high' : undefined}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
           </motion.div>
@@ -160,7 +164,7 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-yellow-500 font-bold tracking-[0.4em] uppercase text-xs md:text-sm mb-6 block"
           >
-            <ScrambleText text="Pompano Beach High School JROTC" trigger="mount" speed={22} />
+            <ScrambleText text="Pompano Beach High School JROTC" trigger="mount" speed={8} />
           </motion.span>
           
           {/* Reserves height for the title block so switching slides doesn't
