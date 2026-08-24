@@ -11,7 +11,7 @@
 
 import { storage } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { validateUpload } from './validateUpload';
+import { validateUpload, validateCadetDocument } from './validateUpload';
 
 /**
  * Upload a photo to Firebase Storage.
@@ -45,6 +45,50 @@ export async function uploadPhotoToStorage(file, folder, onProgress) {
         try {
           const url = await getDownloadURL(task.snapshot.ref);
           resolve({ url, storagePath: path, fileName: file.name, bytes: file.size });
+        } catch (err) {
+          reject(err);
+        }
+      },
+    );
+  });
+}
+
+/**
+ * Upload a cadet's yearly form document to Firebase Storage.
+ *
+ * Accepts JPEG, WebP, PNG, or PDF. PNG files are silently converted to JPEG
+ * before upload (same readability, ~3–5× smaller file). The returned
+ * `wasConverted` flag lets callers show a "saved as JPEG" note if desired.
+ *
+ * Files land at:
+ *   cadet-documents/{uid}/{timestamp}_{filename}
+ *
+ * @param {File}     file
+ * @param {string}   uid          - Firebase Auth UID of the cadet the doc belongs to
+ * @param {Function} [onProgress] - optional callback(percent: number)
+ * @returns {Promise<{ url: string, storagePath: string, fileName: string, bytes: number, wasConverted: boolean }>}
+ */
+export async function uploadCadetDocument(file, uid, onProgress) {
+  const { valid, error, file: outFile, wasConverted } = await validateCadetDocument(file);
+  if (!valid) throw new Error(error);
+
+  const safeName   = outFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path       = `cadet-documents/${uid}/${Date.now()}_${safeName}`;
+  const storageRef = ref(storage, path);
+
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(storageRef, outFile, { contentType: outFile.type });
+
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        if (onProgress) onProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+      },
+      reject,
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve({ url, storagePath: path, fileName: outFile.name, bytes: outFile.size, wasConverted });
         } catch (err) {
           reject(err);
         }

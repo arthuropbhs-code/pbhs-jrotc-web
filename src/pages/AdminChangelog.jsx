@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="13"     label="Releases"    />
+        <Stat value="14"     label="Releases"    />
         <Stat value="274"    label="Commits"     />
         <Stat value="22"     label="Role Levels" />
         <Stat value="210d"   label="In Dev"      />
-        <Stat value="v1.6.8" label="Current"     />
+        <Stat value="v1.6.9" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -467,7 +467,13 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.8" date="Aug 24" title="Security audit — 7 fixes" isCurrent changes={<>
+        <Patch version="v1.6.9" date="Aug 24" title="Cadet document storage" isCurrent changes={<>
+          <C type="feat">Storage rule added for <code className="font-mono text-[10px]">cadet-documents/{'{'}uid{'}'}/{'{'}filename{'}'}</code> — yearly after-school form uploads per cadet; 5 MB cap, JPEG / WebP / PNG / PDF accepted, signed-in read for staff review</C>
+          <C type="feat"><code className="font-mono text-[10px]">uploadCadetDocument(file, uid)</code> upload utility added — wraps validation, PNG→JPEG auto-conversion, and Firebase Storage upload in one call</C>
+          <C type="perf">PNG uploads are silently recompressed to JPEG at 88% quality before hitting the network — ~3–5× smaller with no visible quality loss on document scans; falls back to original PNG if the canvas conversion fails</C>
+          <C type="feat"><code className="font-mono text-[10px]">validateCadetDocument</code> and <code className="font-mono text-[10px]">convertPngToJpeg</code> exported from <code className="font-mono text-[10px]">validateUpload.js</code> for reuse in future upload UIs</C>
+        </>} />
+        <Patch version="v1.6.8" date="Aug 24" title="Security audit — 7 fixes" changes={<>
           <C type="sec">Firestore wildcard fallback changed from <code className="font-mono text-[10px]">if isSignedIn()</code> to <code className="font-mono text-[10px]">if false</code> — any collection without an explicit rule is now deny-all rather than fully open to all signed-in users</C>
           <C type="sec"><code className="font-mono text-[10px]">settings/{'{'}settingId{'}'}</code> write now requires staff tier (70+) — cadets and company leadership could previously overwrite company names, the Blue/Gold anchor date, and page visibility settings</C>
           <C type="sec"><code className="font-mono text-[10px]">events/{'{'}id{'}'}</code> write now requires staff tier (70+) — any signed-in cadet could previously create, modify, or delete public calendar events</C>
