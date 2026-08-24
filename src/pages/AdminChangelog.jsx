@@ -447,13 +447,16 @@ const AdminChangelog = () => {
         </>} />
         <Patch version="v1.6.5" date="Aug 22" title="Version History page" changes={<>
           <C type="feat">This page — <code className="font-mono text-[10px]">/admin/changelog</code> — added to the portal with full patch-level history</C>
-          <C type="feat">"Version History" link added to admin sidebar (visible to all authenticated users)</C>
+          <C type="feat">"Version History" link added to admin sidebar in a dedicated "Portal" group at the bottom, visible to all authenticated users</C>
+          <C type="fix">Changelog page content was rendering too far left — wrapped in correct padding layer since AdminLayout's <code className="font-mono text-[10px]">&lt;Outlet /&gt;</code> provides none</C>
+          <C type="fix">Sidebar link was appearing ungrouped at the top between Dashboard and Command; moved to a labeled "Portal" section above the logout button</C>
         </>} />
         <Patch version="v1.6.6" date="Aug 24" title="5 bug fixes" isCurrent changes={<>
           <C type="fix">Company Executive Officers no longer appear in "Meet the Top 3" on the homepage — XO/Battalion XO roles now require an empty company field to match</C>
           <C type="fix">Zulu Company removed from the public Company Leadership tab — it is the battalion HQ placeholder, not a line company</C>
           <C type="fix">Blue/Gold day system now supports an <code className="font-mono text-[10px]">endDate</code> field in <code className="font-mono text-[10px]">settings/blueGoldCalendar</code>; B/G labels and the header badge disappear automatically after school year ends</C>
-          <C type="fix">Calendar agenda no longer stretches the calendar grid row when it has more events than the calendar is tall — grid columns now size independently</C>
+          <C type="fix">Calendar agenda no longer stretches the calendar grid row when it has more events than the calendar is tall — grid columns now size independently with <code className="font-mono text-[10px]">items-start</code></C>
+          <C type="fix">Agenda event cards are never clipped mid-card — removed the fixed-height scroll container so all cards are always fully visible and the page scrolls naturally</C>
           <C type="perf">Home page animation lag reduced: hero transition cut from 1.5 s to 0.7 s, ScrambleText render load halved, hero image loads at high priority</C>
         </>} />
       </Minor>
