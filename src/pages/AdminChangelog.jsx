@@ -118,7 +118,7 @@ const AdminChangelog = () => {
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
         <Stat value="12"     label="Releases"    />
-        <Stat value="200+"   label="Commits"     />
+        <Stat value="274"    label="Commits"     />
         <Stat value="22"     label="Role Levels" />
         <Stat value="210d"   label="In Dev"      />
         <Stat value="v1.6.7" label="Current"     />
