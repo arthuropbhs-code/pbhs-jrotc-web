@@ -30,24 +30,35 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
-    // Per-cadet yearly documents (after-school forms, permission slips, etc.).
-    // Uploaded once per year per cadet; the app auto-converts PNG → JPEG before
-    // upload so files stay small. PDFs accepted in case a family has a digital
-    // copy. 5 MB cap is well above what a JPEG or WebP form scan should need.
+    // S1 form-submission attachments — proof-of-turn-in photos/scans uploaded
+    // by S1 assistants and company command when marking a submission turned in.
+    // The app auto-converts PNG → JPEG before upload to keep file sizes small.
     //
-    // Path: cadet-documents/{uid}/{timestamp}_{filename}
-    //   uid  — the cadet's Firebase Auth UID
+    // Path: form-submissions/{eventId}/{submissionId}_{timestamp}_{filename}
     //
-    // Read:   any signed-in portal member (staff review submissions).
-    // Create/Update: any signed-in user — the UI controls who gets the button.
-    // Delete: any signed-in user — admin-only enforcement happens at the app layer.
-    match /cadet-documents/{uid}/{filename} {
-      allow read:          if request.auth != null;
+    // Read:   any signed-in portal member (commanders review their company).
+    // Create/Update: any signed-in user with type/size gate; UI enforces who gets
+    //                the upload button (CAN_MARK_ROLES in AdminS1.jsx).
+    // Delete: any signed-in user — old file replaced automatically on re-upload.
+    match /form-submissions/{allPaths=**} {
+      allow read:           if request.auth != null;
       allow create, update: if request.auth != null
                             && request.resource.size < 5 * 1024 * 1024
                             && (request.resource.contentType.matches('image/(jpeg|webp|png)')
                                 || request.resource.contentType == 'application/pdf');
-      allow delete:        if request.auth != null;
+      allow delete:         if request.auth != null;
+    }
+
+    // Per-cadet yearly documents keyed by Firebase Auth UID — reserved for
+    // future direct-upload flows outside the S1 tracker.
+    // Path: cadet-documents/{uid}/{timestamp}_{filename}
+    match /cadet-documents/{uid}/{filename} {
+      allow read:           if request.auth != null;
+      allow create, update: if request.auth != null
+                            && request.resource.size < 5 * 1024 * 1024
+                            && (request.resource.contentType.matches('image/(jpeg|webp|png)')
+                                || request.resource.contentType == 'application/pdf');
+      allow delete:         if request.auth != null;
     }
 
   }

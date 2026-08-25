@@ -11,6 +11,35 @@
 
 import { storage } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+
+/**
+ * Low-level: upload any already-validated File to an explicit Storage path.
+ * Use this when the caller controls the path (e.g. S1 form submissions organised
+ * by event, not by cadet UID). For PNG→JPEG conversion + standard path-building
+ * use uploadCadetDocument() instead.
+ *
+ * @param {File}     file
+ * @param {string}   path        - full Storage path, e.g. "form-submissions/evtId/sub_123.jpg"
+ * @param {Function} [onProgress] - optional callback(percent: number)
+ * @returns {Promise<{ url: string, storagePath: string, fileName: string, bytes: number }>}
+ */
+export async function uploadFileToPath(file, path, onProgress) {
+  const storageRef = ref(storage, path);
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(storageRef, file, { contentType: file.type });
+    task.on(
+      'state_changed',
+      (snap) => { if (onProgress) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)); },
+      reject,
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve({ url, storagePath: path, fileName: file.name, bytes: file.size });
+        } catch (err) { reject(err); }
+      },
+    );
+  });
+}
 import { validateUpload, validateCadetDocument } from './validateUpload';
 
 /**
@@ -72,29 +101,10 @@ export async function uploadCadetDocument(file, uid, onProgress) {
   const { valid, error, file: outFile, wasConverted } = await validateCadetDocument(file);
   if (!valid) throw new Error(error);
 
-  const safeName   = outFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const path       = `cadet-documents/${uid}/${Date.now()}_${safeName}`;
-  const storageRef = ref(storage, path);
-
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, outFile, { contentType: outFile.type });
-
-    task.on(
-      'state_changed',
-      (snapshot) => {
-        if (onProgress) onProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
-      },
-      reject,
-      async () => {
-        try {
-          const url = await getDownloadURL(task.snapshot.ref);
-          resolve({ url, storagePath: path, fileName: outFile.name, bytes: outFile.size, wasConverted });
-        } catch (err) {
-          reject(err);
-        }
-      },
-    );
-  });
+  const safeName = outFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path     = `cadet-documents/${uid}/${Date.now()}_${safeName}`;
+  const result   = await uploadFileToPath(outFile, path, onProgress);
+  return { ...result, wasConverted };
 }
 
 /**

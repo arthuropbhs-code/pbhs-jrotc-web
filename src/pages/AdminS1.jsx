@@ -34,7 +34,9 @@ import {
   collection, query, where, onSnapshot,
   writeBatch, doc, getDocs, Timestamp, updateDoc,
 } from 'firebase/firestore';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { validateCadetDocument } from '../utils/validateUpload';
+import { uploadFileToPath } from '../utils/storageUploadPhoto';
 import {
   ClipboardList, Plus, ChevronLeft, CheckCircle2, Clock,
   Search, ChevronDown, ChevronUp, BookUser, Upload,
@@ -500,26 +502,23 @@ const AdminS1 = () => {
     if (!file) return;
     setUploadingId(sub.id);
     try {
-      const safeName   = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path       = `form-submissions/${sub.eventId}/${sub.id}_${Date.now()}_${safeName}`;
-      const fileRef    = storageRef(storage, path);
+      // Validate type/size and silently convert PNG → JPEG before uploading.
+      // Files land under form-submissions/ (organised by event) so the S1 can
+      // find them by event ID if needed outside the portal.
+      const { valid, error, file: outFile } = await validateCadetDocument(file);
+      if (!valid) { alert(error); return; }
 
-      await new Promise((resolve, reject) => {
-        const task = uploadBytesResumable(fileRef, file);
-        task.on('state_changed', null, reject, async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            // Clean up old file if there was one
-            if (sub.fileStoragePath) {
-              try { await deleteObject(storageRef(storage, sub.fileStoragePath)); } catch { /* non-fatal */ }
-            }
-            await updateDoc(doc(db, 'formSubmissions', sub.id), {
-              fileUrl:         url,
-              fileStoragePath: path,
-            });
-            resolve();
-          } catch (err) { reject(err); }
-        });
+      const safeName   = outFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path       = `form-submissions/${sub.eventId}/${sub.id}_${Date.now()}_${safeName}`;
+      const { url }    = await uploadFileToPath(outFile, path);
+
+      // Clean up old file if there was one, then update the submission record.
+      if (sub.fileStoragePath) {
+        try { await deleteObject(storageRef(storage, sub.fileStoragePath)); } catch { /* non-fatal */ }
+      }
+      await updateDoc(doc(db, 'formSubmissions', sub.id), {
+        fileUrl:         url,
+        fileStoragePath: path,
       });
     } catch (err) {
       console.error('File upload error:', err);

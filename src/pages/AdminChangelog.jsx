@@ -467,11 +467,12 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.9" date="Aug 24" title="Cadet document storage" isCurrent changes={<>
-          <C type="feat">Storage rule added for <code className="font-mono text-[10px]">cadet-documents/{'{'}uid{'}'}/{'{'}filename{'}'}</code> — yearly after-school form uploads per cadet; 5 MB cap, JPEG / WebP / PNG / PDF accepted, signed-in read for staff review</C>
-          <C type="feat"><code className="font-mono text-[10px]">uploadCadetDocument(file, uid)</code> upload utility added — wraps validation, PNG→JPEG auto-conversion, and Firebase Storage upload in one call</C>
-          <C type="perf">PNG uploads are silently recompressed to JPEG at 88% quality before hitting the network — ~3–5× smaller with no visible quality loss on document scans; falls back to original PNG if the canvas conversion fails</C>
-          <C type="feat"><code className="font-mono text-[10px]">validateCadetDocument</code> and <code className="font-mono text-[10px]">convertPngToJpeg</code> exported from <code className="font-mono text-[10px]">validateUpload.js</code> for reuse in future upload UIs</C>
+        <Patch version="v1.6.9" date="Aug 24" title="S1 form-submission file upload" isCurrent changes={<>
+          <C type="feat">Storage rule added for <code className="font-mono text-[10px]">form-submissions/{'{'}eventId{'}'}/*</code> — S1 assistants and company command can now attach a photo or scan of the physical form directly to each submission row in the S1 Tracker</C>
+          <C type="perf">PNG uploads in the S1 Tracker are silently recompressed to JPEG at 88% quality before hitting the network — ~3–5× smaller than raw PNG with no visible quality loss on document scans</C>
+          <C type="sec">S1 file uploads now validate by magic-number byte signature (not extension) before upload — rejects disguised non-image/PDF files</C>
+          <C type="fix">S1 Tracker file uploads were broken after the wildcard Firestore Storage fallback was locked to <code className="font-mono text-[10px]">if false</code> — explicit <code className="font-mono text-[10px]">form-submissions</code> rule added</C>
+          <C type="feat"><code className="font-mono text-[10px]">uploadFileToPath</code>, <code className="font-mono text-[10px]">validateCadetDocument</code>, and <code className="font-mono text-[10px]">convertPngToJpeg</code> added as reusable utilities for future upload UIs</C>
         </>} />
         <Patch version="v1.6.8" date="Aug 24" title="Security audit — 7 fixes" changes={<>
           <C type="sec">Firestore wildcard fallback changed from <code className="font-mono text-[10px]">if isSignedIn()</code> to <code className="font-mono text-[10px]">if false</code> — any collection without an explicit rule is now deny-all rather than fully open to all signed-in users</C>
