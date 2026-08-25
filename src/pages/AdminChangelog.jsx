@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="14"     label="Releases"    />
-        <Stat value="274"    label="Commits"     />
-        <Stat value="22"     label="Role Levels" />
-        <Stat value="210d"   label="In Dev"      />
-        <Stat value="v1.6.9" label="Current"     />
+        <Stat value="15"      label="Releases"    />
+        <Stat value="280"     label="Commits"     />
+        <Stat value="22"      label="Role Levels" />
+        <Stat value="210d"    label="In Dev"      />
+        <Stat value="v1.6.10" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -467,7 +467,16 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.9" date="Aug 24" title="S1 form-submission file upload" isCurrent changes={<>
+        <Patch version="v1.6.10" date="Aug 24" title="S1 company scoping + meeting log sharing" isCurrent changes={<>
+          <C type="fix">S1 Tracker: Company XO / CC / 1SG now see only their own company's submissions — query scoped at the database level (<code className="font-mono text-[10px]">where('company', '==', myCompany)</code>) rather than client-side filtering alone</C>
+          <C type="sec">Firestore <code className="font-mono text-[10px]">formSubmissions</code> read rule updated to allow company-level (35+) access to own-company documents; battalion staff (70+) retain full read access</C>
+          <C type="sec">Firestore <code className="font-mono text-[10px]">formEvents</code> rules opened to company-level users (35+ read, 45+ write) — previously blocked non-staff from seeing and creating events in the S1 Tracker once the wildcard fallback was locked</C>
+          <C type="feat">Meeting Logs: Battalion XO can now mark any log as "Share with Company Leadership" — Company Commanders, XOs, and 1SGs gain read-only access to those specific logs via the <code className="font-mono text-[10px">/admin/meeting-logs</code> page</C>
+          <C type="sec">Firestore <code className="font-mono text-[10px]">meetingLogs</code> rule extended: company leadership (45–69) may only read documents where <code className="font-mono text-[10px]">companyAccess == true</code></C>
+          <C type="feat">Composite Firestore index added for <code className="font-mono text-[10px]">formSubmissions [eventId, company]</code> to support the company-scoped submissions query</C>
+          <C type="feat"><code className="font-mono text-[10px]">company_commander</code>, <code className="font-mono text-[10px]">company_xo</code>, and <code className="font-mono text-[10px]">company_1sg</code> added to the Meeting Logs route guard so they can access the page</C>
+        </>} />
+        <Patch version="v1.6.9" date="Aug 24" title="S1 form-submission file upload" changes={<>
           <C type="feat">Storage rule added for <code className="font-mono text-[10px]">form-submissions/{'{'}eventId{'}'}/*</code> — S1 assistants and company command can now attach a photo or scan of the physical form directly to each submission row in the S1 Tracker</C>
           <C type="perf">PNG uploads in the S1 Tracker are silently recompressed to JPEG at 88% quality before hitting the network — ~3–5× smaller than raw PNG with no visible quality loss on document scans</C>
           <C type="sec">S1 file uploads now validate by magic-number byte signature (not extension) before upload — rejects disguised non-image/PDF files</C>

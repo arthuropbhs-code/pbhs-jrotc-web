@@ -54,6 +54,14 @@
         { "fieldPath": "company",  "order": "ASCENDING" },
         { "fieldPath": "cadetName","order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "formSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "company", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

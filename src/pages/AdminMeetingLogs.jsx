@@ -40,7 +40,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { db, auth } from '../firebase';
 import {
-  collection, query, onSnapshot,
+  collection, query, where, onSnapshot,
   doc, addDoc, updateDoc, deleteDoc, Timestamp,
 } from 'firebase/firestore';
 import {
@@ -53,7 +53,11 @@ import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
 const CAN_EDIT_ROLES  = ['battalion_xo'];
-const CAN_VIEW_ROLES  = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
+// Full-access viewers (see all logs):
+const FULL_VIEW_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
+// Company leadership can view logs the XO marks for company-wide sharing:
+const COMPANY_VIEW_ROLES = ['company_commander', 'company_xo', 'company_1sg'];
+const CAN_VIEW_ROLES  = [...FULL_VIEW_ROLES, ...COMPANY_VIEW_ROLES];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(ts) {
@@ -181,12 +185,13 @@ function BulletListEditor({ items, onChange, placeholder, readOnly }) {
 
 // ── Empty log template ─────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  meetingNumber: '',
-  meetingDate:   '',
-  meetingName:   '',
-  attendance:    '',
-  agendaItems:   [],
-  noteItems:     [],
+  meetingNumber:  '',
+  meetingDate:    '',
+  meetingName:    '',
+  attendance:     '',
+  agendaItems:    [],
+  noteItems:      [],
+  companyAccess:  false, // when true, company commanders/XOs/1SGs can view this log
 };
 
 // ── Main page ──────────────────────────────────────────────────────────────────
@@ -195,10 +200,12 @@ const AdminMeetingLogs = () => {
   const userLevel = ROLE_HIERARCHY[role] || 0;
 
   // ── Access flags ─────────────────────────────────────────────────────────────
-  const isAuthorized = CAN_VIEW_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
-  const canEdit      = CAN_EDIT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  const isAuthorized      = CAN_VIEW_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  const canEdit           = CAN_EDIT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
   // Delete is restricted to XO only — instructors and BC can edit but not delete
-  const canDelete    = role === 'battalion_xo';
+  const canDelete         = role === 'battalion_xo';
+  // Company leadership see only logs flagged for company sharing (different query)
+  const isCompanyViewer   = COMPANY_VIEW_ROLES.includes(role) && userLevel < ADMIN_LEVEL;
 
   // ── Data state ────────────────────────────────────────────────────────────────
   const [logs,       setLogs]       = useState([]);
@@ -220,14 +227,18 @@ const AdminMeetingLogs = () => {
   // ── Firestore subscription ────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthorized) return;
-    const q = query(collection(db, 'meetingLogs'));
+    // Company viewers only receive logs the XO has explicitly shared with company
+    // leadership (companyAccess: true). Full-access viewers receive everything.
+    const q = isCompanyViewer
+      ? query(collection(db, 'meetingLogs'), where('companyAccess', '==', true))
+      : query(collection(db, 'meetingLogs'));
     return onSnapshot(q, snap => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => (b.meetingNumber || 0) - (a.meetingNumber || 0));
       setLogs(docs);
       setLoadingLogs(false);
     });
-  }, [isAuthorized]);
+  }, [isAuthorized, isCompanyViewer]);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
   const nextMeetingNumber = useMemo(() => {
@@ -286,12 +297,13 @@ const AdminMeetingLogs = () => {
 
   const openEdit = (log) => {
     setForm({
-      meetingNumber: log.meetingNumber ?? '',
-      meetingDate:   timestampToDateStr(log.meetingDate),
-      meetingName:   log.meetingName  || '',
-      attendance:    log.attendance   || '',
-      agendaItems:   log.agendaItems  || [],
-      noteItems:     log.noteItems    || [],
+      meetingNumber:  log.meetingNumber ?? '',
+      meetingDate:    timestampToDateStr(log.meetingDate),
+      meetingName:    log.meetingName  || '',
+      attendance:     log.attendance   || '',
+      agendaItems:    log.agendaItems  || [],
+      noteItems:      log.noteItems    || [],
+      companyAccess:  log.companyAccess || false,
     });
     setActiveLog(log);
     setModalMode('edit');
@@ -313,14 +325,15 @@ const AdminMeetingLogs = () => {
     setSaving(true);
     try {
       const payload = {
-        meetingNumber: parseInt(form.meetingNumber) || nextMeetingNumber,
-        meetingDate:   dateStrToTimestamp(form.meetingDate),
-        meetingName:   form.meetingName.trim(),
-        attendance:    form.attendance.trim(),
-        agendaItems:   form.agendaItems,
-        noteItems:     form.noteItems,
-        updatedAt:     Timestamp.now(),
-        updatedByName: userData?.fullName || '',
+        meetingNumber:  parseInt(form.meetingNumber) || nextMeetingNumber,
+        meetingDate:    dateStrToTimestamp(form.meetingDate),
+        meetingName:    form.meetingName.trim(),
+        attendance:     form.attendance.trim(),
+        agendaItems:    form.agendaItems,
+        noteItems:      form.noteItems,
+        companyAccess:  form.companyAccess || false,
+        updatedAt:      Timestamp.now(),
+        updatedByName:  userData?.fullName || '',
       };
 
       let updatedLogs;
@@ -452,6 +465,9 @@ const AdminMeetingLogs = () => {
                     <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Meeting Name</th>
                     <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hidden md:table-cell">Agenda</th>
                     <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hidden md:table-cell">Notes</th>
+                    {!isCompanyViewer && (
+                      <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hidden lg:table-cell">Shared</th>
+                    )}
                     <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Actions</th>
                   </tr>
                 </thead>
@@ -501,6 +517,17 @@ const AdminMeetingLogs = () => {
                           <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
                         )}
                       </td>
+                      {!isCompanyViewer && (
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {log.companyAccess ? (
+                            <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                              Shared
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 justify-end">
                           <button
@@ -661,6 +688,49 @@ const AdminMeetingLogs = () => {
                   />
                 )}
               </div>
+
+              {/* Company Access toggle */}
+              {modalMode === 'view' ? (
+                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Company Leadership Access</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                      {activeLog?.companyAccess
+                        ? 'Visible to Company Commanders, XOs, and 1SGs'
+                        : 'Restricted to battalion staff only'}
+                    </p>
+                  </div>
+                  <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
+                    activeLog?.companyAccess
+                      ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/5'
+                  }`}>
+                    {activeLog?.companyAccess ? 'Shared' : 'Staff Only'}
+                  </span>
+                </div>
+              ) : canEdit ? (
+                <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Share with Company Leadership</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                      When on, Company Commanders, XOs, and 1SGs can view this log
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, companyAccess: !f.companyAccess }))}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                      form.companyAccess ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                    role="switch"
+                    aria-checked={form.companyAccess}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      form.companyAccess ? 'translate-x-4' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+              ) : null}
 
               {/* Last saved info */}
               {modalMode === 'view' && activeLog?.updatedAt && (

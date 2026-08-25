@@ -371,10 +371,18 @@ const AdminS1 = () => {
   useEffect(() => {
     if (!selectedEvent) { setSubmissions([]); return; }
 
-    const q = query(
-      collection(db, 'formSubmissions'),
-      where('eventId', '==', selectedEvent.id),
-    );
+    // Battalion-level users fetch all submissions for the event.
+    // Company-level users are scoped to their own company at the query level
+    // (client-side filter in visibleSubs is a second layer of defence, but
+    //  the DB-level filter avoids reading other companies' data entirely).
+    const q = isBattalionLevel
+      ? query(collection(db, 'formSubmissions'), where('eventId', '==', selectedEvent.id))
+      : query(
+          collection(db, 'formSubmissions'),
+          where('eventId', '==', selectedEvent.id),
+          where('company', '==', myCompany || ''),
+        );
+
     const unsub = onSnapshot(q, snap => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       // Sort by company then name
@@ -385,7 +393,7 @@ const AdminS1 = () => {
       setSubmissions(docs);
     });
     return () => unsub();
-  }, [selectedEvent?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedEvent?.id, isBattalionLevel, myCompany]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const activeEvents   = events.filter(e => !isPast(e.dueDate));

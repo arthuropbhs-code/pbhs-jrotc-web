@@ -558,12 +558,14 @@ service cloud.firestore {
     }
 
     // ── Meeting Logs ──────────────────────────────────────────────────────────
-    // Battalion XO conducts and records meetings. S1 and Commander can view.
+    // Battalion XO conducts and records meetings. S1 and Commander can view all.
+    // Company leadership (45–59) can read logs flagged companyAccess:true only.
     // Delete: battalion_xo only.
     match /meetingLogs/{id} {
       allow read: if isSignedIn() && (
         userDoc().role in ['battalion_xo', 's1_adjutant', 'battalion_commander'] ||
-        myLevel() >= 85
+        myLevel() >= 85 ||
+        (myLevel() >= 45 && myLevel() < 70 && resource.data.companyAccess == true)
       );
       allow create, update: if isSignedIn() && (
         userDoc().role == 'battalion_xo' || myLevel() >= 85
@@ -573,17 +575,29 @@ service cloud.firestore {
       );
     }
 
-    // ── Form Events & Form Submissions (Promotion Board import) ───────────────
-    // Written by an external integration (Google Forms / Cloud Function).
-    // The app reads these to auto-populate promotion board roster data.
-    // Read: S1 adjutant and staff (70+). Write: instructor level (95+) only.
+    // ── Form Events & Form Submissions (S1 Tracker + Promotion Board import) ──
+    // formEvents: S1 / company command create events; company assistants view.
+    // formSubmissions: company roles r/w own company; staff (70+) see all.
+    // Instructor-only (95+) path kept for Cloud Function promotion-board import.
     match /formEvents/{id} {
-      allow read: if isSignedIn() && myLevel() >= 70;
-      allow write: if isSignedIn() && myLevel() >= 95;
+      allow read: if isSignedIn() && myLevel() >= 35;
+      allow create, update: if isSignedIn() && myLevel() >= 45;
+      allow delete: if isSignedIn() && myLevel() >= 70;
     }
     match /formSubmissions/{id} {
-      allow read: if isSignedIn() && myLevel() >= 70;
-      allow write: if isSignedIn() && myLevel() >= 95;
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && (
+        myLevel() >= 45 ||
+        (myLevel() >= 35 && request.resource.data.company == userDoc().company)
+      );
+      allow update: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 35 && resource.data.company == userDoc().company)
+      );
+      allow delete: if isSignedIn() && myLevel() >= 70;
     }
 
     // Fallback — deny everything not covered by an explicit rule above.
