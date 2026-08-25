@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="15"      label="Releases"    />
-        <Stat value="280"     label="Commits"     />
+        <Stat value="16"      label="Releases"    />
+        <Stat value="284"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.10" label="Current"     />
+        <Stat value="v1.6.11" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -467,7 +467,11 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.10" date="Aug 24" title="S1 company scoping + meeting log sharing" isCurrent changes={<>
+        <Patch version="v1.6.11" date="Aug 24" title="Dashboard fixes" isCurrent changes={<>
+          <C type="fix">Clicking X on the Getting Started checklist no longer crashes the page — <code className="font-mono text-[10px]">AnimatePresence</code>/<code className="font-mono text-[10px]">motion.div</code> (framer-motion) replaced with native CSS <code className="font-mono text-[10px]">transition-opacity</code>; framer-motion's abrupt-unmount behaviour was the crash root cause</C>
+          <C type="feat">Quick Glance stat tile on the dashboard is now role-aware: staff (70+) see Pending Uniform Requests as before; Company Commanders, XOs, and 1SGs see Cadets Pending Turn-In (live count of their own company's pending S1 submissions); cadets and lower roles see Upcoming Events only</C>
+        </>} />
+        <Patch version="v1.6.10" date="Aug 24" title="S1 company scoping + meeting log sharing" changes={<>
           <C type="fix">S1 Tracker: Company XO / CC / 1SG now see only their own company's submissions — query scoped at the database level (<code className="font-mono text-[10px]">where('company', '==', myCompany)</code>) rather than client-side filtering alone</C>
           <C type="sec">Firestore <code className="font-mono text-[10px]">formSubmissions</code> read rule updated to allow company-level (35+) access to own-company documents; battalion staff (70+) retain full read access</C>
           <C type="sec">Firestore <code className="font-mono text-[10px]">formEvents</code> rules opened to company-level users (35+ read, 45+ write) — previously blocked non-staff from seeing and creating events in the S1 Tracker once the wildcard fallback was locked</C>

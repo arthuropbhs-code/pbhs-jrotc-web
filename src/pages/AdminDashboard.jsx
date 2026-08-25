@@ -21,10 +21,13 @@ import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } 
 
 const AdminDashboard = () => {
   const { userData, role, loading } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [requestCount, setRequestCount] = useState(0);
+  const [events,       setEvents]       = useState([]);
+  const [requestCount, setRequestCount] = useState(0);  // pending uniform requests (staff+)
+  const [s1PendingCount, setS1PendingCount] = useState(0); // pending S1 turn-ins (company cmd)
 
   useEffect(() => {
+    if (loading || !userData) return;
+
     // Filter to today-or-future events so the dashboard never shows stale past events.
     const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
     const eventsQuery = query(
@@ -38,17 +41,30 @@ const AdminDashboard = () => {
       setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => console.error("Events Sync Error:", error));
 
-    const unsubRequests = onSnapshot(collection(db, "uniform_requests"), (snapshot) => {
-      // Count requests still needing staff action (Pending = awaiting S4 approval).
-      const pending = snapshot.docs.filter(d => d.data().status === 'Pending').length;
-      setRequestCount(pending);
-    });
+    const userLvl = ROLE_HIERARCHY[userData.role] || 0;
+    const unsubs = [unsubEvents];
 
-    return () => {
-      unsubEvents();
-      unsubRequests();
-    };
-  }, []);
+    if (userLvl >= STAFF_LEVEL) {
+      // Staff and above: show pending uniform requests they can action.
+      const unsubRequests = onSnapshot(collection(db, "uniform_requests"), (snapshot) => {
+        const pending = snapshot.docs.filter(d => d.data().status === 'Pending').length;
+        setRequestCount(pending);
+      });
+      unsubs.push(unsubRequests);
+    } else if (userLvl >= COMMAND_LEVEL && userData.company) {
+      // Company leadership (45–69): show cadets still pending turn-in in their company.
+      const s1Query = query(
+        collection(db, 'formSubmissions'),
+        where('company', '==', userData.company),
+        where('status',  '==', 'pending'),
+      );
+      const unsubS1 = onSnapshot(s1Query, snap => setS1PendingCount(snap.size),
+        () => setS1PendingCount(0));
+      unsubs.push(unsubS1);
+    }
+
+    return () => unsubs.forEach(u => u());
+  }, [loading, userData]);
 
   const handleLogout = () => signOut(auth);
 
@@ -194,10 +210,18 @@ const AdminDashboard = () => {
               </p>
 
               <div className="space-y-3">
-                <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                  <p className="text-[10px] font-black uppercase leading-none">Pending Uniform Requests</p>
-                  <AnimatedNumber value={requestCount} className="text-2xl font-black tracking-tighter leading-none" />
-                </div>
+                {/* Top stat tile — context-aware by role */}
+                {isStaffOrS4 ? (
+                  <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                    <p className="text-[10px] font-black uppercase leading-none">Pending Uniform Requests</p>
+                    <AnimatedNumber value={requestCount} className="text-2xl font-black tracking-tighter leading-none" />
+                  </div>
+                ) : isCommander ? (
+                  <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                    <p className="text-[10px] font-black uppercase leading-none">Cadets Pending Turn-In</p>
+                    <AnimatedNumber value={s1PendingCount} className="text-2xl font-black tracking-tighter leading-none" />
+                  </div>
+                ) : null}
                 <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
                   <p className="text-[10px] font-black uppercase leading-none">Upcoming Events</p>
                   <AnimatedNumber value={events.length} className="text-2xl font-black tracking-tighter leading-none" />

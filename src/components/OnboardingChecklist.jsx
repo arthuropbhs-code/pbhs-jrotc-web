@@ -1,71 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Circle, X, PartyPopper } from 'lucide-react';
+import { Circle, CheckCircle2, X, PartyPopper } from 'lucide-react';
 
 /**
  * Dismissible "getting started" checklist. State lives in localStorage,
- * not Firestore - this is a soft onboarding nudge, not a tracked/enforced
- * requirement, so per-browser persistence is a reasonable simplification
- * (no new schema, no admin visibility into who's "done" onboarding, which
- * would be a much bigger feature than what was actually asked for).
+ * not Firestore — a soft onboarding nudge, not a tracked/enforced requirement.
  *
- * Checking an item off removes it from the list with an exit animation
- * (rather than leaving a struck-through row behind) - the remaining items
- * use `layout` + AnimatePresence's `popLayout` mode so they slide up to
- * fill the gap instead of just snapping into place.
+ * State is keyed by `storageKey` so a cadet promoted to staff sees the
+ * staff list fresh instead of inheriting the cadet list's state.
  *
- * @param {string} storageKey - unique per checklist variant (e.g. 'cadet',
- *   'staff'), so a cadet who gets promoted to staff sees the staff list
- *   fresh instead of inheriting the cadet list's dismissed/checked state.
- * @param {string} title
- * @param {{id, label, description, link, linkText}[]} items
+ * Checking an item plays a brief CSS fade-out before removing it from the
+ * list. The card auto-dismisses 2.5 s after the last item is checked.
+ *
+ * @param {string}   storageKey  - unique per checklist variant ('cadet', 'staff')
+ * @param {string}   title
+ * @param {Array}    items       - [{id, label, description, link, linkText}]
  */
 const OnboardingChecklist = ({ storageKey, title, items }) => {
   const dismissedKey = `onboarding-${storageKey}-dismissed`;
-  const checkedKey = `onboarding-${storageKey}-checked`;
+  const checkedKey   = `onboarding-${storageKey}-checked`;
 
-  // Lazy initializers read localStorage synchronously on first render - no
-  // effect needed, and no pop-in flash where the card briefly shows (or
-  // hides) before flipping to the real persisted state a render later.
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissedKey) === 'true');
+  // Lazy initialisers read localStorage synchronously on first render —
+  // no flash where the card briefly shows before hiding.
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(dismissedKey) === 'true',
+  );
   const [checked, setChecked] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(checkedKey) || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(checkedKey) || '[]'); }
+    catch { return []; }
   });
-
-  if (dismissed) return null;
-
-  const completeItem = (id) => {
-    if (checked.includes(id)) return;
-    const next = [...checked, id];
-    setChecked(next);
-    localStorage.setItem(checkedKey, JSON.stringify(next));
-  };
+  // Ids currently fading out (CSS opacity → 0 before removal)
+  const [leaving, setLeaving] = useState([]);
 
   const dismiss = () => {
     localStorage.setItem(dismissedKey, 'true');
     setDismissed(true);
   };
 
-  const remaining = items.filter((item) => !checked.includes(item.id));
-  const allDone = remaining.length === 0;
+  if (dismissed) return null;
 
-  // Auto-dismiss 2.5 s after the last item is checked so the user gets a
-  // brief "You're all set" moment before the card disappears on its own.
+  const remaining = items.filter(item => !checked.includes(item.id));
+  const allDone   = remaining.length === 0;
+
+  // Auto-dismiss 2.5 s after all items are checked.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (!allDone) return;
     const t = setTimeout(dismiss, 2500);
     return () => clearTimeout(t);
   }, [allDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const completeItem = (id) => {
+    if (checked.includes(id) || leaving.includes(id)) return;
+    // Start CSS fade-out, then move to checked after transition (200 ms).
+    setLeaving(prev => [...prev, id]);
+    setTimeout(() => {
+      setLeaving(prev => prev.filter(x => x !== id));
+      const next = [...checked, id];
+      setChecked(next);
+      localStorage.setItem(checkedKey, JSON.stringify(next));
+    }, 200);
+  };
+
   return (
     <div className="mb-8 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-3xl p-8 shadow-sm relative transition-colors">
       <button
         onClick={dismiss}
+        type="button"
         title="Hide this checklist"
         className="absolute top-6 right-6 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors"
       >
@@ -73,13 +74,15 @@ const OnboardingChecklist = ({ storageKey, title, items }) => {
       </button>
 
       {allDone ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
+        <div className="flex items-center gap-3 animate-[fadeIn_0.3s_ease-out]">
           <PartyPopper className="text-yellow-500 shrink-0" size={24} />
           <div>
             <h3 className="font-black uppercase italic text-lg text-slate-900 dark:text-white">You're all set</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nice work getting through the checklist. This card won't show again once dismissed.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Nice work getting through the checklist. This card won't show again once dismissed.
+            </p>
           </div>
-        </motion.div>
+        </div>
       ) : (
         <>
           <h3 className="font-black uppercase italic text-lg text-slate-900 dark:text-white mb-1">{title}</h3>
@@ -87,37 +90,39 @@ const OnboardingChecklist = ({ storageKey, title, items }) => {
             {checked.length} of {items.length} complete
           </p>
           <div className="space-y-3">
-            <AnimatePresence mode="popLayout">
-              {remaining.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: 40, scale: 0.96 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                  className="flex items-center gap-4 p-4 rounded-2xl border bg-blue-50/40 dark:bg-transparent border-blue-100 dark:border-white/5"
+            {remaining.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center gap-4 p-4 rounded-2xl border bg-blue-50/40 dark:bg-transparent border-blue-100 dark:border-white/5 transition-opacity duration-200"
+                style={{ opacity: leaving.includes(item.id) ? 0 : 1 }}
+              >
+                <button
+                  onClick={() => completeItem(item.id)}
+                  type="button"
+                  className="shrink-0"
+                  title="Mark as done"
                 >
-                  <button onClick={() => completeItem(item.id)} className="shrink-0" title="Mark as done">
-                    <Circle className="text-slate-300 dark:text-slate-600 hover:text-yellow-500 transition-colors" size={22} />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{item.label}</p>
-                    {item.description && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{item.description}</p>
-                    )}
-                  </div>
-                  {item.link && (
-                    <Link
-                      to={item.link}
-                      className="shrink-0 text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 hover:underline whitespace-nowrap"
-                    >
-                      {item.linkText || 'Go'} →
-                    </Link>
+                  <Circle
+                    className="text-slate-300 dark:text-slate-600 hover:text-yellow-500 transition-colors"
+                    size={22}
+                  />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{item.label}</p>
+                  {item.description && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{item.description}</p>
                   )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+                {item.link && (
+                  <Link
+                    to={item.link}
+                    className="shrink-0 text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 hover:underline whitespace-nowrap"
+                  >
+                    {item.linkText || 'Go'} →
+                  </Link>
+                )}
+              </div>
+            ))}
           </div>
         </>
       )}
