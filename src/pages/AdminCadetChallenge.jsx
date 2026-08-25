@@ -41,10 +41,13 @@ import AdminPageHeader from '../components/AdminPageHeader';
 
 const CYCLES = [1, 2, 3];
 
-// Roles that can input records (all company-level)
+// Roles that can input records (company-level command + assistants).
+// company_master_sergeant has edit access here specifically —
+// all other pages are view-only for that role.
 const INPUT_ROLES = [
   'company_s1_assistant', 'company_s3_assistant',
   'company_xo', 'company_1sg', 'company_commander',
+  'company_master_sergeant',
 ];
 
 // Only company S1 assistants can finalize
@@ -90,10 +93,10 @@ function statusColor(status) {
 }
 
 function statusLabel(status) {
-  if (status === 'locked')    return '✓ Locked';
-  if (status === 'submitted') return '⏳ Submitted';
-  if (status === 'closed')    return '⏸ Closed';
-  return '✎ Open';
+  if (status === 'locked')    return 'Locked';
+  if (status === 'submitted') return 'Submitted';
+  if (status === 'closed')    return 'Closed';
+  return 'Open';
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────

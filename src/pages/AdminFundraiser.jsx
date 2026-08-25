@@ -42,7 +42,9 @@ const FULL_ACCESS_ROLES = [
   'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
 ];
 
-const COMPANY_INPUT_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant'];
+// company_master_sergeant can VIEW the fundraiser page but cannot log payments —
+// edit rights for MSgt are limited to Cadet Challenge only.
+const COMPANY_INPUT_ROLES = ['company_commander', 'company_xo', 'company_1sg'];
 const BN_INPUT_ROLES      = ['s1_adjutant', 's3_operations'];
 
 const PAYMENT_TYPES = [

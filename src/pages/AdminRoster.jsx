@@ -87,8 +87,11 @@ const AdminRoster = () => {
   const canS1Edit     = role === 'company_s1_assistant';
   // S3 assistants, S6, and S7 are view-only (no write access).
   // S6/S7 can see all companies (canManageAll=true for queries) but cannot modify.
-  const canViewOwn    = role === 'company_s3_assistant';
-  const canEdit       = role !== 's7_special_projects' && role !== 's6_technology' && (canManageAll || canManageOwn || canS1Edit);
+  // company_master_sergeant is view-only here — edit rights limited to Cadet Challenge.
+  const canViewOwn    = role === 'company_s3_assistant' || role === 'company_master_sergeant';
+  const canEdit       = role !== 's7_special_projects' && role !== 's6_technology'
+    && role !== 'company_master_sergeant'
+    && (canManageAll || canManageOwn || canS1Edit);
   const myCompany     = userData?.company || '';
 
   // default to the user's own company, or first company for staff
@@ -241,11 +244,18 @@ const AdminRoster = () => {
     setSaving(true);
     try {
       const isBn = BATTALION_COMPANIES.includes(form.company || activeCompany);
-      const payload = {
+      const resolvedCompany = (form.company || activeCompany || '').trim();
+    if (!resolvedCompany) {
+      showToast('Your company is not configured — ask an admin to update your profile', true);
+      setSaving(false);
+      return;
+    }
+
+    const payload = {
         fullName:         form.fullName.trim().toUpperCase(),
         rank:             form.rank      || null,
         position:         form.position  || null,
-        company:          form.company   || activeCompany,
+        company:          resolvedCompany,
         platoon:          isBn ? null : (form.platoon || null),
         squad:            isBn ? null : (form.squad   || null),
         secondaryCompany: isBn ? (form.secondaryCompany || null) : null,
@@ -296,7 +306,11 @@ const AdminRoster = () => {
       closeModal();
     } catch (err) {
       console.error('Roster save failed:', err);
-      showToast('Save failed — try again');
+      if (err?.code === 'permission-denied') {
+        showToast('Permission denied — verify your company matches the entry');
+      } else {
+        showToast('Save failed — try again');
+      }
     } finally {
       setSaving(false);
     }

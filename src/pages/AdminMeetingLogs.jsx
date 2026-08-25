@@ -56,7 +56,7 @@ const CAN_EDIT_ROLES  = ['battalion_xo'];
 // Full-access viewers (see all logs):
 const FULL_VIEW_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
 // Company leadership can view logs the XO marks for company-wide sharing:
-const COMPANY_VIEW_ROLES = ['company_commander', 'company_xo', 'company_1sg'];
+const COMPANY_VIEW_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant'];
 const CAN_VIEW_ROLES  = [...FULL_VIEW_ROLES, ...COMPANY_VIEW_ROLES];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

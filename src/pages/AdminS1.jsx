@@ -48,14 +48,21 @@ import { useCompanies } from '../hooks/useCompanies';
 import S1PromotionBoard from '../components/S1PromotionBoard';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
+// Only S1 adjutant and Company XO can create events / mark submissions.
+// CC and 1SG are VIEW-ONLY — this enforces that S1 and XO do the data-entry work.
+// MSgt is also view-only (edit rights limited to Cadet Challenge only).
 const CAN_CREATE_ROLES = [
-  's1_adjutant', 'company_xo', 'company_1sg', 'company_commander',
+  's1_adjutant', 'company_xo',
 ];
 const CAN_MARK_ROLES = [
   's1_adjutant', 's3_operations',
-  'company_s1_assistant', 'company_xo', 'company_1sg', 'company_commander', 'company_s3_assistant',
+  'company_s1_assistant', 'company_xo', 'company_s3_assistant',
 ];
-const CAN_VIEW_ROLES = [...CAN_MARK_ROLES, 'battalion_xo'];
+const CAN_VIEW_ROLES = [
+  ...CAN_MARK_ROLES,
+  'battalion_xo',
+  'company_commander', 'company_1sg', 'company_master_sergeant',
+];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(ts) {

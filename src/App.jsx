@@ -416,7 +416,7 @@ const AppContent = () => {
             <Route
               path="/admin/meeting-logs"
               element={
-                <ProtectedRoute allowedRoles={['battalion_xo', 's1_adjutant', 'battalion_commander', 'company_commander', 'company_xo', 'company_1sg']}>
+                <ProtectedRoute allowedRoles={['battalion_xo', 's1_adjutant', 'battalion_commander', 'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant']}>
                   <AdminMeetingLogs />
                 </ProtectedRoute>
               }

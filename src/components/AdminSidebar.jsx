@@ -120,7 +120,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   // Full Cadet Challenge management access (input roles + view-all roles)
   const CHALLENGE_FULL_ROLES = [
     'company_s1_assistant', 'company_s3_assistant',
-    'company_xo', 'company_1sg', 'company_commander',
+    'company_xo', 'company_1sg', 'company_commander', 'company_master_sergeant',
     's1_adjutant', 's3_operations',
     'battalion_xo', 'battalion_commander', 'battalion_csm',
     'sergeant_major', 'senior_army_instructor', 'army_instructor',
@@ -131,7 +131,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const FUNDRAISER_FULL_ROLES = [
     's1_adjutant', 's3_operations',
     'battalion_xo', 'battalion_csm', 'battalion_commander',
-    'company_commander', 'company_xo', 'company_1sg',
+    'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
   ];
   const hasFullFundraiserAccess = FUNDRAISER_FULL_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
@@ -139,16 +139,21 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   const canSeeS2 = role === 's2_intelligence' || role === 'company_s2_assistant' || userLevel >= ADMIN_LEVEL;
   // S6 — battalion S6, S5 (read-only review), and company S6 assistants
   const canSeeS6 = role === 's6_technology' || role === 'company_s6_assistant' || role === 's5_public_affairs' || userLevel >= ADMIN_LEVEL;
-  // S1 Tracker — S1/S3 adjutants, battalion XO, company command + S1/S3 assistants.
+  // S1 Tracker — S1/S3 adjutants, battalion XO, company command + assistants.
+  // CC, 1SG, and MSgt are view-only inside the component; XO + S1/S3 assistants can mark.
   // Excludes S2/S4/S5/S6/S7 staff (not a general-staff tool). Matches /admin/s1 route.
   const S1_TRACKER_ROLES = [
     's1_adjutant', 's3_operations', 'battalion_xo',
-    'company_s1_assistant', 'company_xo', 'company_1sg', 'company_commander', 'company_s3_assistant',
+    'company_s1_assistant', 'company_xo', 'company_1sg', 'company_commander',
+    'company_master_sergeant', 'company_s3_assistant',
   ];
   const canSeeS1 = S1_TRACKER_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
-  // Meeting Logs — Battalion XO (edit), S1 Adjutant (view), Battalion Commander (view)
-  const MEETING_LOG_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
+  // Meeting Logs — Battalion XO (edit), S1 & BC (view); company leadership (view, shared-only)
+  const MEETING_LOG_ROLES = [
+    'battalion_xo', 's1_adjutant', 'battalion_commander',
+    'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
+  ];
   const canSeeMeetingLogs = MEETING_LOG_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
   // Feedback Hub — S5, S6, battalion top 3 (XO/CSM/BC), instructors
