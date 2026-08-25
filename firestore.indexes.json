@@ -33,20 +33,6 @@
       ]
     },
     {
-      "collectionGroup": "supplyRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "requestedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "date", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "promotionScores",
       "queryScope": "COLLECTION",
       "fields": [
