@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="17"      label="Releases"    />
-        <Stat value="289"     label="Commits"     />
+        <Stat value="18"      label="Releases"    />
+        <Stat value="292"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.12" label="Current"     />
+        <Stat value="v1.6.13" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -467,7 +467,14 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.12" date="Aug 24" title="Gating, data reset & meeting log UX" isCurrent changes={<>
+        <Patch version="v1.6.13" date="Aug 24" title="Footer layout overhaul" isCurrent changes={<>
+          <C type="fix">Footer no longer constrained to <code className="font-mono text-[10px]">max-w-7xl</code> — replaced with full-width <code className="font-mono text-[10px]">w-full</code> container with responsive horizontal padding so the footer uses the entire page width on all screen sizes</C>
+          <C type="fix">Grid column distribution updated to <code className="font-mono text-[10px]">2fr 1fr 1fr 1.6fr</code> (branding : resources : battalion : contact) — link columns no longer appear cramped against the right edge</C>
+          <C type="fix">Bottom bar redesigned: copyright and portal version sit on the left, legal and external links grouped on the right with consistent spacing — previously all content was bunched to the right side</C>
+          <C type="feat">Portal version displayed in the footer bottom bar (e.g. "Portal v1.6.13") for quick reference without opening the Version History page</C>
+          <C type="feat">Phone number added to the Contact column in the footer</C>
+        </>} />
+        <Patch version="v1.6.12" date="Aug 24" title="Gating, data reset & meeting log UX" changes={<>
           <C type="feat">Fundraiser now has an Open/Close gate controlled by S1, S3, or any staff (70+) — Company Commanders, XOs, and 1SGs see a locked notice and cannot log payments until the fundraiser is opened; S1/S3 see a green toggle button in the header</C>
           <C type="feat">Cadet Challenge cycles now start CLOSED by default — no company can enter data until S1, S3, or Battalion XO opens the cycle for that company; the Open Cycle button appears in both the single-company banner and the all-companies staff grid</C>
           <C type="fix">Meeting Logs empty state for company leadership now reads "Nothing to see here yet" instead of the generic "No meeting logs yet" (which implied they could create one)</C>
