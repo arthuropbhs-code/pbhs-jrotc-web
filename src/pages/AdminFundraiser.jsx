@@ -18,7 +18,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { db } from '../firebase';
 import {
-  collection, addDoc, updateDoc, doc, onSnapshot,
+  collection, addDoc, updateDoc, setDoc, doc, onSnapshot,
   query, where, serverTimestamp, getDocs, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
@@ -27,7 +27,7 @@ import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
   DollarSign, Flag, Plus, X, Loader2, CheckCircle2,
   Filter, Banknote, FileText, Smartphone, ShoppingCart,
-  Users, ReceiptText, Ban, Heart, BarChart3,
+  Users, ReceiptText, Ban, Heart, BarChart3, Lock, Unlock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
@@ -122,6 +122,38 @@ const AdminFundraiser = () => {
   // Void permission mirrors input permission: company command can void their own
   // company's entries; S1/S3 adjutants and admin 80+ can void any company's entries.
   const canDelete   = COMPANY_INPUT_ROLES.includes(role) || BN_INPUT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  // S1, S3, and anyone at staff level (70+) can open/close the fundraiser period.
+  const canOpenFundraiser = BN_INPUT_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
+  // Company leadership cannot log payments until the fundraiser is opened by S1/S3.
+  const isCompanyInput    = COMPANY_INPUT_ROLES.includes(role) && !BN_INPUT_ROLES.includes(role) && userLevel < ADMIN_LEVEL;
+
+  // ── Fundraiser open/close setting ────────────────────────────────────────────
+  // Stored in settings/fundraiser  { isOpen: boolean }
+  // Company leadership can only log payments when isOpen === true.
+  // S1, S3, and staff (70+) can always log; they also control the toggle.
+  const [fundraiserIsOpen, setFundraiserIsOpen] = useState(false);
+  const [togglingOpen,     setTogglingOpen]     = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'fundraiser'), snap => {
+      setFundraiserIsOpen(snap.exists() ? (snap.data().isOpen === true) : false);
+    }, () => setFundraiserIsOpen(false));
+    return () => unsub();
+  }, []);
+
+  const handleToggleFundraiser = async () => {
+    setTogglingOpen(true);
+    try {
+      await setDoc(doc(db, 'settings', 'fundraiser'), { isOpen: !fundraiserIsOpen }, { merge: true });
+    } catch (err) {
+      console.error('Toggle fundraiser error:', err);
+    } finally {
+      setTogglingOpen(false);
+    }
+  };
+
+  // Company input is gated: staff/S1/S3 can always log; company leadership only when open.
+  const canLogPayment = canInput && (canOpenFundraiser || fundraiserIsOpen);
 
   // ── Full-view UI state ────────────────────────────────────────────────────────
   const [activeTab,    setActiveTab]    = useState('transactions');
@@ -488,16 +520,40 @@ const AdminFundraiser = () => {
     <div className="flex-1 p-6 md:p-10 w-full">
       <AdminPageHeader icon={DollarSign} title="Fundraiser" />
 
-        {canInput && activeCompany && (
-          <div className="flex justify-end mb-6">
+        <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+          {/* Fundraiser open/close toggle — S1/S3/staff only */}
+          {canOpenFundraiser ? (
+            <button
+              onClick={handleToggleFundraiser}
+              disabled={togglingOpen}
+              className={`flex items-center gap-2 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all border ${
+                fundraiserIsOpen
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {togglingOpen ? <Loader2 size={13} className="animate-spin" /> : fundraiserIsOpen ? <Unlock size={13} /> : <Lock size={13} />}
+              {fundraiserIsOpen ? 'Fundraiser Open' : 'Fundraiser Closed'}
+            </button>
+          ) : isCompanyInput && !fundraiserIsOpen ? (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5">
+              <Lock size={13} className="text-slate-400" />
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                Fundraiser not yet open — S1/S3 will open it when ready
+              </p>
+            </div>
+          ) : <span />}
+
+          {/* Log Payment button — company input only when open; S1/S3 always */}
+          {canLogPayment && activeCompany && (
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/20"
             >
               <Plus size={16} /> Log Payment
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
@@ -627,7 +683,7 @@ const AdminFundraiser = () => {
             <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
               <DollarSign className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
               <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No payments logged yet</p>
-              {canInput && <button onClick={() => setShowModal(true)} className="mt-4 text-yellow-500 text-xs font-black uppercase hover:text-yellow-400">+ Log first payment</button>}
+              {canLogPayment && activeCompany && <button onClick={() => setShowModal(true)} className="mt-4 text-yellow-500 text-xs font-black uppercase hover:text-yellow-400">+ Log first payment</button>}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-blue-100 dark:border-white/5 shadow-sm">

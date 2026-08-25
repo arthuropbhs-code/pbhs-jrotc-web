@@ -60,7 +60,12 @@ const VIEW_ALL_ROLES = [
 // Only Battalion S1 can unlock / send back
 const UNLOCK_ROLE = 's1_adjutant';
 
-const STAFF_LEVEL  = 70;
+// S1, S3, and Battalion XO can open a cycle so company leadership can enter data.
+// Cycles start CLOSED — no data entry until one of these roles opens it.
+const OPEN_ROLES = ['s1_adjutant', 's3_operations', 'battalion_xo'];
+
+const ADMIN_LEVEL   = 80;
+const STAFF_LEVEL   = 70;
 const COMMAND_LEVEL = 45;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -80,12 +85,14 @@ function cycleKey(company, cycleNum) { return `${company}_${cycleNum}`; }
 function statusColor(status) {
   if (status === 'locked')    return 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20';
   if (status === 'submitted') return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
+  if (status === 'closed')    return 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10';
   return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20';
 }
 
 function statusLabel(status) {
   if (status === 'locked')    return '✓ Locked';
   if (status === 'submitted') return '⏳ Submitted';
+  if (status === 'closed')    return '⏸ Closed';
   return '✎ Open';
 }
 
@@ -100,6 +107,8 @@ const AdminCadetChallenge = () => {
   const canInput    = INPUT_ROLES.includes(role) || userLevel >= COMMAND_LEVEL;
   const canFinalize = role === FINALIZE_ROLE;
   const canUnlock   = role === UNLOCK_ROLE;
+  // S1, S3, XO (and admins) can open a closed cycle so company roles can enter data.
+  const canOpen     = OPEN_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
   const myCompany   = userData?.company || '';
 
   // Which companies to display in the cycle-status subscription.
@@ -177,7 +186,7 @@ const AdminCadetChallenge = () => {
       return onSnapshot(docRef, snap => {
         setCycleStatuses(prev => ({
           ...prev,
-          [key]: snap.exists() ? { status: 'open', ...snap.data() } : { status: 'open' },
+          [key]: snap.exists() ? snap.data() : { status: 'closed' },
         }));
       });
     });
@@ -348,10 +357,12 @@ const AdminCadetChallenge = () => {
   // ── Current company for forms ────────────────────────────────────────────────
   const activeCompany = filterCompany || myCompany;
   const activeKey     = cycleKey(activeCompany, selectedCycle);
-  const activeCycle   = cycleStatuses[activeKey] || { status: 'open' };
+  const activeCycle   = cycleStatuses[activeKey] || { status: 'closed' };
   const isLocked      = activeCycle.status === 'locked';
   const isSubmitted   = activeCycle.status === 'submitted';
-  const canEdit       = canInput && !isLocked && !(isSubmitted && !canUnlock);
+  const isClosed      = activeCycle.status === 'closed';
+  // Company-level roles cannot edit when cycle is closed; canViewAll (S1/S3/XO) always can edit open cycles
+  const canEdit       = canInput && !isLocked && !(isSubmitted && !canUnlock) && !(isClosed && !canViewAll);
 
   // Records for the currently viewed company.
   // Include records where the cadet's PRIMARY company matches (normal case) OR
@@ -518,6 +529,20 @@ const AdminCadetChallenge = () => {
     } finally {
       setFinalizing(false);
     }
+  };
+
+  // ── Open cycle (S1 / S3 / XO) — starts a closed cycle so companies can enter data ─
+  const handleOpenCycle = async (company) => {
+    try {
+      await setDoc(doc(db, 'cadetChallengeCycles', cycleKey(company, selectedCycle)), {
+        company, cycleNumber: selectedCycle,
+        status: 'open',
+        openedBy: userData?.fullName || '',
+        openedByUid: user.uid,
+        openedAt: serverTimestamp(),
+      }, { merge: true });
+      showToast(`${company} Cycle #${selectedCycle} opened`);
+    } catch { showToast('Open failed'); }
   };
 
   // ── Unlock cycle (Battalion S1) ───────────────────────────────────────────────
@@ -697,7 +722,7 @@ const AdminCadetChallenge = () => {
               <div className="flex gap-2 flex-wrap">
                 {visibleCompanies.map(company => {
                   const key  = cycleKey(company, selectedCycle);
-                  const stat = cycleStatuses[key]?.status || 'open';
+                  const stat = cycleStatuses[key]?.status || 'closed';
                   return (
                     <span key={company} className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColor(stat)}`}>
                       {company}: {statusLabel(stat)}
@@ -719,6 +744,23 @@ const AdminCadetChallenge = () => {
               {canViewAll && <>{filterCompany} · </>}Cycle #{selectedCycle} — {statusLabel(activeCycle.status)}
             </span>
 
+            {/* Open Cycle — S1/S3/XO when cycle is closed */}
+            {canOpen && isClosed && (
+              <button
+                onClick={() => handleOpenCycle(activeCompany)}
+                className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
+              >
+                <Unlock size={14} /> Open Cycle
+              </button>
+            )}
+
+            {/* Company-level notice when cycle is closed */}
+            {isClosed && !canOpen && (
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                <Lock size={12} /> Cycle not yet open — waiting for S1/S3/XO to start it
+              </span>
+            )}
+
             {/* Finalize — company S1 assistant only, cycle must be open */}
             {canFinalize && activeCycle.status === 'open' && (
               <button
@@ -730,7 +772,7 @@ const AdminCadetChallenge = () => {
             )}
 
             {/* Unlock — Battalion S1 only */}
-            {canUnlock && activeCycle.status !== 'open' && (
+            {canUnlock && activeCycle.status !== 'open' && activeCycle.status !== 'closed' && (
               <button
                 onClick={() => handleUnlock(activeCompany)}
                 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-yellow-500/30 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
@@ -830,7 +872,7 @@ const AdminCadetChallenge = () => {
           <div className="space-y-6 mt-6">
             {visibleCompanies.map(company => {
               const key     = cycleKey(company, selectedCycle);
-              const stat    = cycleStatuses[key]?.status || 'open';
+              const stat    = cycleStatuses[key]?.status || 'closed';
               // Include battalion members who observe this company (secondaryCompany match)
               const recs    = allRecords.filter(r => r.company === company || r.secondaryCompany === company);
               const recMap  = {};
@@ -839,7 +881,8 @@ const AdminCadetChallenge = () => {
                 <CompanySection
                   key={company} company={company} cycleStatus={stat}
                   cycleData={cycleStatuses[key] || {}}
-                  records={recs} canUnlock={canUnlock}
+                  records={recs} canUnlock={canUnlock} canOpen={canOpen}
+                  onOpen={() => handleOpenCycle(company)}
                   onUnlock={() => handleUnlock(company)}
                   onLock={() => handleLock(company)}
                   onSendBack={() => setSendBackConf({ company })}
@@ -1286,7 +1329,7 @@ const RecordCard = ({ rec, canEdit, canDelete, onEdit, onDelete }) => (
 
 // ── CompanySection sub-component (staff view) ──────────────────────────────────
 
-const CompanySection = ({ company, cycleStatus, cycleData, records, canUnlock, onUnlock, onLock, onSendBack }) => {
+const CompanySection = ({ company, cycleStatus, cycleData, records, canUnlock, canOpen, onUnlock, onLock, onSendBack, onOpen }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden">
@@ -1300,13 +1343,16 @@ const CompanySection = ({ company, cycleStatus, cycleData, records, canUnlock, o
           <span className="text-[10px] text-slate-400 font-bold">({records.length} records)</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${
-            cycleStatus === 'locked'    ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
-            cycleStatus === 'submitted' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-            'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
-          }`}>
+          <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColor(cycleStatus)}`}>
             {statusLabel(cycleStatus)}
           </span>
+          {/* Open Cycle — S1/S3/XO when cycle is closed */}
+          {canOpen && cycleStatus === 'closed' && (
+            <button onClick={e => { e.stopPropagation(); onOpen(); }}
+              className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-yellow-500 text-slate-950 hover:bg-yellow-400 transition-all flex items-center gap-1">
+              <Unlock size={10} /> Open
+            </button>
+          )}
           {canUnlock && cycleStatus === 'submitted' && (
             <>
               <button onClick={e => { e.stopPropagation(); onLock(); }}
@@ -1319,7 +1365,7 @@ const CompanySection = ({ company, cycleStatus, cycleData, records, canUnlock, o
               </button>
             </>
           )}
-          {canUnlock && cycleStatus !== 'open' && (
+          {canUnlock && cycleStatus !== 'open' && cycleStatus !== 'closed' && (
             <button onClick={e => { e.stopPropagation(); onUnlock(); }}
               className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border border-yellow-500/30 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all flex items-center gap-1">
               <Unlock size={10} /> Unlock

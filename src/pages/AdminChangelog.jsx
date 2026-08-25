@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="16"      label="Releases"    />
-        <Stat value="284"     label="Commits"     />
+        <Stat value="17"      label="Releases"    />
+        <Stat value="289"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.11" label="Current"     />
+        <Stat value="v1.6.12" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -467,7 +467,13 @@ const AdminChangelog = () => {
           <C type="perf">Agenda animation delay capped at 300 ms — was <code className="font-mono text-[10px]">idx × 0.05 s</code> with no ceiling; 40-event months made the last card appear 2 s after load</C>
           <C type="perf">Hero CTA buttons scoped from <code className="font-mono text-[10px]">transition-all</code> to <code className="font-mono text-[10px]">transition-colors</code>; glass button blur reduced from <code className="font-mono text-[10px]">backdrop-blur-md</code> to <code className="font-mono text-[10px]">backdrop-blur-sm</code></C>
         </>} />
-        <Patch version="v1.6.11" date="Aug 24" title="Dashboard fixes" isCurrent changes={<>
+        <Patch version="v1.6.12" date="Aug 24" title="Gating, data reset & meeting log UX" isCurrent changes={<>
+          <C type="feat">Fundraiser now has an Open/Close gate controlled by S1, S3, or any staff (70+) — Company Commanders, XOs, and 1SGs see a locked notice and cannot log payments until the fundraiser is opened; S1/S3 see a green toggle button in the header</C>
+          <C type="feat">Cadet Challenge cycles now start CLOSED by default — no company can enter data until S1, S3, or Battalion XO opens the cycle for that company; the Open Cycle button appears in both the single-company banner and the all-companies staff grid</C>
+          <C type="fix">Meeting Logs empty state for company leadership now reads "Nothing to see here yet" instead of the generic "No meeting logs yet" (which implied they could create one)</C>
+          <C type="fix">Data reset: all documents cleared from <code className="font-mono text-[10px]">fundraiserEntries</code>, <code className="font-mono text-[10px]">promotionBoards</code>, <code className="font-mono text-[10px]">promotionScores</code>, <code className="font-mono text-[10px]">cadetChallengeRecords</code>, <code className="font-mono text-[10px]">cadetChallengeCycles</code>, <code className="font-mono text-[10px]">formSubmissions</code>, <code className="font-mono text-[10px]">formEvents</code>, and <code className="font-mono text-[10px]">uniformSizes</code> for year-start</C>
+        </>} />
+        <Patch version="v1.6.11" date="Aug 24" title="Dashboard fixes" changes={<>
           <C type="fix">Clicking X on the Getting Started checklist no longer crashes the page — <code className="font-mono text-[10px]">AnimatePresence</code>/<code className="font-mono text-[10px]">motion.div</code> (framer-motion) replaced with native CSS <code className="font-mono text-[10px]">transition-opacity</code>; framer-motion's abrupt-unmount behaviour was the crash root cause</C>
           <C type="feat">Quick Glance stat tile on the dashboard is now role-aware: staff (70+) see Pending Uniform Requests as before; Company Commanders, XOs, and 1SGs see Cadets Pending Turn-In (live count of their own company's pending S1 submissions); cadets and lower roles see Upcoming Events only</C>
         </>} />

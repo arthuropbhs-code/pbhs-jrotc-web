@@ -444,14 +444,25 @@ const AdminMeetingLogs = () => {
         ) : logs.length === 0 ? (
           <div className="text-center py-24 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
             <NotepadText className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={40} />
-            <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No meeting logs yet</p>
-            {canEdit && (
-              <button
-                onClick={openCreate}
-                className="mt-4 text-yellow-600 dark:text-yellow-500 text-xs font-black uppercase tracking-widest hover:underline"
-              >
-                Create the first one →
-              </button>
+            {isCompanyViewer ? (
+              <>
+                <p className="text-slate-400 font-black uppercase tracking-widest text-sm">Nothing to see here yet</p>
+                <p className="text-slate-300 dark:text-slate-600 text-xs mt-2 font-medium">
+                  Meeting logs shared with company leadership will appear here.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No meeting logs yet</p>
+                {canEdit && (
+                  <button
+                    onClick={openCreate}
+                    className="mt-4 text-yellow-600 dark:text-yellow-500 text-xs font-black uppercase tracking-widest hover:underline"
+                  >
+                    Create the first one →
+                  </button>
+                )}
+              </>
             )}
           </div>
         ) : (
