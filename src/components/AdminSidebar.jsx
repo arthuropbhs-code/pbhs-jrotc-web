@@ -93,9 +93,10 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   };
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
-  const isCommander  = userLevel >= COMMAND_LEVEL;
-  const isTopFour    = userLevel >= ADMIN_LEVEL;
-  const isStaffOrS4  = userLevel >= STAFF_LEVEL;
+  const isCommander    = userLevel >= COMMAND_LEVEL;
+  const isTopFour      = userLevel >= ADMIN_LEVEL;
+  const isStaffOrS4    = userLevel >= STAFF_LEVEL;
+  const isS1S3Assistant = role === 'company_s1_assistant' || role === 'company_s3_assistant';
 
   // Command roles whose scope is operations — they do not administer the portal
   // (S2/S6 pages, media tools, customization). Battalion XO + instructors are unaffected.
@@ -149,7 +150,8 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   ];
   const canSeeS1 = S1_TRACKER_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
-  // Meeting Logs — Battalion XO (edit), S1 & BC (view); company leadership (view, shared-only)
+  // Meeting Logs — Battalion XO (edit), S1 & BC (view); Company Top 3 + MSgt (shared-only view)
+  // S1/S3 assistants do NOT see meeting logs — company top 3 only.
   const MEETING_LOG_ROLES = [
     'battalion_xo', 's1_adjutant', 'battalion_commander',
     'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
@@ -325,12 +327,30 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </>
         )}
 
-        {/* ── NON-COMMANDER: Cadet Challenge + Roster ── */}
-        {canSeeChallenge && !isCommander && (
+        {/* ── S1 / S3 ASSISTANT: structured sidebar matching company-leadership layout ── */}
+        {isS1S3Assistant && (
+          <>
+            {groupLabel('Personnel')}
+            {navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
+            {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
+
+            {groupLabel('Programs')}
+            {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
+
+            {/* Personal-only access — no full management for Fundraiser or Uniforms */}
+            <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
+              {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
+              {navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
+              {navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
+            </div>
+          </>
+        )}
+
+        {/* ── NON-COMMANDER: Cadet Challenge ── */}
+        {canSeeChallenge && !isCommander && !isS1S3Assistant && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
-              navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 
@@ -348,18 +368,16 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </div>
         )}
 
-        {/* ── NON-COMMANDER: S1 Tracker ── */}
-        {canSeeS1 && !isCommander && (
+        {/* ── NON-COMMANDER: S1 Tracker (non-S1/S3 roles) ── */}
+        {canSeeS1 && !isCommander && !isS1S3Assistant && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
-            {(role === 'company_s1_assistant' || role === 'company_s3_assistant') &&
-              navLink('/admin/roster', <BookUser size={18} />, 'Company Roster')}
           </div>
         )}
 
         {/* ── NON-COMMANDER: Uniform Items ── */}
-        {canSeeUniforms && !isCommander && (
+        {canSeeUniforms && !isCommander && !isS1S3Assistant && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <Link
               to="/uniform-requests"
@@ -383,8 +401,8 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </div>
         )}
 
-        {/* ── Personal-view links for staff who lack full management access ── */}
-        {(!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
+        {/* ── Personal-view links for non-assistant staff who lack full management access ── */}
+        {!isS1S3Assistant && (!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
             {!hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}

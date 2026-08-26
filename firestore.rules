@@ -18,6 +18,14 @@ service cloud.firestore {
       ];
     }
 
+    // S1 adjutant and S6 technology can manage user accounts (same gates as
+    // the AdminUsers.jsx isBattalionStaff check). They share the same privilege-
+    // cloning constraint as admins: cannot elevate a role to their own level or above.
+    function isUserManager() {
+      return isAdmin() ||
+        userDoc().role in ['s1_adjutant', 's6_technology'];
+    }
+
     // Mirrors src/constants.js ROLE_HIERARCHY — keep in sync when the role
     // table changes.
     function roleLevel(roleName) {
@@ -86,11 +94,12 @@ service cloud.firestore {
         request.resource.data.role == 'cadet' &&
         request.resource.data.approved == false;
 
-      allow create, delete: if isSignedIn() && isAdmin();
+      allow create, delete: if isSignedIn() && isUserManager();
       allow update: if isSignedIn() && (
-        // Admins may update any field, but cannot elevate a role to their own
-        // level or above — prevents privilege-cloning attacks.
-        (isAdmin() && (
+        // Admins and user managers (S1 adjutant, S6 technology) may update any
+        // field, but cannot elevate a role to their own level or above —
+        // prevents privilege-cloning attacks.
+        (isUserManager() && (
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
           roleLevel(request.resource.data.role) < myLevel()
         )) ||

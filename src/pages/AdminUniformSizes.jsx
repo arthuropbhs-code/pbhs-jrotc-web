@@ -88,9 +88,9 @@ function statusColor(s) {
   return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20';
 }
 function statusLabel(s) {
-  if (s === 'submitted') return '⏳ Submitted';
-  if (s === 'pending')   return '✎ Pending Review';
-  return '✎ Draft';
+  if (s === 'submitted') return 'Submitted';
+  if (s === 'pending')   return 'Pending Review';
+  return 'Draft';
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

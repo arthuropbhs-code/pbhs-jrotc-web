@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="19"      label="Releases"    />
-        <Stat value="299"     label="Commits"     />
+        <Stat value="20"      label="Releases"    />
+        <Stat value="309"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.14" label="Current"     />
+        <Stat value="v1.6.15" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -509,7 +509,7 @@ const AdminChangelog = () => {
           <C type="feat">Portal version displayed in the footer bottom bar (e.g. "Portal v1.6.13") for quick reference without opening the Version History page</C>
           <C type="feat">Phone number added to the Contact column in the footer</C>
         </>} />
-        <Patch version="v1.6.14" date="Aug 24" title="Role & permission pass" isCurrent changes={<>
+        <Patch version="v1.6.14" date="Aug 24" title="Role & permission pass" changes={<>
           <C type="fix">Meeting Logs link now appears in the sidebar for Company Commander, XO, 1SG, and MSgt — previously the link was missing even though those roles had route access</C>
           <C type="feat">Company Master Sergeant gains the same sidebar visibility as company leadership (S1 Tracker, Meeting Logs, Cadet Challenge full view, Fundraiser, Roster) — previously was being shown a limited "My Records" view</C>
           <C type="feat">Company Master Sergeant now has data-entry access in Cadet Challenge (added to <code className="font-mono text-[10px]">INPUT_ROLES</code>); all other pages (Roster, S1 Tracker, Fundraiser, Meeting Logs) remain view-only for that role</C>
@@ -518,6 +518,15 @@ const AdminChangelog = () => {
           <C type="fix">Company Master Sergeant is now view-only in the Battalion Roster (canEdit blocked explicitly); previously had unintended write access via the COMMAND_LEVEL (45) threshold</C>
           <C type="fix">Cadet Challenge status labels no longer include emojis (✓ / ⏳ / ⏸ / ✎) — replaced with plain text (Locked / Submitted / Closed / Open)</C>
           <C type="fix">Meeting Logs route guard now includes <code className="font-mono text-[10px]">company_master_sergeant</code>; app route and sidebar are consistent</C>
+        </>} />
+
+        <Patch version="v1.6.15" date="Aug 25" title="Sidebar & account-management fixes" isCurrent changes={<>
+          <C type="fix">S1 and S3 assistant sidebar rebuilt with proper group labels (Personnel, Programs, My Records) matching company-leadership layout — replaces the previous flat divider-section structure</C>
+          <C type="fix">Removed duplicate "Company Roster" link that appeared twice for S1/S3 assistants; now appears once under Personnel</C>
+          <C type="fix">Meeting Logs removed from S1/S3 assistant sidebar — only Company Top 3 (CC, XO, 1SG) and MSgt see that link; S1/S3 assistants' Personnel group shows Company Roster and S1 Tracker only</C>
+          <C type="fix">S1 and S3 assistants no longer see full Fundraiser or Uniform management pages — sidebar routes them to "My Records" personal links (Fundraiser, Uniform Items, Uniform Sizes) while preserving full Cadet Challenge and S1 Tracker access</C>
+          <C type="fix">Battalion S1 (s1_adjutant) and S6 Technology can now save user accounts and approve registrations — Firestore <code className="font-mono text-[10px]">/users</code> update/create/delete rules were only allowing <code className="font-mono text-[10px]">isAdmin()</code> (battalion command + instructors), which excluded both roles despite the UI correctly showing them the management interface</C>
+          <C type="sec">Added <code className="font-mono text-[10px]">isUserManager()</code> helper to Firestore rules: S1 adjutant and S6 technology share the same privilege-cloning constraint as admins — cannot elevate a role to their own level (70) or above</C>
         </>} />
       </Minor>
 
