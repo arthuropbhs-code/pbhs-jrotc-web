@@ -20,8 +20,8 @@
 //     meetingDate    (Timestamp)
 //     meetingName    (string)
 //     attendance     (string)
-//     agendaItems    (string[])
-//     noteItems      (string[])
+//     agendaItems    (BulletItem[])  — { text: string, children: string[] }[]; old docs use string[] (auto-upgraded on save)
+//     noteItems      (BulletItem[])
 //     createdBy      (uid)
 //     createdByName  (string)
 //     createdAt      (Timestamp)
@@ -46,10 +46,10 @@ import {
 } from 'firebase/firestore';
 import {
   NotepadText, Plus, X, Pencil, Trash2,
-  Eye, ChevronDown, ChevronUp,
-  CheckCircle2, AlertCircle, Loader2,
+  Eye, CheckCircle2, AlertCircle, Loader2,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
+import BulletListEditor, { normalizeBullets, flattenBullets } from '../components/BulletListEditor';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
@@ -86,100 +86,6 @@ function timestampToDateStr(ts) {
   const mo = String(d.getMonth() + 1).padStart(2, '0');
   const da = String(d.getDate()).padStart(2, '0');
   return `${y}-${mo}-${da}`;
-}
-
-// ── BulletListEditor ───────────────────────────────────────────────────────────
-// Interactive bullet-point list builder (for Agenda and Notes).
-function BulletListEditor({ items, onChange, placeholder, readOnly }) {
-  const [draft, setDraft] = useState('');
-
-  const addItem = () => {
-    const trimmed = draft.trim();
-    if (!trimmed) return;
-    onChange([...items, trimmed]);
-    setDraft('');
-  };
-
-  const removeItem = (i) => onChange(items.filter((_, idx) => idx !== i));
-
-  const moveUp   = (i) => {
-    if (i === 0) return;
-    const next = [...items];
-    [next[i - 1], next[i]] = [next[i], next[i - 1]];
-    onChange(next);
-  };
-  const moveDown = (i) => {
-    if (i === items.length - 1) return;
-    const next = [...items];
-    [next[i], next[i + 1]] = [next[i + 1], next[i]];
-    onChange(next);
-  };
-
-  if (readOnly) {
-    if (!items.length) return <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>;
-    return (
-      <ul className="space-y-1">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <span className="text-yellow-500 shrink-0 mt-0.5 font-bold">•</span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <div className="space-y-1.5">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-2 group">
-          <span className="text-yellow-500 shrink-0 font-bold text-sm">•</span>
-          <p className="flex-1 text-sm text-slate-800 dark:text-slate-200 py-1">{item}</p>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={() => moveUp(i)}
-              disabled={i === 0}
-              className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 disabled:opacity-20 transition-colors"
-              title="Move up"
-            >
-              <ChevronUp size={12} />
-            </button>
-            <button
-              onClick={() => moveDown(i)}
-              disabled={i === items.length - 1}
-              className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 disabled:opacity-20 transition-colors"
-              title="Move down"
-            >
-              <ChevronDown size={12} />
-            </button>
-            <button
-              onClick={() => removeItem(i)}
-              className="text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 transition-colors"
-              title="Remove"
-            >
-              <X size={12} />
-            </button>
-          </div>
-        </div>
-      ))}
-      <div className="flex gap-2 mt-1">
-        <input
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
-          placeholder={placeholder}
-          className="flex-1 bg-blue-50/50 dark:bg-slate-800 border border-blue-100 dark:border-white/5 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-yellow-500/40 transition-colors"
-        />
-        <button
-          onClick={addItem}
-          disabled={!draft.trim()}
-          className="text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 hover:bg-yellow-500 hover:text-slate-950 disabled:opacity-30 transition-all whitespace-nowrap"
-        >
-          + Add
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ── Empty log template ─────────────────────────────────────────────────────────
@@ -265,8 +171,8 @@ const AdminMeetingLogs = () => {
         meetingDate:   fmtDateForSheets(l.meetingDate),
         meetingName:   l.meetingName   || '',
         attendance:    l.attendance    || '',
-        agendaItems:   l.agendaItems   || [],
-        noteItems:     l.noteItems     || [],
+        agendaItems:   flattenBullets(l.agendaItems),
+        noteItems:     flattenBullets(l.noteItems),
       }));
 
       const res  = await fetch('/api/sync-meeting-logs', {
@@ -305,8 +211,8 @@ const AdminMeetingLogs = () => {
       meetingDate:    timestampToDateStr(log.meetingDate),
       meetingName:    log.meetingName  || '',
       attendance:     log.attendance   || '',
-      agendaItems:    log.agendaItems  || [],
-      noteItems:      log.noteItems    || [],
+      agendaItems:    normalizeBullets(log.agendaItems),
+      noteItems:      normalizeBullets(log.noteItems),
       companyAccess:  log.companyAccess || false,
     });
     setActiveLog(log);
@@ -517,30 +423,36 @@ const AdminMeetingLogs = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {(log.agendaItems || []).length > 0 ? (
-                          <div>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[150px]">
-                              • {log.agendaItems[0]}
-                            </p>
-                            {log.agendaItems.length > 1 && (
-                              <p className="text-[9px] text-slate-400 dark:text-slate-500">+{log.agendaItems.length - 1} more</p>
-                            )}
-                          </div>
-                        ) : (
+                        {(log.agendaItems || []).length > 0 ? (() => {
+                          const first = normalizeBullets(log.agendaItems)[0];
+                          return (
+                            <div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[150px]">
+                                • {first?.text}
+                              </p>
+                              {log.agendaItems.length > 1 && (
+                                <p className="text-[9px] text-slate-400 dark:text-slate-500">+{log.agendaItems.length - 1} more</p>
+                              )}
+                            </div>
+                          );
+                        })() : (
                           <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {(log.noteItems || []).length > 0 ? (
-                          <div>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[150px]">
-                              • {log.noteItems[0]}
-                            </p>
-                            {log.noteItems.length > 1 && (
-                              <p className="text-[9px] text-slate-400 dark:text-slate-500">+{log.noteItems.length - 1} more</p>
-                            )}
-                          </div>
-                        ) : (
+                        {(log.noteItems || []).length > 0 ? (() => {
+                          const first = normalizeBullets(log.noteItems)[0];
+                          return (
+                            <div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[150px]">
+                                • {first?.text}
+                              </p>
+                              {log.noteItems.length > 1 && (
+                                <p className="text-[9px] text-slate-400 dark:text-slate-500">+{log.noteItems.length - 1} more</p>
+                              )}
+                            </div>
+                          );
+                        })() : (
                           <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
                         )}
                       </td>

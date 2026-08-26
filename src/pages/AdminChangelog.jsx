@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="32"      label="Releases"    />
-        <Stat value="334"     label="Commits"     />
+        <Stat value="33"      label="Releases"    />
+        <Stat value="335"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.27" label="Current"     />
+        <Stat value="v1.6.28" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -597,6 +597,13 @@ const AdminChangelog = () => {
           <C type="feat">Company command (45–69) continue to see their own company locked in the company field — behavior unchanged for that tier</C>
           <C type="feat">Battalion-wide AARs (<code className="font-mono text-[10px]">company: null</code>) are visible to staff (70+) only — company command's existing company-scoped Firestore query already excludes them</C>
           <C type="feat">Company column in the AAR table and "Filed by" line in the view modal now display "Battalion-wide" instead of a dash when company is null</C>
+        </>} />
+        <Patch version="v1.6.28" date="Aug 26" title="Sub-bullet points in Meeting Logs & AAR Logs" isCurrent changes={<>
+          <C type="feat">Agenda, Notes (Meeting Logs) and What Went Well, Needs Improvement (AAR Logs) now support two-level bullet points — hover any top-level item and click the indent arrow (↩) to open a sub-item input; Enter adds the sub-item, Esc closes the input</C>
+          <C type="feat">Sub-items render indented under their parent with a hollow bullet (◦) in both edit and read-only view; a vertical guide line groups sub-items visually</C>
+          <C type="feat">New shared <code className="font-mono text-[10px]">BulletListEditor</code> component (<code className="font-mono text-[10px]">src/components/BulletListEditor.jsx</code>) replaces the duplicate inline implementations; exports <code className="font-mono text-[10px]">normalizeBullets</code> and <code className="font-mono text-[10px]">flattenBullets</code> utilities</C>
+          <C type="feat">Data model updated from <code className="font-mono text-[10px]">string[]</code> to <code className="font-mono text-[10px]">{'{ text, children }[]'}</code> — existing documents are backward-compatible and silently upgraded to the new format on next save</C>
+          <C type="feat">Meeting Logs Google Sheets sync flattens sub-items as two-space-indented strings so indentation is preserved in the spreadsheet</C>
         </>} />
       </Minor>
 
