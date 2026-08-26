@@ -68,6 +68,7 @@ const AdminFundraiser     = lazy(() => import('./pages/AdminFundraiser'));
 const AdminUniformSizes   = lazy(() => import('./pages/AdminUniformSizes'));
 const AdminS1             = lazy(() => import('./pages/AdminS1'));
 const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
+const AdminAARLogs        = lazy(() => import('./pages/AdminAARLogs'));
 const AdminEvents         = lazy(() => import('./pages/AdminEvents'));
 const AdminFeedback       = lazy(() => import('./pages/AdminFeedback'));
 const AdminHonorCompany   = lazy(() => import('./pages/AdminHonorCompany'));
@@ -413,12 +414,22 @@ const AppContent = () => {
               }
             />
 
-            {/* Meeting Logs — XO edits; S1 & BC view */}
+            {/* Meeting Logs — all staff (70+) create/view; XO/CSM/BC/S1 edit all; company cmd sees shared */}
             <Route
               path="/admin/meeting-logs"
               element={
-                <ProtectedRoute allowedRoles={['battalion_xo', 's1_adjutant', 'battalion_commander', 'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant']}>
+                <ProtectedRoute minLevel={COMMAND_LEVEL} allowedRoles={['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant']}>
                   <AdminMeetingLogs />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* AAR Logs — staff (70+) see all; company command (45+) see own company */}
+            <Route
+              path="/admin/aar-logs"
+              element={
+                <ProtectedRoute minLevel={COMMAND_LEVEL}>
+                  <AdminAARLogs />
                 </ProtectedRoute>
               }
             />

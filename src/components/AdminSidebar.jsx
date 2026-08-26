@@ -36,6 +36,7 @@ import {
   Ruler,
   ClipboardList,
   NotepadText,
+  ClipboardCheck,
   CalendarDays,
   MessageSquare,
   Trophy,
@@ -151,13 +152,13 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   ];
   const canSeeS1 = S1_TRACKER_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
 
-  // Meeting Logs — Battalion XO (edit), S1 & BC (view); Company Top 3 + MSgt (shared-only view)
-  // S1/S3 assistants do NOT see meeting logs — company top 3 only.
+  // Meeting Logs — all staff (70+) can create and see all; company top 3 see shared-only.
   const MEETING_LOG_ROLES = [
-    'battalion_xo', 's1_adjutant', 'battalion_commander',
     'company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant',
   ];
-  const canSeeMeetingLogs = MEETING_LOG_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
+  const canSeeMeetingLogs = MEETING_LOG_ROLES.includes(role) || userLevel >= STAFF_LEVEL;
+  // AAR Logs — staff (70+) and company command (45+) can access.
+  const canSeeAARLogs = userLevel >= COMMAND_LEVEL;
 
   // Feedback Hub — S5, S6, battalion top 3 (XO/CSM/BC), instructors
   const FEEDBACK_VIEW_ROLES = ['s5_public_affairs', 's6_technology', 'battalion_xo', 'battalion_csm', 'battalion_commander'];
@@ -257,6 +258,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {isStaffOrS4 && navLink('/admin/orders', <PlusSquare size={18} />, 'Orders & Tasks')}
             {(role === 's5_public_affairs' || isTopFour) && navLink('/admin/announcements', <Megaphone size={18} />, 'Global Broadcast')}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
+            {canSeeAARLogs && navLink('/admin/aar-logs', <ClipboardCheck size={18} />, 'AAR Logs')}
 
             {/* ── PERSONNEL ───────────────────────── */}
             {groupLabel('Personnel')}
@@ -375,6 +377,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             {navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {canSeeMeetingLogs && navLink('/admin/meeting-logs', <NotepadText size={18} />, 'Meeting Logs')}
+            {canSeeAARLogs && navLink('/admin/aar-logs', <ClipboardCheck size={18} />, 'AAR Logs')}
           </div>
         )}
 
@@ -403,8 +406,9 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </div>
         )}
 
-        {/* ── Personal-view links for non-assistant staff who lack full management access ── */}
-        {!isS1S3Assistant && (!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
+        {/* ── Personal-view links — company assistants (35+) who lack full management access.
+            Platoon/squad leadership (5–25) use My Profile instead. ── */}
+        {userLevel >= 35 && !isS1S3Assistant && (!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
             {!hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}

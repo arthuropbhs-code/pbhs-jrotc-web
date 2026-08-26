@@ -80,8 +80,8 @@ const AdminUsers = () => {
   // Dropdown Constants
   const JROTC_RANKS = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
   const LET_LEVELS = ["LET 1", "LET 2", "LET 3", "LET 4"];
-  const PLATOONS = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
-  const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
+  const PLATOONS = ["1st Platoon", "2nd Platoon", "3rd Platoon", "Company HQ"];
+  const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad"];
   // JROTC_POSITIONS imported from constants.js — do not duplicate here.
 
   // Zulu = Battalion. Members of Zulu are battalion-level staff and don't
@@ -580,7 +580,7 @@ const AdminUsers = () => {
                       company: nextCompany,
                       secondaryCompany: isNextBn ? (formData.secondaryCompany || '') : '',
                       ...(isNextBn
-                        ? { platoon: 'HQ Platoon', squad: 'Staff' }
+                        ? { platoon: null, squad: null }
                         : (isPrevBn ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
                     });
                   }}>
@@ -599,13 +599,20 @@ const AdminUsers = () => {
                 {!BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Platoon</label>
-                    <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.platoon} onChange={e => setFormData({...formData, platoon: e.target.value})}>
+                    <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.platoon} onChange={e => {
+                      const next = e.target.value;
+                      setFormData({
+                        ...formData,
+                        platoon: next,
+                        ...(next === 'Company HQ' ? { squad: '' } : {}),
+                      });
+                    }}>
                       {PLATOONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
                     </select>
                   </div>
                 )}
 
-                {!BATTALION_COMPANIES.includes(formData.company) && (
+                {!BATTALION_COMPANIES.includes(formData.company) && formData.platoon !== 'Company HQ' && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Squad</label>
                     <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.squad} onChange={e => setFormData({...formData, squad: e.target.value})}>

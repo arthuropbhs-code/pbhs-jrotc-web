@@ -49,15 +49,13 @@ import {
   CheckCircle2, AlertCircle, Loader2,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
-import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
+import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
-const CAN_EDIT_ROLES  = ['battalion_xo'];
-// Full-access viewers (see all logs):
-const FULL_VIEW_ROLES = ['battalion_xo', 's1_adjutant', 'battalion_commander'];
-// Company Top 3 + MSgt can view logs the XO marks for company-wide sharing:
+// Who can edit ANYONE's log and delete:
+const ELEVATED_EDIT_ROLES = ['battalion_xo', 'battalion_csm', 'battalion_commander', 's1_adjutant'];
+// Company Top 3 + MSgt can view logs flagged companyAccess:true:
 const COMPANY_VIEW_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant'];
-const CAN_VIEW_ROLES  = [...FULL_VIEW_ROLES, ...COMPANY_VIEW_ROLES];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(ts) {
@@ -200,12 +198,17 @@ const AdminMeetingLogs = () => {
   const userLevel = ROLE_HIERARCHY[role] || 0;
 
   // ── Access flags ─────────────────────────────────────────────────────────────
-  const isAuthorized      = CAN_VIEW_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
-  const canEdit           = CAN_EDIT_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
-  // Delete is restricted to XO only — instructors and BC can edit but not delete
-  const canDelete         = role === 'battalion_xo';
-  // Company leadership see only logs flagged for company sharing (different query)
-  const isCompanyViewer   = COMPANY_VIEW_ROLES.includes(role) && userLevel < ADMIN_LEVEL;
+  // All battalion staff (70+) + company command (45+) may access this page.
+  const isAuthorized     = userLevel >= STAFF_LEVEL || COMPANY_VIEW_ROLES.includes(role);
+  // Any staff member (70+) may create logs.
+  const canCreate        = userLevel >= STAFF_LEVEL;
+  // XO/CSM/BC/S1 may edit anyone's log and delete.
+  const canElevatedEdit  = ELEVATED_EDIT_ROLES.includes(role) || userLevel >= 85;
+  const canDelete        = canElevatedEdit;
+  // Company command (45–59) only see logs flagged companyAccess:true.
+  const isCompanyViewer  = COMPANY_VIEW_ROLES.includes(role) && userLevel < STAFF_LEVEL;
+  // uid reference for per-log ownership check.
+  const uid              = auth.currentUser?.uid;
 
   // ── Data state ────────────────────────────────────────────────────────────────
   const [logs,       setLogs]       = useState([]);
@@ -414,7 +417,7 @@ const AdminMeetingLogs = () => {
                 {syncMessage || (syncStatus === 'syncing' ? 'Syncing…' : '')}
               </div>
             )}
-            {canEdit && (
+            {canCreate && (
               <button
                 onClick={openCreate}
                 className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
@@ -425,12 +428,12 @@ const AdminMeetingLogs = () => {
           </div>
         </div>
 
-        {/* ── Access notice for read-only users ────────────────────────────────────── */}
-        {!canEdit && (
+        {/* ── Access notice for company-leadership viewers ────────────────────────── */}
+        {isCompanyViewer && (
           <div className="mb-6 p-4 bg-blue-50/60 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 rounded-2xl flex items-center gap-3">
             <Eye className="text-blue-400 shrink-0" size={15} />
             <p className="text-xs font-bold text-blue-600 dark:text-blue-400">
-              You have read-only access to meeting logs. Contact the Battalion XO to make changes.
+              You can view meeting logs shared with company leadership.
             </p>
           </div>
         )}
@@ -454,7 +457,7 @@ const AdminMeetingLogs = () => {
             ) : (
               <>
                 <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No meeting logs yet</p>
-                {canEdit && (
+                {canCreate && (
                   <button
                     onClick={openCreate}
                     className="mt-4 text-yellow-600 dark:text-yellow-500 text-xs font-black uppercase tracking-widest hover:underline"
@@ -548,7 +551,7 @@ const AdminMeetingLogs = () => {
                           >
                             <Eye size={10} /> View
                           </button>
-                          {canEdit && (
+                          {(canElevatedEdit || log.createdBy === uid) && (
                             <button
                               onClick={() => openEdit(log)}
                               title="Edit"
@@ -719,7 +722,7 @@ const AdminMeetingLogs = () => {
                     {activeLog?.companyAccess ? 'Shared' : 'Staff Only'}
                   </span>
                 </div>
-              ) : canEdit ? (
+              ) : canCreate ? (
                 <div className="flex items-center justify-between py-3 border-t border-slate-100 dark:border-white/5">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Share with Company Leadership</p>
@@ -744,9 +747,10 @@ const AdminMeetingLogs = () => {
               ) : null}
 
               {/* Last saved info */}
-              {modalMode === 'view' && activeLog?.updatedAt && (
+              {modalMode === 'view' && (
                 <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Last updated {fmtDate(activeLog.updatedAt)} by {activeLog.updatedByName || '—'}
+                  Created by {activeLog?.createdByName || '—'}
+                  {activeLog?.updatedAt && ` · Last updated ${fmtDate(activeLog.updatedAt)} by ${activeLog.updatedByName || '—'}`}
                 </p>
               )}
 
@@ -769,7 +773,7 @@ const AdminMeetingLogs = () => {
                 </div>
               )}
 
-              {modalMode === 'view' && canEdit && (
+              {modalMode === 'view' && (canElevatedEdit || activeLog?.createdBy === uid) && (
                 <div className="pt-2">
                   <button
                     onClick={() => { closeModal(); openEdit(activeLog); }}

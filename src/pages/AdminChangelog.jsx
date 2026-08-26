@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="27"      label="Releases"    />
-        <Stat value="320"     label="Commits"     />
+        <Stat value="28"      label="Releases"    />
+        <Stat value="330"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.22" label="Current"     />
+        <Stat value="v1.6.23" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -561,7 +561,7 @@ const AdminChangelog = () => {
           <C type="feat">Each form request card shows a linked cadet chip (name · rank · company, plus "has account" if a portal account is linked) or a "No roster match" indicator when the name wasn't found</C>
         </>} />
 
-        <Patch version="v1.6.22" date="Aug 26" title="Activity Log + HC categories + enhanced roster matching" isCurrent changes={<>
+        <Patch version="v1.6.22" date="Aug 26" title="Activity Log + HC categories + enhanced roster matching" changes={<>
           <C type="feat">New Activity Log page (<code className="font-mono text-[10px]">/admin/log</code>) with a real-time feed of all system events and manual duty-log entries; visible to all battalion staff (70+); linked from the admin sidebar</C>
           <C type="feat">Manual duty-log entries can be added from the log page — pick a category (Duty Note, Incident, Supply, Training, Admin, Other) and write a description and optional notes</C>
           <C type="feat">Auto-logging wired into: sign-in, roster create/update/delete, uniform request approve/issue, Google Form request approve/decline</C>
@@ -569,6 +569,15 @@ const AdminChangelog = () => {
           <C type="fix">Honor Company category creation restricted to BC, XO, and CSM (level 85+) — previously available to all ADMIN_LEVEL (80+) including SGM; SGM and all S-staff retain the ability to log points</C>
           <C type="feat">Honor Company categories now store a <code className="font-mono text-[10px]">maxScore</code> field (default 100) set at creation time; max score is shown on each category chip and in the Log Points modal for reference</C>
           <C type="feat">Webhook roster matching now also filters by company (from the form's "Company" question) for a high-confidence match, and checks LET level as a secondary confirmation; <code className="font-mono text-[10px]">matchConfidence</code> ("high" / "medium") is stored on each submission and shown as a "confirmed" badge on the form request card</C>
+        </>} />
+
+        <Patch version="v1.6.23" date="Aug 26" title="AAR Logs, meeting-log rights, platoon/squad fix, sidebar cleanup" isCurrent changes={<>
+          <C type="feat">New AAR Logs page (<code className="font-mono text-[10px]">/admin/aar-logs</code>) — file After Action Reports for battalion/company events; fields: event name, date, company, attendee count, facilitators (multi-tag), "What Went Well" bullet list, "Needs Improvement" bullet list; company command (45+) can create and see their own company's AARs; staff (70+) see all; XO/CSM/BC/S1 can edit anyone's and delete; <code className="font-mono text-[10px]">aarLogs</code> Firestore collection with matching security rules; rules deployed</C>
+          <C type="feat">Meeting Logs expanded — all battalion staff (70+) can now create logs and edit their own; XO/CSM/BC/S1 retain elevated rights to edit anyone's log and delete; company command (45+) continues to see logs flagged for company sharing; meeting-log Firestore rules updated</C>
+          <C type="fix">Platoon/Squad options standardised across AdminUsers and AdminRoster: platoons are now 1st Platoon, 2nd Platoon, 3rd Platoon, Company HQ (removed "HQ Platoon", "4th Platoon", "N/A", "Staff"); squads are 1st–4th Squad; selecting "Company HQ" platoon automatically hides the squad selector (no squad for HQ)</C>
+          <C type="fix">Battalion/Zulu conflict — "Battalion" no longer appears as a selectable company in account creation; Zulu is the canonical battalion-level company; existing records with <code className="font-mono text-[10px]">company:"Battalion"</code> continue to work without a migration</C>
+          <C type="fix">Sidebar "My Records" personal-view links (Cadet Challenge, Fundraiser, Uniform Items, Uniform Sizes) no longer show for platoon/squad leadership (levels 12–25) or squad members/cadets (level 5); those tiers access their own data via My Profile instead; company assistants (35+) are unaffected</C>
+          <C type="feat">AAR Logs sidebar link added under Meeting Logs for all company command (45+) and staff (70+); Meeting Logs sidebar link expanded to include all staff (70+)</C>
         </>} />
       </Minor>
 

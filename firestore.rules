@@ -567,20 +567,47 @@ service cloud.firestore {
     }
 
     // ── Meeting Logs ──────────────────────────────────────────────────────────
-    // Battalion XO conducts and records meetings. S1 and Commander can view all.
+    // All battalion staff (70+) can create logs and read all logs.
+    // Staff may edit their own log (createdBy == uid).
+    // XO/CSM/BC/S1 (elevated roles) can edit anyone's log and delete.
     // Company leadership (45–59) can read logs flagged companyAccess:true only.
-    // Delete: battalion_xo only.
     match /meetingLogs/{id} {
       allow read: if isSignedIn() && (
-        userDoc().role in ['battalion_xo', 's1_adjutant', 'battalion_commander'] ||
-        myLevel() >= 85 ||
+        myLevel() >= 70 ||
         (myLevel() >= 45 && myLevel() < 70 && resource.data.companyAccess == true)
       );
-      allow create, update: if isSignedIn() && (
-        userDoc().role == 'battalion_xo' || myLevel() >= 85
+      allow create: if isSignedIn() && myLevel() >= 70 &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && (
+        myLevel() >= 85 ||
+        userDoc().role in ['s1_adjutant', 'battalion_xo'] ||
+        (myLevel() >= 70 && resource.data.createdBy == request.auth.uid)
       );
       allow delete: if isSignedIn() && (
-        userDoc().role == 'battalion_xo'
+        myLevel() >= 85 || userDoc().role == 's1_adjutant'
+      );
+    }
+
+    // ── AAR Logs ──────────────────────────────────────────────────────────────
+    // After Action Reports from battalion events.
+    // Create: staff (70+) or company command (45+).
+    // Read: staff (70+) sees all; company command (45–59) sees own company only.
+    // Edit own: the creator at 45+.
+    // Edit anyone's + delete: XO/CSM/BC/S1 (myLevel >= 85 or s1_adjutant).
+    match /aarLogs/{id} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        (myLevel() >= 45 && myLevel() < 70 && resource.data.company == userDoc().company)
+      );
+      allow create: if isSignedIn() && myLevel() >= 45 &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && (
+        myLevel() >= 85 ||
+        userDoc().role in ['s1_adjutant', 'battalion_xo'] ||
+        (myLevel() >= 45 && resource.data.createdBy == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (
+        myLevel() >= 85 || userDoc().role == 's1_adjutant'
       );
     }
 

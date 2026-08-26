@@ -35,8 +35,8 @@ import AdminPageHeader from '../components/AdminPageHeader';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-const PLATOONS = ['1st Platoon', '2nd Platoon', '3rd Platoon', '4th Platoon', 'HQ'];
-const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad', 'N/A'];
+const PLATOONS = ['1st Platoon', '2nd Platoon', '3rd Platoon', 'Company HQ'];
+const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad'];
 const LET_LEVELS = ['LET 1', 'LET 2', 'LET 3', 'LET 4'];
 const GENDERS  = ['Male', 'Female', 'Other'];
 
@@ -751,7 +751,15 @@ const AdminRoster = () => {
                       <label className={lCls}>Platoon</label>
                       <select
                         value={form.platoon}
-                        onChange={e => setForm(f => ({ ...f, platoon: e.target.value }))}
+                        onChange={e => {
+                          const next = e.target.value;
+                          setForm(f => ({
+                            ...f,
+                            platoon: next,
+                            // Company HQ has no squad — clear it when switching to HQ
+                            ...(next === 'Company HQ' ? { squad: '' } : {}),
+                          }));
+                        }}
                         className={iCls}
                       >
                         <option value="">— —</option>
@@ -760,7 +768,7 @@ const AdminRoster = () => {
                     </div>
                   )}
 
-                  {!BATTALION_COMPANIES.includes(form.company) && (
+                  {!BATTALION_COMPANIES.includes(form.company) && form.platoon !== 'Company HQ' && (
                     <div>
                       <label className={lCls}>Squad</label>
                       <select
