@@ -653,7 +653,14 @@ const AdminUniformSizes = () => {
         ) : !activeCompany ? (
           <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
             <Shirt className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Select a company to begin</p>
+            {canInput && !canViewAll ? (
+              <>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Company not configured</p>
+                <p className="text-xs text-slate-400 mt-2">Your company isn't set — ask an admin to update your profile.</p>
+              </>
+            ) : (
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Select a company to begin</p>
+            )}
           </div>
         ) : cadets.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">

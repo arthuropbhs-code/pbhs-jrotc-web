@@ -117,8 +117,8 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="21"      label="Releases"    />
-        <Stat value="312"     label="Commits"     />
+        <Stat value="22"      label="Releases"    />
+        <Stat value="315"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
         <Stat value="v1.6.15" label="Current"     />
@@ -529,9 +529,14 @@ const AdminChangelog = () => {
           <C type="sec">Added <code className="font-mono text-[10px]">isUserManager()</code> helper to Firestore rules: S1 adjutant and S6 technology share the same privilege-cloning constraint as admins — cannot elevate a role to their own level (70) or above</C>
         </>} />
 
-        <Patch version="v1.6.16" date="Aug 25" title="Account approval UI" isCurrent changes={<>
+        <Patch version="v1.6.16" date="Aug 25" title="Account approval UI" changes={<>
           <C type="feat">Pending-account review now shows a green "Approve Account" button and a red "Deny Account" button side by side — replaces the generic yellow "Update Record" bar so the approval intent is unmistakable</C>
           <C type="feat">Denying an account registration removes the Firebase Auth entry and Firestore document in one action, matching the existing Delete Account flow but scoped to the pending-approval context with its own confirmation and "Registration Denied" toast</C>
+        </>} />
+
+        <Patch version="v1.6.17" date="Aug 25" title="S3 assistant roster rights & S4 empty-state fix" isCurrent changes={<>
+          <C type="feat">Company S3 assistant now has the same roster edit rights as S1 assistant — can create, edit, and delete cadets in their own company but cannot change a cadet's name or company assignment; Firestore roster create/update/delete rules updated to match</C>
+          <C type="fix">Uniform Sizes page now shows "Company not configured — ask an admin to update your profile" instead of the generic "Select a company to begin" empty state when an S4 assistant's user document is missing a company field</C>
         </>} />
       </Minor>
 

@@ -82,13 +82,13 @@ const AdminRoster = () => {
   const userLevel     = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
   const canManageAll  = userLevel >= STAFF_LEVEL;
   const canManageOwn  = userLevel >= COMMAND_LEVEL;
-  // S1 assistants can create, edit, and delete cadets in their own company —
-  // but they cannot change a cadet's name or company assignment.
-  const canS1Edit     = role === 'company_s1_assistant';
-  // S3 assistants, S6, and S7 are view-only (no write access).
+  // S1 and S3 assistants can create, edit, and delete cadets in their own
+  // company — but they cannot change a cadet's name or company assignment.
+  const canS1Edit     = role === 'company_s1_assistant' || role === 'company_s3_assistant';
+  // S6, S7, and MSgt are view-only (no write access).
   // S6/S7 can see all companies (canManageAll=true for queries) but cannot modify.
   // company_master_sergeant is view-only here — edit rights limited to Cadet Challenge.
-  const canViewOwn    = role === 'company_s3_assistant' || role === 'company_master_sergeant';
+  const canViewOwn    = role === 'company_master_sergeant';
   const canEdit       = role !== 's7_special_projects' && role !== 's6_technology'
     && role !== 'company_master_sergeant'
     && (canManageAll || canManageOwn || canS1Edit);
