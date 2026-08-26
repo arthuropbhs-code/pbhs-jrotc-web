@@ -609,6 +609,21 @@ service cloud.firestore {
       allow delete: if isSignedIn() && myLevel() >= 70;
     }
 
+    // ── Uniform Form Requests (Google Form webhook) ───────────────────────────
+    // Submissions arrive via Google Apps Script → /api/uniform-form-webhook
+    // which writes with the service account (bypasses client rules).
+    // Client reads: S4 logistics (70) and S4 assistants (35).
+    // Client updates: S4 logistics (70+) only (e.g. mark as reviewed).
+    // Client create/delete: denied — all creates are server-side.
+    match /uniformFormRequests/{id} {
+      allow read: if isSignedIn() && (
+        myLevel() >= 70 ||
+        userDoc().role == 'company_s4_assistant'
+      );
+      allow update: if isSignedIn() && myLevel() >= 70;
+      allow create, delete: if false;
+    }
+
     // Fallback — deny everything not covered by an explicit rule above.
     // Every new collection MUST get its own match block before it can be used.
     match /{path=**} {

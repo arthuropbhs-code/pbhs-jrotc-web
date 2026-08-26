@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, updateDoc, deleteDoc, doc, orderBy, query, where, addDoc, serverTimestamp, getDoc, getDocs } from 'firebase/firestore';
-import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell, Edit3 } from 'lucide-react';
+import { Shirt, CheckCircle2, Clock, Trash2, ArrowLeft, Search, BookOpen, Plus, X, Package, Target, UserCheck, ShieldAlert, AlertCircle, Bell, Edit3, ClipboardList, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -311,6 +311,31 @@ const UniformRequests = () => {
     : [];
 
   // Personal-view users: neither requesters nor approvers
+  // ── Form request submissions (Google Form → webhook → Firestore) ─────────────
+  // Only visible to S4 logistics and above (not company leadership or assistants).
+  const canSeeFormRequests = canApprove || isHighCommand;
+  const [formRequests,     setFormRequests]     = useState([]);
+  const [formRequestsTab,  setFormRequestsTab]  = useState(false); // true = showing form tab
+  const [markingReviewed,  setMarkingReviewed]  = useState(null);  // id being updated
+
+  useEffect(() => {
+    if (!canSeeFormRequests) return;
+    const q = query(collection(db, 'uniformFormRequests'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, snap => {
+      setFormRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [canSeeFormRequests]);
+
+  const handleMarkReviewed = async (id) => {
+    setMarkingReviewed(id);
+    try {
+      await updateDoc(doc(db, 'uniformFormRequests', id), { status: 'reviewed' });
+    } finally {
+      setMarkingReviewed(null);
+    }
+  };
+
   const isPersonalView = !canRequest && !canApprove && !isHighCommand && !isCompanyLeadership;
 
   const filteredRequests = requests.filter(req => {
@@ -443,14 +468,106 @@ const UniformRequests = () => {
       {/* Tabs */}
       <div className="max-w-6xl mx-auto mb-6 flex bg-slate-900/50 p-1 rounded-xl w-fit border border-white/5">
         {['Pending', 'Approved', 'Issued'].map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${filter === s ? 'bg-yellow-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
+          <button
+            key={s}
+            onClick={() => { setFilter(s); setFormRequestsTab(false); }}
+            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${!formRequestsTab && filter === s ? 'bg-yellow-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+          >
             {s}
           </button>
         ))}
+        {canSeeFormRequests && (
+          <button
+            onClick={() => setFormRequestsTab(true)}
+            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${formRequestsTab ? 'bg-blue-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <ClipboardList size={11} />
+            Form Requests
+            {formRequests.filter(r => r.status === 'new').length > 0 && (
+              <span className={`ml-1 text-[9px] font-black px-1.5 py-0.5 rounded-full ${formRequestsTab ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-400'}`}>
+                {formRequests.filter(r => r.status === 'new').length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Grid */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* ── Form Requests Panel ───────────────────────────────────────────── */}
+      {formRequestsTab && canSeeFormRequests && (
+        <div className="max-w-6xl mx-auto">
+          {formRequests.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed border-white/10 rounded-3xl">
+              <ClipboardList className="mx-auto text-slate-600 mb-4" size={36} />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No form submissions yet</p>
+              <p className="text-slate-600 text-xs mt-2">
+                Submissions arrive here automatically when cadets fill out the Google Form.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {formRequests.map(req => {
+                const isNew = req.status === 'new';
+                const date = req.submittedAt
+                  ? new Date(req.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+                  : '—';
+                return (
+                  <div
+                    key={req.id}
+                    className={`bg-slate-900 border rounded-2xl p-6 shadow-lg relative overflow-hidden transition-all ${isNew ? 'border-blue-500/30' : 'border-white/5'}`}
+                  >
+                    {isNew && <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />}
+
+                    <div className="flex items-start justify-between gap-4 mb-4 pl-2">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${isNew ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
+                            {isNew ? 'New' : 'Reviewed'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-bold">{date}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+                          Google Form Submission
+                        </p>
+                      </div>
+                      {isNew && (
+                        <button
+                          onClick={() => handleMarkReviewed(req.id)}
+                          disabled={markingReviewed === req.id}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-[10px] font-black uppercase transition-all disabled:opacity-50 shrink-0"
+                        >
+                          {markingReviewed === req.id ? (
+                            <Clock size={11} className="animate-spin" />
+                          ) : (
+                            <Eye size={11} />
+                          )}
+                          Mark Reviewed
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Response fields */}
+                    <div className="pl-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(req.responses || {}).map(([question, answer]) => {
+                        const displayAnswer = Array.isArray(answer) ? answer.join(', ') : (answer || '—');
+                        if (!displayAnswer || displayAnswer === '—') return null;
+                        return (
+                          <div key={question} className="bg-black/20 rounded-xl px-4 py-3 border border-white/5">
+                            <p className="text-[9px] font-black uppercase tracking-wider text-yellow-500 mb-1 truncate">{question}</p>
+                            <p className="text-sm font-bold text-white leading-snug">{displayAnswer}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Grid — existing internal requests */}
+      {!formRequestsTab && <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredRequests.map((req) => (
           <div key={req.id} className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all hover:border-white/10">
             <div className={`absolute top-0 left-0 w-1 h-full ${req.status === 'Pending' ? 'bg-yellow-500' : req.status === 'Approved' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
@@ -511,7 +628,7 @@ const UniformRequests = () => {
             })()}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* ISSUANCE MODAL */}
       <AnimatePresence>

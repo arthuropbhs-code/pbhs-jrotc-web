@@ -1,0 +1,181 @@
+// POST /api/uniform-form-webhook
+//
+// Receives a form-submit payload from Google Apps Script (attached to the
+// battalion's uniform item request Google Form) and writes it to the
+// uniformFormRequests Firestore collection.
+//
+// Authentication: shared secret in the FORM_WEBHOOK_SECRET environment
+// variable (Google Apps Script is not a Firebase user so we can't use
+// Firebase ID tokens here).
+//
+// Expected body (JSON):
+//   secret      string   — must match FORM_WEBHOOK_SECRET
+//   responses   object   — { "Question label": "Answer", ... }
+//   submittedAt string   — ISO 8601 timestamp from Apps Script
+//
+// Google Apps Script (paste into Tools → Script editor on the Form's
+// linked spreadsheet, then set an onFormSubmit trigger):
+//
+//   function onFormSubmit(e) {
+//     var payload = JSON.stringify({
+//       secret: 'YOUR_SECRET_HERE',
+//       responses: e.namedValues,
+//       submittedAt: new Date().toISOString()
+//     });
+//     UrlFetchApp.fetch('https://pbhsjrotc.com/api/uniform-form-webhook', {
+//       method: 'post',
+//       contentType: 'application/json',
+//       payload: payload,
+//       muteHttpExceptions: true
+//     });
+//   }
+//
+// Note: e.namedValues is an object where each value is an array (Google Forms
+// can have multi-select questions). We flatten single-element arrays to strings
+// before storing.
+
+import { SignJWT, importPKCS8 } from 'jose';
+import { checkRateLimit } from '../lib/rateLimit.js';
+
+// ── Service-account helpers (same pattern as notify-uniform.js) ───────────────
+
+let _serviceAccount = null;
+function getServiceAccount() {
+  if (_serviceAccount) return _serviceAccount;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT not set.');
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON.'); }
+  if (parsed.private_key?.includes('\\n')) parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+  _serviceAccount = parsed;
+  return _serviceAccount;
+}
+
+let _cachedToken = null;
+async function getAccessToken() {
+  if (_cachedToken && _cachedToken.expiresAt > Date.now() + 30_000) return _cachedToken.value;
+  const account = getServiceAccount();
+  const key = await importPKCS8(account.private_key, 'RS256');
+  const now = Math.floor(Date.now() / 1000);
+  const assertion = await new SignJWT({ scope: 'https://www.googleapis.com/auth/datastore' })
+    .setProtectedHeader({ alg: 'RS256' })
+    .setIssuedAt(now)
+    .setExpirationTime(now + 3600)
+    .setIssuer(account.client_email)
+    .setSubject(account.client_email)
+    .setAudience('https://oauth2.googleapis.com/token')
+    .sign(key);
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Token exchange failed: ${data.error_description || data.error}`);
+  _cachedToken = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  return _cachedToken.value;
+}
+
+// ── Firestore REST write ──────────────────────────────────────────────────────
+
+// Converts a JS value to a Firestore REST API field value object.
+function toFirestoreValue(val) {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (typeof val === 'number') return { integerValue: String(val) };
+  if (typeof val === 'string') return { stringValue: val };
+  if (val instanceof Date) return { timestampValue: val.toISOString() };
+  if (Array.isArray(val)) {
+    return {
+      arrayValue: {
+        values: val.map(toFirestoreValue),
+      },
+    };
+  }
+  if (typeof val === 'object') {
+    const fields = {};
+    for (const [k, v] of Object.entries(val)) {
+      fields[k] = toFirestoreValue(v);
+    }
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
+
+async function writeToFirestore(projectId, collectionId, data) {
+  const accessToken = await getAccessToken();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collectionId}`;
+  const fields = {};
+  for (const [k, v] of Object.entries(data)) {
+    fields[k] = toFirestoreValue(v);
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Firestore write failed: ${text}`);
+  }
+  return await res.json();
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Rate-limit: max 60 submissions per minute (more than enough; protects
+  // against replay attacks).
+  try { await checkRateLimit(req, 'uniform-form-webhook', 60, 60); }
+  catch { return res.status(429).json({ error: 'Too many requests' }); }
+
+  // ── Verify shared secret ────────────────────────────────────────────────────
+  const secret = process.env.FORM_WEBHOOK_SECRET;
+  if (!secret) return res.status(500).json({ error: 'Webhook secret not configured' });
+
+  const { secret: suppliedSecret, responses, submittedAt } = req.body || {};
+
+  if (!suppliedSecret || suppliedSecret !== secret) {
+    return res.status(401).json({ error: 'Invalid secret' });
+  }
+
+  if (!responses || typeof responses !== 'object') {
+    return res.status(400).json({ error: 'Missing or invalid responses' });
+  }
+
+  // ── Normalise responses ─────────────────────────────────────────────────────
+  // Google Apps Script's e.namedValues wraps each answer in an array.
+  // Flatten single-element arrays to plain strings for readability.
+  const normalised = {};
+  for (const [question, answer] of Object.entries(responses)) {
+    if (Array.isArray(answer) && answer.length === 1) {
+      normalised[question] = answer[0];
+    } else {
+      normalised[question] = answer;
+    }
+  }
+
+  // ── Write to Firestore ──────────────────────────────────────────────────────
+  try {
+    const account = getServiceAccount();
+    await writeToFirestore(account.project_id, 'uniformFormRequests', {
+      responses:   normalised,
+      submittedAt: submittedAt || new Date().toISOString(),
+      status:      'new',
+      source:      'google-form',
+      createdAt:   new Date().toISOString(),
+    });
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('uniform-form-webhook write failed:', err);
+    return res.status(500).json({ error: 'Failed to store submission' });
+  }
+}

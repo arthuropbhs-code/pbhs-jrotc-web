@@ -39,7 +39,6 @@ const Leadership = lazy(() => import('./pages/Leadership'));
 const AdminOrders = lazy(() => import('./pages/AdminOrders'));
 const AdminAnnouncements = lazy(() => import('./pages/AdminAnnouncements'));
 const UniformRequests = lazy(() => import('./pages/UniformRequests'));
-const UniformItemRequest = lazy(() => import('./pages/UniformItemRequest'));
 const CommanderInfo = lazy(() => import('./pages/CommanderInfo'));
 const AdminTeams = lazy(() => import('./pages/AdminTeams'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
@@ -195,8 +194,6 @@ const AppContent = () => {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
           <Route path="/how-to-join" element={<HowToJoin />} />
-          {/* Public uniform item request form — no login required */}
-          <Route path="/uniform-request" element={<UniformItemRequest />} />
 
           {/* --- PROTECTED ADMIN ROUTES (wrapped in AdminLayout for persistent sidebar) --- */}
           {/* AdminLayout is a pathless layout route that renders <AdminSidebar /> +

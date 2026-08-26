@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="24"      label="Releases"    />
-        <Stat value="317"     label="Commits"     />
+        <Stat value="25"      label="Releases"    />
+        <Stat value="318"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.19" label="Current"     />
+        <Stat value="v1.6.20" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -544,11 +544,15 @@ const AdminChangelog = () => {
           <C type="fix">Sync Settings labels updated in the roster modal: "Roster is master" → "One-way sync (Roster → Portal only)", "Portal is master" → "Two-way sync (Roster ↔ Portal)", with updated description text clarifying roster saves always push to the account</C>
         </>} />
 
-        <Patch version="v1.6.19" date="Aug 25" title="Public uniform item request page" isCurrent changes={<>
-          <C type="feat">New public page at <code className="font-mono text-[10px]">/uniform-request</code> — no login required; any cadet or parent can submit a uniform item request directly from the battalion website</C>
-          <C type="feat">Page embeds the S4 Google Form in an inline iframe; falls back to an "open in new tab" button if the browser blocks the embed</C>
-          <C type="feat">Available-items grid shows the four request categories (Uniform Components, OCP Gear, Accoutrements, PT Gear) above the form so cadets know what to request</C>
-          <C type="feat">"Request Uniform Items" link added to the Navbar under the Cadet Info dropdown (desktop and mobile); gated by a <code className="font-mono text-[10px]">uniform-request</code> visibility flag that admins can toggle off without a redeploy</C>
+        <Patch version="v1.6.19" date="Aug 25" title="Public uniform item request page (reverted)" changes={<>
+          <C type="feat">Created public <code className="font-mono text-[10px]">/uniform-request</code> page embedding the S4 Google Form — reverted in v1.6.20 to prevent unsolicited submissions from parents and non-cadets</C>
+        </>} />
+
+        <Patch version="v1.6.20" date="Aug 25" title="Google Form webhook — backend-only uniform requests" isCurrent changes={<>
+          <C type="fix">Removed the public <code className="font-mono text-[10px]">/uniform-request</code> page, its Navbar links, and the <code className="font-mono text-[10px]">uniform-request</code> visibility flag — the Google Form remains as a QR code posted in the JROTC room only</C>
+          <C type="feat">New serverless endpoint <code className="font-mono text-[10px]">/api/uniform-form-webhook</code> receives Google Form submissions via Google Apps Script on every form submit; authenticated with a shared secret stored in the <code className="font-mono text-[10px]">FORM_WEBHOOK_SECRET</code> Vercel environment variable</C>
+          <C type="feat">Submissions are written to a new <code className="font-mono text-[10px]">uniformFormRequests</code> Firestore collection using the service account; Firestore security rules allow S4 logistics and battalion command (level 70+) to read, and command to mark reviewed — client apps cannot write or delete</C>
+          <C type="feat">Uniform Items admin page gains a "Form Requests" tab (visible to S4 logistics and battalion command) showing every Google Form submission with all question/answer pairs, submission date, and a "Mark Reviewed" action; new submissions are highlighted with a blue left border and a badge count on the tab</C>
         </>} />
       </Minor>
 
