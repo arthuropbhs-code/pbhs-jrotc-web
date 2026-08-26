@@ -316,7 +316,7 @@ const UniformRequests = () => {
   const canSeeFormRequests = canApprove || isHighCommand;
   const [formRequests,     setFormRequests]     = useState([]);
   const [formRequestsTab,  setFormRequestsTab]  = useState(false); // true = showing form tab
-  const [markingReviewed,  setMarkingReviewed]  = useState(null);  // id being updated
+  const [actingOnForm,     setActingOnForm]     = useState(null);   // { id, action }
 
   useEffect(() => {
     if (!canSeeFormRequests) return;
@@ -327,12 +327,12 @@ const UniformRequests = () => {
     return () => unsub();
   }, [canSeeFormRequests]);
 
-  const handleMarkReviewed = async (id) => {
-    setMarkingReviewed(id);
+  const handleFormAction = async (id, action) => {
+    setActingOnForm({ id, action });
     try {
-      await updateDoc(doc(db, 'uniformFormRequests', id), { status: 'reviewed' });
+      await updateDoc(doc(db, 'uniformFormRequests', id), { status: action });
     } finally {
-      setMarkingReviewed(null);
+      setActingOnForm(null);
     }
   };
 
@@ -476,20 +476,23 @@ const UniformRequests = () => {
             {s}
           </button>
         ))}
-        {canSeeFormRequests && (
-          <button
-            onClick={() => setFormRequestsTab(true)}
-            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${formRequestsTab ? 'bg-blue-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-          >
-            <ClipboardList size={11} />
-            Form Requests
-            {formRequests.filter(r => r.status === 'new').length > 0 && (
-              <span className={`ml-1 text-[9px] font-black px-1.5 py-0.5 rounded-full ${formRequestsTab ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-400'}`}>
-                {formRequests.filter(r => r.status === 'new').length}
-              </span>
-            )}
-          </button>
-        )}
+        {canSeeFormRequests && (() => {
+          const newCount = formRequests.filter(r => r.status === 'new').length;
+          return (
+            <button
+              onClick={() => setFormRequestsTab(true)}
+              className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${formRequestsTab ? 'bg-blue-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <ClipboardList size={11} />
+              Form Requests
+              {newCount > 0 && (
+                <span className={`ml-1 text-[9px] font-black px-1.5 py-0.5 rounded-full ${formRequestsTab ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-400'}`}>
+                  {newCount}
+                </span>
+              )}
+            </button>
+          );
+        })()}
       </div>
 
       {/* ── Form Requests Panel ───────────────────────────────────────────── */}
@@ -506,22 +509,40 @@ const UniformRequests = () => {
           ) : (
             <div className="space-y-4">
               {formRequests.map(req => {
-                const isNew = req.status === 'new';
+                const isNew      = req.status === 'new';
+                const isApproved = req.status === 'approved';
+                const isDeclined = req.status === 'declined';
+                const isBusy     = actingOnForm?.id === req.id;
+
+                const accentClass = isApproved ? 'border-green-500/30'
+                                  : isDeclined ? 'border-white/5 opacity-60'
+                                  : 'border-blue-500/30';
+                const accentBar   = isApproved ? 'bg-green-500'
+                                  : isDeclined ? 'bg-slate-700'
+                                  : 'bg-blue-500';
+
+                const statusLabel  = isApproved ? 'Approved' : isDeclined ? 'Declined' : 'New';
+                const statusChip   = isApproved ? 'bg-green-500/20 text-green-400'
+                                   : isDeclined ? 'bg-white/5 text-slate-500'
+                                   : 'bg-blue-500/20 text-blue-400';
+
                 const date = req.submittedAt
                   ? new Date(req.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
                   : '—';
+
                 return (
                   <div
                     key={req.id}
-                    className={`bg-slate-900 border rounded-2xl p-6 shadow-lg relative overflow-hidden transition-all ${isNew ? 'border-blue-500/30' : 'border-white/5'}`}
+                    className={`bg-slate-900 border rounded-2xl p-6 shadow-lg relative overflow-hidden transition-all ${accentClass}`}
                   >
-                    {isNew && <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />}
+                    <div className={`absolute top-0 left-0 w-1 h-full ${accentBar}`} />
 
+                    {/* Header row */}
                     <div className="flex items-start justify-between gap-4 mb-4 pl-2">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${isNew ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
-                            {isNew ? 'New' : 'Reviewed'}
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${statusChip}`}>
+                            {statusLabel}
                           </span>
                           <span className="text-[10px] text-slate-500 font-bold">{date}</span>
                         </div>
@@ -529,19 +550,53 @@ const UniformRequests = () => {
                           Google Form Submission
                         </p>
                       </div>
+
+                      {/* Approve / Decline — only shown while status is 'new' */}
                       {isNew && (
-                        <button
-                          onClick={() => handleMarkReviewed(req.id)}
-                          disabled={markingReviewed === req.id}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-[10px] font-black uppercase transition-all disabled:opacity-50 shrink-0"
-                        >
-                          {markingReviewed === req.id ? (
-                            <Clock size={11} className="animate-spin" />
-                          ) : (
-                            <Eye size={11} />
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleFormAction(req.id, 'approved')}
+                            disabled={isBusy}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500/20 text-[10px] font-black uppercase transition-all disabled:opacity-50"
+                          >
+                            {isBusy && actingOnForm?.action === 'approved'
+                              ? <Clock size={11} className="animate-spin" />
+                              : <CheckCircle2 size={11} />}
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleFormAction(req.id, 'declined')}
+                            disabled={isBusy}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 text-[10px] font-black uppercase transition-all disabled:opacity-50"
+                          >
+                            {isBusy && actingOnForm?.action === 'declined'
+                              ? <Clock size={11} className="animate-spin" />
+                              : <X size={11} />}
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Roster linkage chip */}
+                    <div className="pl-2 mb-3">
+                      {req.rosterDocId ? (
+                        <div className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-1.5">
+                          <UserCheck size={11} className="text-yellow-500" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-yellow-500">
+                            {req.rosterName}
+                            {req.rosterRank    ? ` · ${req.rosterRank}`    : ''}
+                            {req.rosterCompany ? ` · ${req.rosterCompany}` : ''}
+                          </span>
+                          {req.linkedUid && (
+                            <span className="ml-1 text-[9px] text-yellow-600 font-bold">(has account)</span>
                           )}
-                          Mark Reviewed
-                        </button>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5">
+                          <AlertCircle size={11} className="text-slate-600" />
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">No roster match</span>
+                        </div>
                       )}
                     </div>
 

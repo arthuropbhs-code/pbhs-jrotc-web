@@ -22,7 +22,7 @@
 //       responses: e.namedValues,
 //       submittedAt: new Date().toISOString()
 //     });
-//     UrlFetchApp.fetch('https://pbhsjrotc.com/api/uniform-form-webhook', {
+//     UrlFetchApp.fetch('https://www.pbhsjrotc.com/api/uniform-form-webhook', {
 //       method: 'post',
 //       contentType: 'application/json',
 //       payload: payload,
@@ -33,6 +33,13 @@
 // Note: e.namedValues is an object where each value is an array (Google Forms
 // can have multi-select questions). We flatten single-element arrays to strings
 // before storing.
+//
+// Roster linkage: on every submission we attempt to match the cadet name
+// (converted from "Last, First" → "First Last") against the Firestore roster
+// collection. If a match is found, rosterDocId, linkedUid, rosterName,
+// rosterCompany, and rosterRank are stored on the document so the admin UI
+// can link the submission to the cadet record even if they have no portal
+// account.
 
 import { SignJWT, importPKCS8 } from 'jose';
 import { checkRateLimit } from '../lib/rateLimit.js';
@@ -79,7 +86,7 @@ async function getAccessToken() {
   return _cachedToken.value;
 }
 
-// ── Firestore REST write ──────────────────────────────────────────────────────
+// ── Firestore REST helpers ────────────────────────────────────────────────────
 
 // Converts a JS value to a Firestore REST API field value object.
 function toFirestoreValue(val) {
@@ -127,6 +134,71 @@ async function writeToFirestore(projectId, collectionId, data) {
   return await res.json();
 }
 
+// ── Roster lookup ─────────────────────────────────────────────────────────────
+// Attempts to find a roster entry matching the cadet's name.
+// The Google Form collects names in "Last, First" order; we convert to
+// "First Last" before querying.  Returns null if no match is found.
+
+function extractStringValue(fieldObj) {
+  if (!fieldObj) return null;
+  return fieldObj.stringValue ?? fieldObj.integerValue ?? null;
+}
+
+async function findRosterEntry(projectId, nameLastFirst) {
+  if (!nameLastFirst || typeof nameLastFirst !== 'string') return null;
+
+  // Convert "De Almeida, Arthuro" → "Arthuro De Almeida"
+  const commaIdx = nameLastFirst.indexOf(',');
+  if (commaIdx === -1) return null;
+  const lastName  = nameLastFirst.slice(0, commaIdx).trim();
+  const firstName = nameLastFirst.slice(commaIdx + 1).trim();
+  if (!firstName || !lastName) return null;
+  const fullName = `${firstName} ${lastName}`;
+
+  try {
+    const accessToken = await getAccessToken();
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+    const body = {
+      structuredQuery: {
+        from: [{ collectionId: 'roster' }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'fullName' },
+            op: 'EQUAL',
+            value: { stringValue: fullName },
+          },
+        },
+        limit: 1,
+      },
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+
+    const results = await res.json();
+    const doc = results?.[0]?.document;
+    if (!doc) return null;
+
+    const f = doc.fields || {};
+    return {
+      rosterDocId:   doc.name.split('/').pop(),
+      linkedUid:     extractStringValue(f.linkedUid)     || null,
+      rosterName:    extractStringValue(f.fullName)       || fullName,
+      rosterCompany: extractStringValue(f.company)        || null,
+      rosterRank:    extractStringValue(f.rank)           || null,
+    };
+  } catch {
+    // Non-fatal — a failed lookup doesn't prevent storing the submission
+    return null;
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -163,15 +235,28 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── Roster linkage ──────────────────────────────────────────────────────────
+  // Find the name field (any question label containing "name", case-insensitive).
+  const nameKey = Object.keys(normalised).find(k => k.toLowerCase().includes('name'));
+  const account = getServiceAccount();
+  const rosterEntry = nameKey
+    ? await findRosterEntry(account.project_id, normalised[nameKey])
+    : null;
+
   // ── Write to Firestore ──────────────────────────────────────────────────────
   try {
-    const account = getServiceAccount();
     await writeToFirestore(account.project_id, 'uniformFormRequests', {
-      responses:   normalised,
-      submittedAt: submittedAt || new Date().toISOString(),
-      status:      'new',
-      source:      'google-form',
-      createdAt:   new Date().toISOString(),
+      responses:     normalised,
+      submittedAt:   submittedAt || new Date().toISOString(),
+      status:        'new',
+      source:        'google-form',
+      createdAt:     new Date().toISOString(),
+      // Roster / account linkage — null when no roster match is found
+      rosterDocId:   rosterEntry?.rosterDocId   ?? null,
+      linkedUid:     rosterEntry?.linkedUid      ?? null,
+      rosterName:    rosterEntry?.rosterName     ?? null,
+      rosterCompany: rosterEntry?.rosterCompany  ?? null,
+      rosterRank:    rosterEntry?.rosterRank     ?? null,
     });
     return res.status(200).json({ ok: true });
   } catch (err) {

@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="25"      label="Releases"    />
-        <Stat value="318"     label="Commits"     />
+        <Stat value="26"      label="Releases"    />
+        <Stat value="319"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.20" label="Current"     />
+        <Stat value="v1.6.21" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -548,11 +548,17 @@ const AdminChangelog = () => {
           <C type="feat">Created public <code className="font-mono text-[10px]">/uniform-request</code> page embedding the S4 Google Form — reverted in v1.6.20 to prevent unsolicited submissions from parents and non-cadets</C>
         </>} />
 
-        <Patch version="v1.6.20" date="Aug 25" title="Google Form webhook — backend-only uniform requests" isCurrent changes={<>
+        <Patch version="v1.6.20" date="Aug 25" title="Google Form webhook — backend-only uniform requests" changes={<>
           <C type="fix">Removed the public <code className="font-mono text-[10px]">/uniform-request</code> page, its Navbar links, and the <code className="font-mono text-[10px]">uniform-request</code> visibility flag — the Google Form remains as a QR code posted in the JROTC room only</C>
           <C type="feat">New serverless endpoint <code className="font-mono text-[10px]">/api/uniform-form-webhook</code> receives Google Form submissions via Google Apps Script on every form submit; authenticated with a shared secret stored in the <code className="font-mono text-[10px]">FORM_WEBHOOK_SECRET</code> Vercel environment variable</C>
           <C type="feat">Submissions are written to a new <code className="font-mono text-[10px]">uniformFormRequests</code> Firestore collection using the service account; Firestore security rules allow S4 logistics and battalion command (level 70+) to read, and command to mark reviewed — client apps cannot write or delete</C>
           <C type="feat">Uniform Items admin page gains a "Form Requests" tab (visible to S4 logistics and battalion command) showing every Google Form submission with all question/answer pairs, submission date, and a "Mark Reviewed" action; new submissions are highlighted with a blue left border and a badge count on the tab</C>
+        </>} />
+
+        <Patch version="v1.6.21" date="Aug 26" title="Form request approve/decline + roster linkage" isCurrent changes={<>
+          <C type="feat">Form Requests tab now shows Approve (green) and Decline buttons instead of "Mark Reviewed" — Approve confirms the request will be fulfilled; Decline rejects it; status badge updates accordingly</C>
+          <C type="feat">Webhook now queries the roster on every form submission: the cadet's name ("Last, First") is converted to "First Last" and matched against roster <code className="font-mono text-[10px]">fullName</code>; if found, <code className="font-mono text-[10px]">rosterDocId</code>, <code className="font-mono text-[10px]">linkedUid</code>, rank, and company are stored on the submission document</C>
+          <C type="feat">Each form request card shows a linked cadet chip (name · rank · company, plus "has account" if a portal account is linked) or a "No roster match" indicator when the name wasn't found</C>
         </>} />
       </Minor>
 
