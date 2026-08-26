@@ -9,17 +9,18 @@ import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 export const DEFAULT_VISIBILITY = {
-  about:             true,
-  'cadet-info':      true,
-  'promotion-board': true,
-  'winning-colors':  true,
-  documents:         true,
-  announcements:     true,
-  newsletter:        true,
-  teams:             true,
-  leadership:        true,
-  photos:            true,
-  events:            true,
+  about:              true,
+  'cadet-info':       true,
+  'promotion-board':  true,
+  'winning-colors':   true,
+  documents:          true,
+  announcements:      true,
+  newsletter:         true,
+  teams:              true,
+  leadership:         true,
+  photos:             true,
+  events:             true,
+  'uniform-request':  true,
 };
 
 export function usePageVisibility() {

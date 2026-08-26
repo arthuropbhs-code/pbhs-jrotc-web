@@ -91,7 +91,7 @@ const Navbar = () => {
             {vis.about && <NavLink to="/about" currentPath={currentPath}>About</NavLink>}
 
             {/* --- CADET INFO DROPDOWN (shows if any sub-item is visible) --- */}
-            {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents) && (
+            {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents || vis['uniform-request']) && (
             <div className="relative group py-5">
               <div className="flex items-center gap-1 cursor-pointer">
                 <span className={`text-[11px] font-black uppercase tracking-[0.3em] transition-colors
@@ -123,6 +123,11 @@ const Navbar = () => {
                 {vis.documents && !isActive('/documents') && (
                   <Link to="/documents" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
                     Documents & Regs
+                  </Link>
+                )}
+                {vis['uniform-request'] && !isActive('/uniform-request') && (
+                  <Link to="/uniform-request" className="block p-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors border-t border-slate-100 dark:border-white/5 mt-1 pt-3">
+                    Request Uniform Items
                   </Link>
                 )}
               </div>
@@ -216,7 +221,7 @@ const Navbar = () => {
               {vis.about && <MobileNavLink to="/about" currentPath={currentPath} onNavigate={closeMenu}>About</MobileNavLink>}
 
               {/* Mobile Cadet Accordion Node */}
-              {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents) && (
+              {(vis['cadet-info'] || vis['promotion-board'] || vis['winning-colors'] || vis.documents || vis['uniform-request']) && (
               <div className="py-2 border-b border-white/5">
                 <button
                   onClick={() => setMobileCadetOpen(!mobileCadetOpen)}
@@ -231,6 +236,7 @@ const Navbar = () => {
                     {vis['promotion-board'] && <MobileNavLink to="/promotion-board" currentPath={currentPath} onNavigate={closeMenu} indent>Promotion Board</MobileNavLink>}
                     {vis['winning-colors'] && <MobileNavLink to="/cadet-info/winning-colors" currentPath={currentPath} onNavigate={closeMenu} indent>Winning Colors</MobileNavLink>}
                     {vis.documents && <MobileNavLink to="/documents" currentPath={currentPath} onNavigate={closeMenu} indent>Documents & Regs</MobileNavLink>}
+                    {vis['uniform-request'] && <MobileNavLink to="/uniform-request" currentPath={currentPath} onNavigate={closeMenu} indent>Request Uniform Items</MobileNavLink>}
                   </div>
                 )}
               </div>

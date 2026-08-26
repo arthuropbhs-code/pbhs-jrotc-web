@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="23"      label="Releases"    />
-        <Stat value="316"     label="Commits"     />
+        <Stat value="24"      label="Releases"    />
+        <Stat value="317"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.18" label="Current"     />
+        <Stat value="v1.6.19" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -539,9 +539,16 @@ const AdminChangelog = () => {
           <C type="fix">Uniform Sizes page now shows "Company not configured — ask an admin to update your profile" instead of the generic "Select a company to begin" empty state when an S4 assistant's user document is missing a company field</C>
         </>} />
 
-        <Patch version="v1.6.18" date="Aug 25" title="Roster → account sync always-on" isCurrent changes={<>
+        <Patch version="v1.6.18" date="Aug 25" title="Roster → account sync always-on" changes={<>
           <C type="fix">Saving a roster entry now always pushes shared fields (rank, position, company, platoon, squad, gender, LET level) to the linked portal account — previously only fired when the entry's sync mode was set to "Roster is master", so accounts auto-created during approval (which default to portal-as-master) were never updated from the roster</C>
           <C type="fix">Sync Settings labels updated in the roster modal: "Roster is master" → "One-way sync (Roster → Portal only)", "Portal is master" → "Two-way sync (Roster ↔ Portal)", with updated description text clarifying roster saves always push to the account</C>
+        </>} />
+
+        <Patch version="v1.6.19" date="Aug 25" title="Public uniform item request page" isCurrent changes={<>
+          <C type="feat">New public page at <code className="font-mono text-[10px]">/uniform-request</code> — no login required; any cadet or parent can submit a uniform item request directly from the battalion website</C>
+          <C type="feat">Page embeds the S4 Google Form in an inline iframe; falls back to an "open in new tab" button if the browser blocks the embed</C>
+          <C type="feat">Available-items grid shows the four request categories (Uniform Components, OCP Gear, Accoutrements, PT Gear) above the form so cadets know what to request</C>
+          <C type="feat">"Request Uniform Items" link added to the Navbar under the Cadet Info dropdown (desktop and mobile); gated by a <code className="font-mono text-[10px]">uniform-request</code> visibility flag that admins can toggle off without a redeploy</C>
         </>} />
       </Minor>
 
