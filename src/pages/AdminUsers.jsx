@@ -5,6 +5,7 @@ import {
   addDoc, serverTimestamp, deleteDoc, getDocs
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import {
   UserCog, Search, CheckCircle2,
@@ -28,7 +29,7 @@ const formatCooldown = (seconds) => {
 };
 
 const AdminUsers = () => {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   
   const [personnel, setPersonnel] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(true);
@@ -140,6 +141,7 @@ const AdminUsers = () => {
     // SignUp.jsx) and flips to true the first time staff touches the
     // record here, which is also when the welcome email goes out.
     const wasPendingApproval = !!editingRecord && editingRecord.approved === false;
+    const roleChanged = !!editingRecord && editingRecord.role !== formData.role;
 
     try {
       if (editingRecord) {
@@ -150,6 +152,30 @@ const AdminUsers = () => {
         });
         setEditingRecord(null);
         showStatus("Record Updated");
+
+        // ── Account-change logging ─────────────────────────────────────────
+        if (wasPendingApproval) {
+          writeLog({
+            type: 'account', action: 'approve',
+            description: `Approved account for ${formData.fullName} (${formData.role || 'cadet'})`,
+            userId: user?.uid || '', userFullName: userData?.fullName || '',
+            userRole: role || '', targetId: editingRecord.id, targetName: formData.fullName,
+          });
+        } else if (roleChanged) {
+          writeLog({
+            type: 'account', action: 'role_change',
+            description: `Changed ${formData.fullName}'s role from ${editingRecord.role} to ${formData.role}`,
+            userId: user?.uid || '', userFullName: userData?.fullName || '',
+            userRole: role || '', targetId: editingRecord.id, targetName: formData.fullName,
+          });
+        } else {
+          writeLog({
+            type: 'account', action: 'update',
+            description: `Updated account record for ${formData.fullName}`,
+            userId: user?.uid || '', userFullName: userData?.fullName || '',
+            userRole: role || '', targetId: editingRecord.id, targetName: formData.fullName,
+          });
+        }
 
         // ── Portal-is-master sync ─────────────────────────────────────────
         // If this user account is the master for a linked roster entry, push
@@ -294,6 +320,12 @@ const AdminUsers = () => {
 
         setShowAddModal(false);
         showStatus("Cadet Added");
+        writeLog({
+          type: 'account', action: 'create',
+          description: `Manually created account for ${formData.fullName} (${formData.role || 'cadet'}, ${formData.company || ''})`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId: newUserRef.id, targetName: formData.fullName,
+        });
       }
       setFormData(initialFormState);
     } catch {
@@ -388,6 +420,12 @@ const AdminUsers = () => {
       setEditingRecord(prev => prev && ({ ...prev, suspended: suspending }));
       setSuspendStatus('success');
       setTimeout(() => setSuspendStatus(null), 3000);
+      writeLog({
+        type: 'account', action: suspending ? 'suspend' : 'reactivate',
+        description: `${suspending ? 'Suspended' : 'Reactivated'} account for ${editingRecord.fullName}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: editingRecord.id, targetName: editingRecord.fullName,
+      });
     } catch (err) {
       setSuspendStatus(err.message || 'error');
     }
@@ -396,13 +434,24 @@ const AdminUsers = () => {
   // Shared deletion core — used by both handleDeleteAccount and handleDenyAccount.
   // Removes Firebase Auth + Firestore user doc via the Admin SDK endpoint, then
   // scrubs the email from every team's leadership array.
-  const _doDeleteAccount = async (successToast) => {
+  // logAction: 'delete' | 'deny'
+  const _doDeleteAccount = async (successToast, logAction = 'delete') => {
     setDeleteAccountStatus('working');
+    const targetId   = editingRecord.id;
+    const targetName = editingRecord.fullName;
     try {
       if (editingRecord.isManual) {
         await deleteDoc(doc(db, 'users', editingRecord.id));
         setEditingRecord(null);
         showStatus(successToast);
+        writeLog({
+          type: 'account', action: logAction,
+          description: logAction === 'deny'
+            ? `Denied registration request for ${targetName}`
+            : `Deleted account for ${targetName}`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId, targetName,
+        });
         return;
       }
       const idToken = await user.getIdToken();
@@ -430,6 +479,14 @@ const AdminUsers = () => {
 
       setEditingRecord(null);
       showStatus(successToast);
+      writeLog({
+        type: 'account', action: logAction,
+        description: logAction === 'deny'
+          ? `Denied registration request for ${targetName}`
+          : `Deleted account for ${targetName}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId, targetName,
+      });
     } catch (err) {
       setDeleteAccountStatus(err.message || 'error');
     }
@@ -439,7 +496,7 @@ const AdminUsers = () => {
   const handleDeleteAccount = async () => {
     if (!editingRecord) return;
     if (!window.confirm(`Permanently delete ${editingRecord.fullName || 'this account'}? This cannot be undone.`)) return;
-    await _doDeleteAccount('Account Deleted');
+    await _doDeleteAccount('Account Deleted', 'delete');
   };
 
   // Denies a pending account registration — same deletion logic, different
@@ -447,7 +504,7 @@ const AdminUsers = () => {
   const handleDenyAccount = async () => {
     if (!editingRecord) return;
     if (!window.confirm(`Deny ${editingRecord.fullName || 'this account'}'s registration request? This cannot be undone.`)) return;
-    await _doDeleteAccount('Registration Denied');
+    await _doDeleteAccount('Registration Denied', 'deny');
   };
 
   if (authLoading) return (
