@@ -117,8 +117,8 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="20"      label="Releases"    />
-        <Stat value="309"     label="Commits"     />
+        <Stat value="21"      label="Releases"    />
+        <Stat value="312"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
         <Stat value="v1.6.15" label="Current"     />
@@ -520,13 +520,18 @@ const AdminChangelog = () => {
           <C type="fix">Meeting Logs route guard now includes <code className="font-mono text-[10px]">company_master_sergeant</code>; app route and sidebar are consistent</C>
         </>} />
 
-        <Patch version="v1.6.15" date="Aug 25" title="Sidebar & account-management fixes" isCurrent changes={<>
+        <Patch version="v1.6.15" date="Aug 25" title="Sidebar & account-management fixes" changes={<>
           <C type="fix">S1 and S3 assistant sidebar rebuilt with proper group labels (Personnel, Programs, My Records) matching company-leadership layout — replaces the previous flat divider-section structure</C>
           <C type="fix">Removed duplicate "Company Roster" link that appeared twice for S1/S3 assistants; now appears once under Personnel</C>
           <C type="fix">Meeting Logs removed from S1/S3 assistant sidebar — only Company Top 3 (CC, XO, 1SG) and MSgt see that link; S1/S3 assistants' Personnel group shows Company Roster and S1 Tracker only</C>
           <C type="fix">S1 and S3 assistants no longer see full Fundraiser or Uniform management pages — sidebar routes them to "My Records" personal links (Fundraiser, Uniform Items, Uniform Sizes) while preserving full Cadet Challenge and S1 Tracker access</C>
           <C type="fix">Battalion S1 (s1_adjutant) and S6 Technology can now save user accounts and approve registrations — Firestore <code className="font-mono text-[10px]">/users</code> update/create/delete rules were only allowing <code className="font-mono text-[10px]">isAdmin()</code> (battalion command + instructors), which excluded both roles despite the UI correctly showing them the management interface</C>
           <C type="sec">Added <code className="font-mono text-[10px]">isUserManager()</code> helper to Firestore rules: S1 adjutant and S6 technology share the same privilege-cloning constraint as admins — cannot elevate a role to their own level (70) or above</C>
+        </>} />
+
+        <Patch version="v1.6.16" date="Aug 25" title="Account approval UI" isCurrent changes={<>
+          <C type="feat">Pending-account review now shows a green "Approve Account" button and a red "Deny Account" button side by side — replaces the generic yellow "Update Record" bar so the approval intent is unmistakable</C>
+          <C type="feat">Denying an account registration removes the Firebase Auth entry and Firestore document in one action, matching the existing Delete Account flow but scoped to the pending-approval context with its own confirmation and "Registration Denied" toast</C>
         </>} />
       </Minor>
 

@@ -393,22 +393,18 @@ const AdminUsers = () => {
     }
   };
 
-  // Permanently deletes a record. Manual (isManual: true) entries have no
-  // Firebase Auth account, so a Firestore deleteDoc is all that's needed.
-  // Real accounts go through the API endpoint which removes both Auth and
-  // Firestore together — preventing the ghost-account bug from before.
-  const handleDeleteAccount = async () => {
-    if (!editingRecord) return;
-    if (!window.confirm(`Permanently delete ${editingRecord.fullName || 'this account'}? This cannot be undone.`)) return;
+  // Shared deletion core — used by both handleDeleteAccount and handleDenyAccount.
+  // Removes Firebase Auth + Firestore user doc via the Admin SDK endpoint, then
+  // scrubs the email from every team's leadership array.
+  const _doDeleteAccount = async (successToast) => {
     setDeleteAccountStatus('working');
     try {
       if (editingRecord.isManual) {
         await deleteDoc(doc(db, 'users', editingRecord.id));
         setEditingRecord(null);
-        showStatus('Record Deleted');
+        showStatus(successToast);
         return;
       }
-
       const idToken = await user.getIdToken();
       const res = await fetch('/api/admin-update-account', {
         method: 'POST',
@@ -416,11 +412,9 @@ const AdminUsers = () => {
         body: JSON.stringify({ type: 'delete-account', targetUid: editingRecord.id })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete account');
+      if (!res.ok) throw new Error(data.error || 'Failed to remove account');
 
-      // After the auth+Firestore user doc is gone, scrub the deleted account's
-      // email from every team's leadership array so they don't retain a command
-      // slot on the public site or in AdminTeams.
+      // Scrub the deleted email from every special team's leadership array.
       const deletedEmail = editingRecord.email;
       if (deletedEmail) {
         const teamsSnap = await getDocs(collection(db, 'specialTeams'));
@@ -428,18 +422,32 @@ const AdminUsers = () => {
         teamsSnap.forEach(teamDoc => {
           const { leadership = [] } = teamDoc.data();
           const filtered = leadership.filter(l => l.email !== deletedEmail);
-          if (filtered.length !== leadership.length) {
+          if (filtered.length !== leadership.length)
             cleanups.push(updateDoc(doc(db, 'specialTeams', teamDoc.id), { leadership: filtered }));
-          }
         });
         await Promise.all(cleanups);
       }
 
       setEditingRecord(null);
-      showStatus('Account Deleted');
+      showStatus(successToast);
     } catch (err) {
       setDeleteAccountStatus(err.message || 'error');
     }
+  };
+
+  // Permanently deletes an approved account from the Danger Zone.
+  const handleDeleteAccount = async () => {
+    if (!editingRecord) return;
+    if (!window.confirm(`Permanently delete ${editingRecord.fullName || 'this account'}? This cannot be undone.`)) return;
+    await _doDeleteAccount('Account Deleted');
+  };
+
+  // Denies a pending account registration — same deletion logic, different
+  // confirmation text and toast so the action reads clearly as a denial.
+  const handleDenyAccount = async () => {
+    if (!editingRecord) return;
+    if (!window.confirm(`Deny ${editingRecord.fullName || 'this account'}'s registration request? This cannot be undone.`)) return;
+    await _doDeleteAccount('Registration Denied');
   };
 
   if (authLoading) return (
@@ -661,9 +669,28 @@ const AdminUsers = () => {
                   </select>
                 </div>
 
-                <button type="submit" className="md:col-span-2 w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all mt-4 text-sm shadow-lg shadow-yellow-500/20">
-                  {editingRecord ? 'Update Record' : 'Authorize & Add to Roster'}
-                </button>
+                {editingRecord?.approved === false ? (
+                  /* ── Pending-approval flow: green Approve + red Deny ── */
+                  <div className="md:col-span-2 flex gap-3 mt-4">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-green-600 hover:bg-green-500 text-white font-black uppercase py-5 rounded-2xl transition-all text-sm shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 size={17} /> Approve Account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDenyAccount}
+                      className="flex-1 bg-red-600 hover:bg-red-500 text-white font-black uppercase py-5 rounded-2xl transition-all text-sm shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
+                    >
+                      <X size={17} /> Deny Account
+                    </button>
+                  </div>
+                ) : (
+                  <button type="submit" className="md:col-span-2 w-full bg-yellow-500 text-slate-950 font-black uppercase py-5 rounded-2xl hover:bg-yellow-400 transition-all mt-4 text-sm shadow-lg shadow-yellow-500/20">
+                    {editingRecord ? 'Update Record' : 'Authorize & Add to Roster'}
+                  </button>
+                )}
               </form>
 
               {/* Real Firebase Auth login email - separate from the contact-email field above.
