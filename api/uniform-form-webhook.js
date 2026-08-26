@@ -135,16 +135,44 @@ async function writeToFirestore(projectId, collectionId, data) {
 }
 
 // ── Roster lookup ─────────────────────────────────────────────────────────────
-// Attempts to find a roster entry matching the cadet's name.
-// The Google Form collects names in "Last, First" order; we convert to
-// "First Last" before querying.  Returns null if no match is found.
+// Attempts to find a roster entry matching the cadet's name, with optional
+// company and LET-level confirmation for higher-confidence matches.
+//
+// Strategy:
+//   1. Query roster where fullName == converted name AND company == formCompany
+//      (if the form provided a company). High-confidence if found.
+//   2. Fall back to name-only query if no company match or company not provided.
+//
+// matchConfidence is stored on the document so the UI can distinguish strong
+// from weak matches.
 
 function extractStringValue(fieldObj) {
   if (!fieldObj) return null;
   return fieldObj.stringValue ?? fieldObj.integerValue ?? null;
 }
 
-async function findRosterEntry(projectId, nameLastFirst) {
+async function queryRoster(projectId, accessToken, whereClause, limit = 1) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'roster' }],
+        where: whereClause,
+        limit,
+      },
+    }),
+  });
+  if (!res.ok) return null;
+  const results = await res.json();
+  return results?.[0]?.document || null;
+}
+
+async function findRosterEntry(projectId, nameLastFirst, company, letLevel) {
   if (!nameLastFirst || typeof nameLastFirst !== 'string') return null;
 
   // Convert "De Almeida, Arthuro" → "Arthuro De Almeida"
@@ -157,41 +185,62 @@ async function findRosterEntry(projectId, nameLastFirst) {
 
   try {
     const accessToken = await getAccessToken();
-    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
-    const body = {
-      structuredQuery: {
-        from: [{ collectionId: 'roster' }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: 'fullName' },
-            op: 'EQUAL',
-            value: { stringValue: fullName },
-          },
-        },
-        limit: 1,
+
+    const nameFilter = {
+      fieldFilter: {
+        field: { fieldPath: 'fullName' },
+        op: 'EQUAL',
+        value: { stringValue: fullName },
       },
     };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
 
-    const results = await res.json();
-    const doc = results?.[0]?.document;
+    let doc = null;
+    let matchConfidence = 'medium';
+
+    // Try name + company first (higher confidence)
+    if (company) {
+      doc = await queryRoster(projectId, accessToken, {
+        compositeFilter: {
+          op: 'AND',
+          filters: [
+            nameFilter,
+            {
+              fieldFilter: {
+                field: { fieldPath: 'company' },
+                op: 'EQUAL',
+                value: { stringValue: company },
+              },
+            },
+          ],
+        },
+      });
+      if (doc) matchConfidence = 'high';
+    }
+
+    // Fall back to name-only
+    if (!doc) {
+      doc = await queryRoster(projectId, accessToken, nameFilter);
+    }
+
     if (!doc) return null;
 
     const f = doc.fields || {};
+    const rosterLetLevel = extractStringValue(f.letLevel);
+
+    // Further boost confidence if LET level also matches
+    if (matchConfidence === 'high' && letLevel && rosterLetLevel) {
+      const formLet   = String(letLevel).replace(/\D/g, '');
+      const rosterLet = String(rosterLetLevel).replace(/\D/g, '');
+      if (formLet !== rosterLet) matchConfidence = 'medium'; // name+company match, LET mismatch
+    }
+
     return {
-      rosterDocId:   doc.name.split('/').pop(),
-      linkedUid:     extractStringValue(f.linkedUid)     || null,
-      rosterName:    extractStringValue(f.fullName)       || fullName,
-      rosterCompany: extractStringValue(f.company)        || null,
-      rosterRank:    extractStringValue(f.rank)           || null,
+      rosterDocId:      doc.name.split('/').pop(),
+      linkedUid:        extractStringValue(f.linkedUid)  || null,
+      rosterName:       extractStringValue(f.fullName)    || fullName,
+      rosterCompany:    extractStringValue(f.company)     || null,
+      rosterRank:       extractStringValue(f.rank)        || null,
+      matchConfidence,
     };
   } catch {
     // Non-fatal — a failed lookup doesn't prevent storing the submission
@@ -236,11 +285,18 @@ export default async function handler(req, res) {
   }
 
   // ── Roster linkage ──────────────────────────────────────────────────────────
-  // Find the name field (any question label containing "name", case-insensitive).
-  const nameKey = Object.keys(normalised).find(k => k.toLowerCase().includes('name'));
-  const account = getServiceAccount();
+  // Find the relevant form fields by matching question-label keywords.
+  const nameKey    = Object.keys(normalised).find(k => k.toLowerCase().includes('name'));
+  const companyKey = Object.keys(normalised).find(k => k.toLowerCase().includes('company'));
+  const letKey     = Object.keys(normalised).find(k => k.toLowerCase().includes('let'));
+  const account    = getServiceAccount();
   const rosterEntry = nameKey
-    ? await findRosterEntry(account.project_id, normalised[nameKey])
+    ? await findRosterEntry(
+        account.project_id,
+        normalised[nameKey],
+        companyKey ? normalised[companyKey] : null,
+        letKey     ? normalised[letKey]     : null,
+      )
     : null;
 
   // ── Write to Firestore ──────────────────────────────────────────────────────
@@ -252,11 +308,12 @@ export default async function handler(req, res) {
       source:        'google-form',
       createdAt:     new Date().toISOString(),
       // Roster / account linkage — null when no roster match is found
-      rosterDocId:   rosterEntry?.rosterDocId   ?? null,
-      linkedUid:     rosterEntry?.linkedUid      ?? null,
-      rosterName:    rosterEntry?.rosterName     ?? null,
-      rosterCompany: rosterEntry?.rosterCompany  ?? null,
-      rosterRank:    rosterEntry?.rosterRank     ?? null,
+      rosterDocId:      rosterEntry?.rosterDocId      ?? null,
+      linkedUid:        rosterEntry?.linkedUid         ?? null,
+      rosterName:       rosterEntry?.rosterName        ?? null,
+      rosterCompany:    rosterEntry?.rosterCompany     ?? null,
+      rosterRank:       rosterEntry?.rosterRank        ?? null,
+      matchConfidence:  rosterEntry?.matchConfidence   ?? null,
     });
     return res.status(200).json({ ok: true });
   } catch (err) {

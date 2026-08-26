@@ -71,6 +71,7 @@ const AdminMeetingLogs    = lazy(() => import('./pages/AdminMeetingLogs'));
 const AdminEvents         = lazy(() => import('./pages/AdminEvents'));
 const AdminFeedback       = lazy(() => import('./pages/AdminFeedback'));
 const AdminHonorCompany   = lazy(() => import('./pages/AdminHonorCompany'));
+const AdminLog            = lazy(() => import('./pages/AdminLog'));
 const AdminSupplyRequests = lazy(() => import('./pages/AdminSupplyRequests'));
 const AdminCadetHistory   = lazy(() => import('./pages/AdminCadetHistory'));
 const AdminChangelog      = lazy(() => import('./pages/AdminChangelog'));
@@ -444,6 +445,16 @@ const AppContent = () => {
               element={
                 <ProtectedRoute minLevel={STAFF_LEVEL}>
                   <AdminHonorCompany />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Activity Log — staff only */}
+            <Route
+              path="/admin/log"
+              element={
+                <ProtectedRoute minLevel={STAFF_LEVEL}>
+                  <AdminLog />
                 </ProtectedRoute>
               }
             />

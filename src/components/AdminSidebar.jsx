@@ -43,6 +43,7 @@ import {
   ShoppingCart,
   History,
   Tag,
+  ScrollText,
 } from 'lucide-react';
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 import { clearDeviceTrust } from '../hooks/useIdleLogout';
@@ -265,6 +266,7 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
             {navLink('/admin/cadet-history', <History size={18} />, 'Cadet History')}
+            {userLevel >= STAFF_LEVEL && navLink('/admin/log', <ScrollText size={18} />, 'Activity Log')}
 
             {/* ── PROGRAMS ────────────────────────── */}
             {groupLabel('Programs')}

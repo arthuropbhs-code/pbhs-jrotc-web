@@ -189,9 +189,11 @@ const AdminHonorCompany = () => {
   const { role, userData, loading: authLoading } = useAuth();
   const { companies: COMPANIES } = useCompanies();
   const myLevel   = () => ROLE_HIERARCHY[role] || 0;
-  const isAuth    = myLevel() >= STAFF_LEVEL;
-  const canLog    = myLevel() >= STAFF_LEVEL;
-  const canAdmin  = myLevel() >= ADMIN_LEVEL;
+  const isAuth          = myLevel() >= STAFF_LEVEL;
+  const canLog          = myLevel() >= STAFF_LEVEL;
+  const canAdmin        = myLevel() >= ADMIN_LEVEL;
+  // Only BC, XO, and CSM (level 85+) can create or remove scoring categories.
+  const canCreateCategory = myLevel() >= 85;
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState('quarterly');
@@ -213,9 +215,10 @@ const AdminHonorCompany = () => {
   const [savedLog,  setSavedLog]  = useState(false);
 
   // ── Category management ───────────────────────────────────────────────────
-  const [catInput,  setCatInput]  = useState('');
-  const [savingCat, setSavingCat] = useState(false);
-  const [catOpen,   setCatOpen]   = useState(false);
+  const [catInput,    setCatInput]    = useState('');
+  const [catMaxScore, setCatMaxScore] = useState('');
+  const [savingCat,   setSavingCat]   = useState(false);
+  const [catOpen,     setCatOpen]     = useState(false);
 
   // ── Org Day editing ───────────────────────────────────────────────────────
   const [expandedEvent, setExpandedEvent] = useState(null);
@@ -319,17 +322,30 @@ const AdminHonorCompany = () => {
   const addCategory = async () => {
     const val = catInput.trim();
     if (!val || currentCategories.includes(val)) return;
-    const key = `${quarter.toLowerCase()}Categories`;
+    const key        = `${quarter.toLowerCase()}Categories`;
+    const detailKey  = `${quarter.toLowerCase()}CategoryDetails`;
+    const maxScore   = Number(catMaxScore) || 100;
+    const existing   = settings[detailKey] || {};
     setSavingCat(true);
-    await setDoc(doc(db, 'settings', 'honorCompany'), { [key]: [...currentCategories, val] }, { merge: true });
+    await setDoc(doc(db, 'settings', 'honorCompany'), {
+      [key]:       [...currentCategories, val],
+      [detailKey]: { ...existing, [val]: { maxScore } },
+    }, { merge: true });
     setCatInput('');
+    setCatMaxScore('');
     setSavingCat(false);
   };
 
   const removeCategory = async cat => {
-    if (!canAdmin) return;
-    const key = `${quarter.toLowerCase()}Categories`;
-    await setDoc(doc(db, 'settings', 'honorCompany'), { [key]: currentCategories.filter(c => c !== cat) }, { merge: true });
+    if (!canCreateCategory) return;
+    const key       = `${quarter.toLowerCase()}Categories`;
+    const detailKey = `${quarter.toLowerCase()}CategoryDetails`;
+    const existing  = { ...(settings[detailKey] || {}) };
+    delete existing[cat];
+    await setDoc(doc(db, 'settings', 'honorCompany'), {
+      [key]:       currentCategories.filter(c => c !== cat),
+      [detailKey]: existing,
+    }, { merge: true });
   };
 
   // ── Handlers — Org Day ────────────────────────────────────────────────────
@@ -464,8 +480,8 @@ const AdminHonorCompany = () => {
               </div>
             </div>
 
-            {/* Category management (admin) */}
-            {canAdmin && (
+            {/* Category management — BC/XO/CSM only (canCreateCategory) */}
+            {canCreateCategory && (
               <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl">
                 <button onClick={() => setCatOpen(o => !o)}
                   className="w-full flex items-center justify-between px-6 py-4 text-left">
@@ -480,28 +496,43 @@ const AdminHonorCompany = () => {
                       {currentCategories.length === 0 && (
                         <p className="text-xs italic text-slate-400">No categories — add one below.</p>
                       )}
-                      {currentCategories.map(cat => (
-                        <span key={cat} className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase">
-                          {cat}
-                          <button onClick={() => removeCategory(cat)} aria-label={`Remove category ${cat}`} className="text-slate-400 hover:text-red-500 transition-colors">
-                            <X size={10} />
-                          </button>
-                        </span>
-                      ))}
+                      {currentCategories.map(cat => {
+                        const detail   = settings[`${quarter.toLowerCase()}CategoryDetails`]?.[cat];
+                        const maxScore = detail?.maxScore ?? 100;
+                        return (
+                          <span key={cat} className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase">
+                            {cat}
+                            <span className="text-slate-400 font-normal normal-case">/{maxScore}pts</span>
+                            <button onClick={() => removeCategory(cat)} aria-label={`Remove category ${cat}`} className="text-slate-400 hover:text-red-500 transition-colors">
+                              <X size={10} />
+                            </button>
+                          </span>
+                        );
+                      })}
                     </div>
                     <div className="flex gap-2">
                       <input
                         value={catInput}
                         onChange={e => setCatInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && addCategory()}
-                        placeholder="New category…"
+                        placeholder="Category name…"
                         className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-yellow-500/40 transition-colors"
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        value={catMaxScore}
+                        onChange={e => setCatMaxScore(e.target.value)}
+                        onKeyDown={e => e.stopPropagation()}
+                        placeholder="Max pts"
+                        className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-yellow-500/40 transition-colors"
                       />
                       <button onClick={addCategory} disabled={savingCat || !catInput.trim()}
                         className="px-3 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-xl text-[10px] font-black uppercase disabled:opacity-50 transition-colors">
                         {savingCat ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                       </button>
                     </div>
+                    <p className="text-[9px] text-slate-400 mt-2">Max points defaults to 100 if left blank.</p>
                   </div>
                 )}
               </div>
@@ -750,10 +781,21 @@ const AdminHonorCompany = () => {
                   <select value={logForm.category} onChange={e => setLogForm(f => ({ ...f, category: e.target.value }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-yellow-500/40 transition-colors">
                     <option value="">Select category…</option>
-                    {(settings[`${logForm.quarter.toLowerCase()}Categories`] || []).map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {(settings[`${logForm.quarter.toLowerCase()}Categories`] || []).map(c => {
+                      const detail   = settings[`${logForm.quarter.toLowerCase()}CategoryDetails`]?.[c];
+                      const maxScore = detail?.maxScore ?? 100;
+                      return <option key={c} value={c}>{c} (max {maxScore} pts)</option>;
+                    })}
                   </select>
+                  {logForm.category && (() => {
+                    const detail   = settings[`${logForm.quarter.toLowerCase()}CategoryDetails`]?.[logForm.category];
+                    const maxScore = detail?.maxScore ?? 100;
+                    return (
+                      <p className="text-[9px] text-slate-400 mt-1 ml-1">
+                        Max points for this category: <strong>{maxScore}</strong>
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 {/* Company */}

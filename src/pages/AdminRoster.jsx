@@ -18,6 +18,7 @@ import {
   onSnapshot, query, orderBy, where, serverTimestamp, getDocs,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import {
   ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL,
@@ -268,14 +269,26 @@ const AdminRoster = () => {
       if (editingId) {
         await updateDoc(doc(db, 'roster', editingId), { ...payload, updatedAt: serverTimestamp() });
         showToast('Entry updated');
+        writeLog({
+          type: 'roster', action: 'update',
+          description: `Updated roster entry for ${payload.fullName}`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId: editingId, targetName: payload.fullName,
+        });
       } else {
-        await addDoc(collection(db, 'roster'), {
+        const newDoc = await addDoc(collection(db, 'roster'), {
           ...payload,
           createdAt:  serverTimestamp(),
           updatedAt:  serverTimestamp(),
           createdBy:  user?.uid || '',
         });
         showToast('Cadet added');
+        writeLog({
+          type: 'roster', action: 'create',
+          description: `Added ${payload.fullName} to the roster (${payload.company})`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId: newDoc.id, targetName: payload.fullName,
+        });
       }
 
       // ── Roster → account sync ────────────────────────────────────────────
@@ -319,8 +332,15 @@ const AdminRoster = () => {
 
   const handleDelete = async () => {
     if (!deleteConf) return;
+    const deletedName = deleteConf.fullName || '';
     try {
       await deleteDoc(doc(db, 'roster', deleteConf.id));
+      writeLog({
+        type: 'roster', action: 'delete',
+        description: `Removed ${deletedName} from the roster`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deletedName,
+      });
       setDeleteConf(null);
       showToast('Entry removed');
     } catch {

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Import constants
 import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
+import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import Footer from '../components/Footer';
 import ScrambleText from '../components/ScrambleText';
@@ -193,6 +194,12 @@ const UniformRequests = () => {
     if (req.status !== 'Pending') return;
     await updateDoc(doc(db, "uniform_requests", req.id), { status: 'Approved' });
     showNotify("Request marked as Approved");
+    writeLog({
+      type: 'uniform', action: 'approve',
+      description: `Approved uniform request: ${req.item}${req.detail ? ' — ' + req.detail : ''} for ${req.cadetName}`,
+      userId: auth.currentUser?.uid || '', userFullName: userProfile?.fullName || '',
+      userRole: userRole, targetId: req.id, targetName: req.cadetName,
+    });
 
     // Best-effort notification — a failed email doesn't undo the status change.
     if (req.requestedByEmail) {
@@ -225,6 +232,12 @@ const UniformRequests = () => {
     if (req.status !== 'Approved') return;
     await updateDoc(doc(db, "uniform_requests", req.id), { status: 'Issued' });
     showNotify("Item marked as Received!");
+    writeLog({
+      type: 'uniform', action: 'issue',
+      description: `Confirmed receipt of ${req.item}${req.detail ? ' — ' + req.detail : ''} for ${req.cadetName}`,
+      userId: auth.currentUser?.uid || '', userFullName: userProfile?.fullName || '',
+      userRole: userRole, targetId: req.id, targetName: req.cadetName,
+    });
   };
 
   const handleDelete = async (id) => {
@@ -330,7 +343,14 @@ const UniformRequests = () => {
   const handleFormAction = async (id, action) => {
     setActingOnForm({ id, action });
     try {
+      const req = formRequests.find(r => r.id === id);
       await updateDoc(doc(db, 'uniformFormRequests', id), { status: action });
+      writeLog({
+        type: 'form', action,
+        description: `${action === 'approved' ? 'Approved' : 'Declined'} Google Form uniform request${req?.rosterName ? ' from ' + req.rosterName : ''}`,
+        userId: auth.currentUser?.uid || '', userFullName: userProfile?.fullName || '',
+        userRole: userRole, targetId: id, targetName: req?.rosterName || null,
+      });
     } finally {
       setActingOnForm(null);
     }
@@ -590,6 +610,9 @@ const UniformRequests = () => {
                           </span>
                           {req.linkedUid && (
                             <span className="ml-1 text-[9px] text-yellow-600 font-bold">(has account)</span>
+                          )}
+                          {req.matchConfidence === 'high' && (
+                            <span className="ml-1 text-[9px] text-green-500 font-bold">confirmed</span>
                           )}
                         </div>
                       ) : (

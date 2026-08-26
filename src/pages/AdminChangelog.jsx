@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="26"      label="Releases"    />
-        <Stat value="319"     label="Commits"     />
+        <Stat value="27"      label="Releases"    />
+        <Stat value="320"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.21" label="Current"     />
+        <Stat value="v1.6.22" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -555,10 +555,20 @@ const AdminChangelog = () => {
           <C type="feat">Uniform Items admin page gains a "Form Requests" tab (visible to S4 logistics and battalion command) showing every Google Form submission with all question/answer pairs, submission date, and a "Mark Reviewed" action; new submissions are highlighted with a blue left border and a badge count on the tab</C>
         </>} />
 
-        <Patch version="v1.6.21" date="Aug 26" title="Form request approve/decline + roster linkage" isCurrent changes={<>
+        <Patch version="v1.6.21" date="Aug 26" title="Form request approve/decline + roster linkage" changes={<>
           <C type="feat">Form Requests tab now shows Approve (green) and Decline buttons instead of "Mark Reviewed" — Approve confirms the request will be fulfilled; Decline rejects it; status badge updates accordingly</C>
           <C type="feat">Webhook now queries the roster on every form submission: the cadet's name ("Last, First") is converted to "First Last" and matched against roster <code className="font-mono text-[10px]">fullName</code>; if found, <code className="font-mono text-[10px]">rosterDocId</code>, <code className="font-mono text-[10px]">linkedUid</code>, rank, and company are stored on the submission document</C>
           <C type="feat">Each form request card shows a linked cadet chip (name · rank · company, plus "has account" if a portal account is linked) or a "No roster match" indicator when the name wasn't found</C>
+        </>} />
+
+        <Patch version="v1.6.22" date="Aug 26" title="Activity Log + HC categories + enhanced roster matching" isCurrent changes={<>
+          <C type="feat">New Activity Log page (<code className="font-mono text-[10px]">/admin/log</code>) with a real-time feed of all system events and manual duty-log entries; visible to all battalion staff (70+); linked from the admin sidebar</C>
+          <C type="feat">Manual duty-log entries can be added from the log page — pick a category (Duty Note, Incident, Supply, Training, Admin, Other) and write a description and optional notes</C>
+          <C type="feat">Auto-logging wired into: sign-in, roster create/update/delete, uniform request approve/issue, Google Form request approve/decline</C>
+          <C type="feat">New <code className="font-mono text-[10px]">adminLog</code> Firestore collection with rules: staff (70+) can read and create their own entries; entries are immutable once written</C>
+          <C type="fix">Honor Company category creation restricted to BC, XO, and CSM (level 85+) — previously available to all ADMIN_LEVEL (80+) including SGM; SGM and all S-staff retain the ability to log points</C>
+          <C type="feat">Honor Company categories now store a <code className="font-mono text-[10px]">maxScore</code> field (default 100) set at creation time; max score is shown on each category chip and in the Log Points modal for reference</C>
+          <C type="feat">Webhook roster matching now also filters by company (from the form's "Company" question) for a high-confidence match, and checks LET level as a secondary confirmation; <code className="font-mono text-[10px]">matchConfidence</code> ("high" / "medium") is stored on each submission and shown as a "confirmed" badge on the form request card</C>
         </>} />
       </Minor>
 

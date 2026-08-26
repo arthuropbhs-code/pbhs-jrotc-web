@@ -624,6 +624,17 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    // ── Admin Activity Log ────────────────────────────────────────────────────
+    // Manual duty-log entries and auto-generated action records.
+    // Staff (70+) can read and create their own entries; log records are
+    // immutable once written (no update/delete from clients).
+    match /adminLog/{id} {
+      allow read: if isSignedIn() && myLevel() >= 70;
+      allow create: if isSignedIn() && myLevel() >= 70 &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // Fallback — deny everything not covered by an explicit rule above.
     // Every new collection MUST get its own match block before it can be used.
     match /{path=**} {

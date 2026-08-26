@@ -11,6 +11,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft, UserPlus, Shield, Loader2, Smartphone, CheckSquare, Square } from 'lucide-react';
 import { trustDevice } from '../hooks/useIdleLogout';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import SmoothInput from '../components/SmoothInput';
 import Typewriter from '../components/Typewriter';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -184,6 +185,14 @@ const AdminLogin = () => {
       // Clear any stale soft-lock before entering the admin area so the lock
       // screen never appears right after a fresh sign-in.
       sessionStorage.removeItem('sessionLocked');
+      // Best-effort login log — non-blocking.
+      writeLog({
+        type: 'auth', action: 'login',
+        description: `Signed in to the admin portal`,
+        userId: userCredential.user.uid,
+        userFullName: userCredential.user.displayName || cleanEmail,
+        userRole: '',
+      });
       navigate('/admin/dashboard');
     } catch (err) {
       if (err.code === 'auth/multi-factor-auth-required') {
