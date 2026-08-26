@@ -4,6 +4,7 @@ import {
   collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
@@ -34,7 +35,7 @@ const formatBytes = (bytes) => {
 };
 
 const AdminDocuments = () => {
-  const { role, userData, loading: authLoading } = useAuth();
+  const { user, role, userData, loading: authLoading } = useAuth();
   const isAuthorized = role === 's5_public_affairs' || role === 's6_technology' || (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
 
   const [documents, setDocuments] = useState([]);
@@ -109,6 +110,12 @@ const AdminDocuments = () => {
       });
       showStatus("Document Published");
       setShowModal(false);
+      writeLog({
+        type: 'document', action: 'create',
+        description: `Published document: "${form.title}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: form.title,
+      });
       setForm(initialForm);
     } catch (err) {
       console.error("Save failed:", err);
@@ -120,9 +127,16 @@ const AdminDocuments = () => {
 
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
+    const { id, title } = deleteConfirm;
     try {
-      await deleteDoc(doc(db, "documents", deleteConfirm.id));
+      await deleteDoc(doc(db, "documents", id));
       showStatus("Document Removed");
+      writeLog({
+        type: 'document', action: 'delete',
+        description: `Removed document: "${title || id}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: title,
+      });
     } catch (err) {
       console.error("Delete failed:", err);
       showStatus("Delete Failed");

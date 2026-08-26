@@ -26,6 +26,7 @@ import {
 } from 'firebase/firestore';
 import { getIdToken } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
@@ -435,6 +436,13 @@ const AdminCadetChallenge = () => {
         showToast('Record saved');
       }
       closeModal();
+      writeLog({
+        type: 'cadet_challenge', action: editingRecord ? 'update' : 'create',
+        description: `${editingRecord ? 'Updated' : 'Saved'} CC record for ${form.cadetName} — Cycle #${selectedCycle}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: form.cadetName,
+        notes: `cycle:${selectedCycle},company:${recordCompany}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('Save failed — try again');
@@ -494,6 +502,12 @@ const AdminCadetChallenge = () => {
       await deleteDoc(doc(db, 'cadetChallengeRecords', deleteConf.id));
       setDeleteConf(null);
       showToast('Record deleted');
+      writeLog({
+        type: 'cadet_challenge', action: 'delete',
+        description: `Deleted CC record for ${deleteConf.cadetName} — Cycle #${selectedCycle}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.cadetName,
+      });
     } catch { showToast('Delete failed'); }
   };
 
@@ -526,6 +540,12 @@ const AdminCadetChallenge = () => {
       const data = await res.json();
       setFinalizeConf(null);
       showToast(`Cycle #${selectedCycle} submitted — ${data.sent || 0} notifications sent`);
+      writeLog({
+        type: 'cadet_challenge', action: 'finalize',
+        description: `Finalized CC Cycle #${selectedCycle} for ${activeCompany}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `cycle:${selectedCycle},company:${activeCompany}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('Finalize failed — try again');

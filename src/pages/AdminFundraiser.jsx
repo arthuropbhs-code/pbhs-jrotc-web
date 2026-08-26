@@ -22,6 +22,7 @@ import {
   query, where, serverTimestamp, getDocs, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
@@ -144,9 +145,16 @@ const AdminFundraiser = () => {
   }, []);
 
   const handleToggleFundraiser = async () => {
+    const opening = !fundraiserIsOpen;
     setTogglingOpen(true);
     try {
-      await setDoc(doc(db, 'settings', 'fundraiser'), { isOpen: !fundraiserIsOpen }, { merge: true });
+      await setDoc(doc(db, 'settings', 'fundraiser'), { isOpen: opening }, { merge: true });
+      writeLog({
+        type: 'fundraiser', action: 'settings',
+        description: `Fundraiser ${opening ? 'opened' : 'closed'} for submissions`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       console.error('Toggle fundraiser error:', err);
     } finally {
@@ -394,6 +402,13 @@ const AdminFundraiser = () => {
       showToast('Payment logged');
       setShowModal(false);
       setForm(EMPTY_FORM);
+      writeLog({
+        type: 'fundraiser', action: 'create',
+        description: `Logged payment for ${name}: $${amt} (${form.paymentType})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: name,
+        notes: `company:${activeCompany}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('Save failed — try again');
@@ -414,6 +429,12 @@ const AdminFundraiser = () => {
       });
       setDeleteConf(null);
       showToast('Entry voided');
+      writeLog({
+        type: 'fundraiser', action: 'void',
+        description: `Voided payment entry for ${deleteConf.cadetName}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.cadetName,
+      });
     } catch (err) {
       console.error(err);
       showToast('Void failed — try again');

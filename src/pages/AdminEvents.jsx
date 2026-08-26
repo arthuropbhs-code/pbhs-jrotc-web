@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import {
   Calendar, Plus, Edit3, Trash2, Save, X, Loader2,
   MapPin, Clock, Info, Tag, Check,
@@ -176,7 +177,7 @@ const EventForm = ({ editingEvent, setField, saving, handleSave, setEditingEvent
 );
 
 const AdminEvents = () => {
-  const { userData } = useAuth();
+  const { user, userData, role } = useAuth();
 
   const [events, setEvents]           = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -202,6 +203,12 @@ const AdminEvents = () => {
       await setDoc(doc(db, 'settings', 'blueGoldCalendar'), { anchorDate }, { merge: true });
       setAnchorSaved(true);
       setTimeout(() => setAnchorSaved(false), 2500);
+      writeLog({
+        type: 'settings', action: 'update',
+        description: `Updated Blue/Gold calendar anchor date to ${anchorDate}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       console.error('Anchor save failed:', err);
     } finally {
@@ -245,6 +252,12 @@ const AdminEvents = () => {
         });
       }
       setEditingEvent(null);
+      writeLog({
+        type: 'event', action: editingEvent.id ? 'update' : 'create',
+        description: `${editingEvent.id ? 'Updated' : 'Created'} event: "${payload.title}" on ${payload.date}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: editingEvent.id || '', targetName: payload.title,
+      });
     } catch (err) {
       console.error('Event save failed:', err);
     } finally {
@@ -254,9 +267,16 @@ const AdminEvents = () => {
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
+    const ev = events.find(e => e.id === id);
     if (!window.confirm('Delete this event from the public calendar?')) return;
     try {
       await deleteDoc(doc(db, 'events', id));
+      writeLog({
+        type: 'event', action: 'delete',
+        description: `Deleted event: "${ev?.title || id}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: ev?.title,
+      });
     } catch (err) {
       console.error('Delete failed:', err);
     }

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY } from '../constants';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -154,6 +155,12 @@ function ArchiveModal({ onClose, adminUser }) {
 
       setArchived(count);
       setStep('done');
+      writeLog({
+        type: 'history', action: 'archive',
+        description: `Archived ${count} cadet records for school year ${year}`,
+        userId: adminUid, userFullName: adminName,
+        userRole: '', notes: `year:${year},count:${count}`,
+      });
     } catch (err) {
       setError('Archive failed. Some records may not have been saved. Please try again.');
       console.error(err);
@@ -306,6 +313,7 @@ function EditRecordModal({ record, onClose }) {
   const [letLevel,  setLetLevel]  = useState(record.letLevel  || '');
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState('');
+  const { user, userData, role } = useAuth();
 
   async function handleSave() {
     setSaving(true);
@@ -315,6 +323,12 @@ function EditRecordModal({ record, onClose }) {
         awards: awards.trim(),
         campNotes: campNotes.trim(),
         letLevel: letLevel.trim(),
+      });
+      writeLog({
+        type: 'history', action: 'update',
+        description: `Updated history record for ${record.cadetName} (${record.schoolYear})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: record.id, targetName: record.cadetName,
       });
       onClose();
     } catch (err) {
@@ -484,22 +498,37 @@ export default function AdminCadetHistory() {
   }, [canView]);
 
   async function deleteRecord(id) {
+    const rec = records.find(r => r.id === id);
     setDeleting(true);
-    try { await deleteDoc(doc(db, 'cadetYearlyHistory', id)); }
+    try {
+      await deleteDoc(doc(db, 'cadetYearlyHistory', id));
+      writeLog({
+        type: 'history', action: 'delete',
+        description: `Deleted history record for ${rec?.cadetName || id} (${rec?.schoolYear || ''})`,
+        userId: userData?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: rec?.cadetName,
+      });
+    }
     catch (err) { console.error(err); alert('Delete failed.'); }
     finally { setDeleting(false); setDeleteConf(null); }
   }
 
   async function deleteYear(year) {
+    const toDelete = records.filter(r => r.schoolYear === year);
     setDeleting(true);
     try {
-      const toDelete = records.filter(r => r.schoolYear === year);
       const chunkSize = 400;
       for (let i = 0; i < toDelete.length; i += chunkSize) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + chunkSize).forEach(r => batch.delete(doc(db, 'cadetYearlyHistory', r.id)));
         await batch.commit();
       }
+      writeLog({
+        type: 'history', action: 'delete',
+        description: `Deleted all history records for school year ${year} (${toDelete.length} records)`,
+        userId: userData?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `year:${year},count:${toDelete.length}`,
+      });
     } catch (err) {
       console.error(err);
       alert('Delete failed.');

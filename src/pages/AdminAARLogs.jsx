@@ -37,6 +37,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useCompanies } from '../hooks/useCompanies';
+import { writeLog } from '../lib/writeLog';
 import { db, auth } from '../firebase';
 import {
   collection, query, where, orderBy, onSnapshot,
@@ -196,7 +197,7 @@ const mkEmpty = (defaultCompany = '') => ({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 const AdminAARLogs = () => {
-  const { userData, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const { companies } = useCompanies();
   const userLevel  = ROLE_HIERARCHY[role] || 0;
   const myCompany  = userData?.company || '';
@@ -294,6 +295,12 @@ const AdminAARLogs = () => {
         await updateDoc(doc(db, 'aarLogs', activeAAR.id), payload);
       }
       closeModal();
+      writeLog({
+        type: 'aar_log', action: modalMode === 'create' ? 'create' : 'update',
+        description: `${modalMode === 'create' ? 'Created' : 'Updated'} AAR: "${payload.eventName}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: payload.eventName,
+      });
     } catch (err) {
       console.error('AAR save error:', err);
       alert('Failed to save AAR. Please try again.');
@@ -308,6 +315,12 @@ const AdminAARLogs = () => {
     setDeleting(aar.id);
     try {
       await deleteDoc(doc(db, 'aarLogs', aar.id));
+      writeLog({
+        type: 'aar_log', action: 'delete',
+        description: `Deleted AAR: "${aar.eventName}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: aar.id, targetName: aar.eventName,
+      });
     } catch (err) {
       console.error('AAR delete error:', err);
       alert('Failed to delete AAR.');

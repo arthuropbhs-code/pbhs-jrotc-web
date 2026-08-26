@@ -29,6 +29,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { db, auth, storage } from '../firebase';
 import {
   collection, query, where, onSnapshot,
@@ -490,6 +491,13 @@ const AdminS1 = () => {
 
       setShowCreateModal(false);
       setCreateForm({ title: '', dueDate: '', scope: 'battalion', company: '' });
+      writeLog({
+        type: 's1', action: 'create',
+        description: `Created form event: "${createForm.title}" (${eventScope === 'battalion' ? 'battalion-wide' : eventCompany})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: createForm.title,
+        notes: `cadets:${cadets.length},due:${createForm.dueDate}`,
+      });
     } catch (err) {
       console.error('Error creating form event:', err);
       alert('Failed to create form event. Please try again.');
@@ -506,6 +514,12 @@ const AdminS1 = () => {
       turnedInAt:      newStatus === 'turned_in' ? Timestamp.now()             : null,
       turnedInBy:      newStatus === 'turned_in' ? auth.currentUser.uid        : null,
       turnedInByName:  newStatus === 'turned_in' ? (userData?.fullName || '')  : null,
+    });
+    writeLog({
+      type: 's1', action: newStatus === 'turned_in' ? 'mark_complete' : 'mark_pending',
+      description: `Marked form ${newStatus === 'turned_in' ? 'turned in' : 'pending'} for ${sub.cadetName}`,
+      userId: user?.uid || '', userFullName: userData?.fullName || '',
+      userRole: role || '', targetId: sub.id, targetName: sub.cadetName,
     });
   };
 

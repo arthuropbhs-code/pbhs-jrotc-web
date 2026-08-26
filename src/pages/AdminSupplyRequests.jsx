@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY } from '../constants';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -202,6 +203,13 @@ function SubmitForm({ userProfile }) {
       setForm(INITIAL_FORM);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 4000);
+      writeLog({
+        type: 'supply', action: 'create',
+        description: `Supply request submitted: ${form.category} — ${resolvedItem} (qty ${form.quantity})`,
+        userId: userProfile.uid || '', userFullName: userProfile.fullName || '',
+        userRole: userData?.role || '', targetName: resolvedItem,
+        notes: `priority:${form.priority}`,
+      });
     } catch (err) {
       setError('Failed to submit request. Please try again.');
       console.error(err);
@@ -385,6 +393,7 @@ function ActionModal({ request, onClose, adminName }) {
   const [denial, setDenial]     = useState('');
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
+  const { user, userData, role } = useAuth();
 
   async function handleConfirm() {
     if (action === 'deny' && !denial.trim()) {
@@ -416,6 +425,12 @@ function ActionModal({ request, onClose, adminName }) {
           fulfilledAt:     serverTimestamp(),
         });
       }
+      writeLog({
+        type: 'supply', action,
+        description: `Supply request ${action}d: ${request.category} — ${request.item} for ${request.requestedByName}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || adminName,
+        userRole: role || '', targetId: request.id, targetName: request.item,
+      });
       onClose();
     } catch (err) {
       setError('Failed to update. Please try again.');

@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 import { getIdToken } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
@@ -408,6 +409,13 @@ const AdminUniformSizes = () => {
         showToast('Sizes saved');
       }
       closeModal();
+      writeLog({
+        type: 'uniform_sizes', action: editingRecord ? 'update' : 'create',
+        description: `${editingRecord ? 'Updated' : 'Saved'} uniform sizes for ${form.cadetName}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: docId, targetName: form.cadetName,
+        notes: `company:${activeCompany}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('Save failed — try again');
@@ -423,6 +431,12 @@ const AdminUniformSizes = () => {
       await deleteDoc(doc(db, 'uniformSizes', deleteConf.id));
       setDeleteConf(null);
       showToast('Record deleted');
+      writeLog({
+        type: 'uniform_sizes', action: 'delete',
+        description: `Deleted uniform sizes for ${deleteConf.cadetName || deleteConf.id}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.cadetName,
+      });
     } catch { showToast('Delete failed'); }
   };
 
@@ -456,6 +470,12 @@ const AdminUniformSizes = () => {
 
       setFinalizeConf(false);
       showToast(`${activeCompany} uniform sizes submitted`);
+      writeLog({
+        type: 'uniform_sizes', action: 'finalize',
+        description: `Submitted ${activeCompany} uniform sizes (${displaySizes.length} records)`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `company:${activeCompany},records:${displaySizes.length}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('Finalize failed — try again');

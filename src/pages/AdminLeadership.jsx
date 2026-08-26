@@ -4,6 +4,7 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
@@ -27,7 +28,7 @@ const initialLeaderForm = { name: '', role: '', rank: '', portrait: '', desc: ''
 const initialInstructorForm = { type: 'SAI', name: '' };
 
 const AdminLeadership = () => {
-  const { role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
 
   // Build the company dropdown from live Firestore config.
@@ -102,16 +103,29 @@ const AdminLeadership = () => {
       setEditingLeader(null);
       setLeaderForm(initialLeaderForm);
       showStatus("Leadership Record Saved");
+      writeLog({
+        type: 'leadership', action: editingLeader ? 'update' : 'create',
+        description: `${editingLeader ? 'Updated' : 'Added'} leader: ${leaderForm.name} — ${leaderForm.role}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: leaderForm.name,
+      });
     } catch {
       showStatus("Error Saving Record");
     }
   };
 
   const handleDeleteLeader = async (id) => {
+    const record = leadership.find(l => l.id === id);
     if (!window.confirm("Remove this leadership record?")) return;
     try {
       await deleteDoc(doc(db, "leadership", id));
       showStatus("Record Removed");
+      writeLog({
+        type: 'leadership', action: 'delete',
+        description: `Removed leader: ${record?.name || id}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: record?.name,
+      });
     } catch {
       showStatus("Error Removing Record");
     }
@@ -133,16 +147,30 @@ const AdminLeadership = () => {
       setEditingInstructor(null);
       setInstructorForm(initialInstructorForm);
       showStatus("Instructor Saved");
+      writeLog({
+        type: 'leadership', action: editingInstructor ? 'update' : 'create',
+        description: `${editingInstructor ? 'Updated' : 'Added'} instructor: ${instructorForm.name} (${instructorForm.type})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: instructorForm.name,
+        notes: `type:${instructorForm.type}`,
+      });
     } catch {
       showStatus("Error Saving Instructor");
     }
   };
 
   const handleDeleteInstructor = async (id) => {
+    const record = instructors.find(i => i.id === id);
     if (!window.confirm("Remove this instructor?")) return;
     try {
       await deleteDoc(doc(db, "instructors", id));
       showStatus("Instructor Removed");
+      writeLog({
+        type: 'leadership', action: 'delete',
+        description: `Removed instructor: ${record?.name || id}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: record?.name,
+      });
     } catch {
       showStatus("Error Removing Instructor");
     }

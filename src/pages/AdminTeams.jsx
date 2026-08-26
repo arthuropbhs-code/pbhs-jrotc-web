@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import {
   Save, Trash2, Edit3, ShieldAlert,
@@ -100,6 +101,12 @@ const AdminTeams = () => {
       setEditingId(null);
       setFormData({ name: '', status: 'Open Practice', description: '', practice: '', location: '', requirements: '', disciplines: '', leadership: [], photo: '' });
       triggerStatus('success');
+      writeLog({
+        type: 'team', action: editingId ? 'update' : 'create',
+        description: `${editingId ? 'Updated' : 'Created'} team: ${formData.name}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: docId, targetName: formData.name,
+      });
     } catch { triggerStatus('error'); }
   };
 
@@ -324,6 +331,12 @@ const AdminTeams = () => {
                     await deleteDoc(doc(db, 'specialTeams', deleteConfirm.id));
                     setDeleteConfirm({ open: false, id: null, name: '' });
                     triggerStatus('success');
+                    writeLog({
+                      type: 'team', action: 'delete',
+                      description: `Deleted team: ${deleteConfirm.name}`,
+                      userId: user?.uid || '', userFullName: userData?.fullName || '',
+                      userRole: role || '', targetId: deleteConfirm.id, targetName: deleteConfirm.name,
+                    });
                   } catch { triggerStatus('error'); }
                 }} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all">Confirm Purge</button>
               <button onClick={() => setDeleteConfirm({ open: false, id: null, name: '' })} className="w-full py-4 rounded-xl font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest bg-slate-100 dark:bg-white/5">Abort Mission</button>

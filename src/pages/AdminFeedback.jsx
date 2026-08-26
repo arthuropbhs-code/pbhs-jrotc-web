@@ -15,6 +15,7 @@ import {
   doc, Timestamp, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
   MessageSquare, Bug, Lightbulb, MessageCircle, Plus, X, Trash2,
@@ -62,7 +63,7 @@ const Badge = ({ meta, label }) => meta ? (
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const AdminFeedback = () => {
-  const { userData, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const userLevel = ROLE_HIERARCHY[role] || 0;
 
   const canView   = VIEW_ROLES.includes(role) || userLevel >= ADMIN_LEVEL;
@@ -92,6 +93,7 @@ const AdminFeedback = () => {
   }), [items, filterType, filterStatus]);
 
   const handleStatusChange = async (id, newStatus) => {
+    const item = items.find(i => i.id === id);
     setUpdating(id);
     try {
       await updateDoc(doc(db, 'feedback', id), {
@@ -101,6 +103,13 @@ const AdminFeedback = () => {
           resolvedByName: userData?.fullName || '',
         } : {}),
       });
+      writeLog({
+        type: 'feedback', action: 'status_change',
+        description: `Feedback "${item?.title || id}" marked ${newStatus}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: item?.title,
+        notes: `status:${newStatus}`,
+      });
     } finally {
       setUpdating(null);
     }
@@ -109,7 +118,15 @@ const AdminFeedback = () => {
   const handleDelete = async (item) => {
     if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
     setDeleting(item.id);
-    try { await deleteDoc(doc(db, 'feedback', item.id)); }
+    try {
+      await deleteDoc(doc(db, 'feedback', item.id));
+      writeLog({
+        type: 'feedback', action: 'delete',
+        description: `Deleted feedback: "${item.title}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: item.id, targetName: item.title,
+      });
+    }
     finally { setDeleting(null); }
   };
 

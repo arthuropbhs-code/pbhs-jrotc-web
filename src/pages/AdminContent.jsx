@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc, onSnapshot, collection, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import { DEFAULT_ABOUT, DEFAULT_CADET_INFO, DEFAULT_PROMOTION_BOARD, DEFAULT_HOME, DEFAULT_PHOTOS } from '../data/defaultPageContent';
@@ -44,7 +45,7 @@ const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 
 const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1";
 
 const AdminContent = () => {
-  const { role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const isAuthorized = role === 's5_public_affairs' || role === 's6_technology' || (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
 
   const [activeTab, setActiveTab] = useState('about');
@@ -97,6 +98,12 @@ const AdminContent = () => {
       }
       setEditingEvent(null);
       showStatus('Event saved');
+      writeLog({
+        type: 'event', action: editingEvent.id ? 'update' : 'create',
+        description: `${editingEvent.id ? 'Updated' : 'Created'} event: "${payload.title}" on ${payload.date}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: editingEvent.id || '', targetName: payload.title,
+      });
     } catch (err) {
       console.error('Event save failed:', err);
       showStatus('Save Failed');
@@ -106,10 +113,17 @@ const AdminContent = () => {
   };
 
   const handleDeleteEvent = async (id) => {
+    const ev = events.find(e => e.id === id);
     if (!window.confirm('Delete this event?')) return;
     try {
       await deleteDoc(doc(db, 'events', id));
       showStatus('Event deleted');
+      writeLog({
+        type: 'event', action: 'delete',
+        description: `Deleted event: "${ev?.title || id}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: ev?.title,
+      });
     } catch (err) {
       console.error('Delete failed:', err);
       showStatus('Delete Failed');
@@ -153,6 +167,12 @@ const AdminContent = () => {
     try {
       await setDoc(doc(db, "pageContent", id), data);
       showStatus("Saved and live on the site now");
+      writeLog({
+        type: 'content', action: 'update',
+        description: `Updated page content: ${id}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id,
+      });
     } catch (err) {
       console.error("Save failed:", err);
       showStatus("Save Failed");

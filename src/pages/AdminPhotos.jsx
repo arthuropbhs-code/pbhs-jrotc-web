@@ -10,6 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
@@ -34,7 +35,7 @@ const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 
 const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block mb-1";
 
 const AdminPhotos = () => {
-  const { role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   // Only S5/S6 and top-4 (ADMIN_LEVEL) — same as AdminContent/AdminDocuments
   const isAuthorized = role === 's5_public_affairs' || role === 's6_technology' || (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL;
 
@@ -71,6 +72,12 @@ const AdminPhotos = () => {
     try {
       await setDoc(doc(db, 'pageContent', 'photos'), { albums });
       showStatus('success', 'Photo gallery updated. Changes are live instantly.');
+      writeLog({
+        type: 'photos', action: 'update',
+        description: `Updated photo gallery albums (${albums.length} albums)`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       showStatus('error', 'Save failed: ' + err.message);
     } finally {

@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { getIdToken } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import { uploadPhotoToStorage } from '../utils/storageUploadPhoto';
 import {
@@ -193,6 +194,12 @@ const CartsTab = ({ user, showToast }) => {
         showToast('Cart added');
       }
       setShowForm(false); setEditing(null); setForm({ name: '', serialNumber: '' });
+      writeLog({
+        type: 's6', action: editing ? 'update' : 'create',
+        description: `${editing ? 'Updated' : 'Added'} S6 cart: "${form.name}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: form.name,
+      });
     } catch { showToast('Save failed'); }
     finally { setSaving(false); }
   };
@@ -202,6 +209,12 @@ const CartsTab = ({ user, showToast }) => {
     try {
       await updateDoc(doc(db, 's6Carts', deleteConf.id), { isActive: false });
       setDeleteConf(null); showToast('Cart removed');
+      writeLog({
+        type: 's6', action: 'delete',
+        description: `Removed S6 cart: "${deleteConf.name}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.name,
+      });
     } catch { showToast('Failed'); }
   };
 
@@ -345,6 +358,12 @@ const TasksTab = ({ user, showToast }) => {
       });
       showToast('Task added');
       setShowForm(false); setForm({ name: '', cartId: '' });
+      writeLog({
+        type: 's6', action: 'create',
+        description: `Added S6 task: "${form.name}" for cart "${cart?.name}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: form.name,
+      });
     } catch { showToast('Save failed'); }
     finally { setSaving(false); }
   };
@@ -354,6 +373,12 @@ const TasksTab = ({ user, showToast }) => {
     try {
       await updateDoc(doc(db, 's6Tasks', deleteConf.id), { isActive: false });
       setDeleteConf(null); showToast('Task removed');
+      writeLog({
+        type: 's6', action: 'delete',
+        description: `Removed S6 task: "${deleteConf.name}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.name,
+      });
     } catch { showToast('Failed'); }
   };
 

@@ -38,6 +38,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { db, auth } from '../firebase';
 import {
   collection, query, where, onSnapshot,
@@ -194,7 +195,7 @@ const EMPTY_FORM = {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 const AdminMeetingLogs = () => {
-  const { userData, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const userLevel = ROLE_HIERARCHY[role] || 0;
 
   // ── Access flags ─────────────────────────────────────────────────────────────
@@ -361,6 +362,12 @@ const AdminMeetingLogs = () => {
       closeModal();
       // Sync to Sheets with updated list
       syncToSheets(updatedLogs);
+      writeLog({
+        type: 'meeting_log', action: modalMode === 'create' ? 'create' : 'update',
+        description: `${modalMode === 'create' ? 'Created' : 'Updated'} Meeting Log #${payload.meetingNumber} — "${payload.meetingName}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: payload.meetingName,
+      });
     } catch (err) {
       console.error('Save error:', err);
       alert('Failed to save meeting log. Please try again.');
@@ -377,6 +384,12 @@ const AdminMeetingLogs = () => {
       await deleteDoc(doc(db, 'meetingLogs', log.id));
       const updatedLogs = logs.filter(l => l.id !== log.id);
       syncToSheets(updatedLogs);
+      writeLog({
+        type: 'meeting_log', action: 'delete',
+        description: `Deleted Meeting Log #${log.meetingNumber} — "${log.meetingName}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: log.id, targetName: log.meetingName,
+      });
     } catch (err) {
       console.error('Delete error:', err);
       alert('Failed to delete meeting log.');

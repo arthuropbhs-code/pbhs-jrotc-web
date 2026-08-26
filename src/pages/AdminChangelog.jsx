@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="29"      label="Releases"    />
-        <Stat value="331"     label="Commits"     />
+        <Stat value="30"      label="Releases"    />
+        <Stat value="332"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.24" label="Current"     />
+        <Stat value="v1.6.25" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -579,8 +579,11 @@ const AdminChangelog = () => {
           <C type="fix">Sidebar "My Records" personal-view links (Cadet Challenge, Fundraiser, Uniform Items, Uniform Sizes) no longer show for platoon/squad leadership (levels 12–25) or squad members/cadets (level 5); those tiers access their own data via My Profile instead; company assistants (35+) are unaffected</C>
           <C type="feat">AAR Logs sidebar link added under Meeting Logs for all company command (45+) and staff (70+); Meeting Logs sidebar link expanded to include all staff (70+)</C>
         </>} />
-        <Patch version="v1.6.24" date="Aug 26" title="Account change logging" isCurrent changes={<>
+        <Patch version="v1.6.24" date="Aug 26" title="Account change logging" changes={<>
           <C type="feat">Admin action log now records every account lifecycle event — account creation, approval, role change, profile update, suspend, reactivate, permanent delete, and registration denial; entries written to <code className="font-mono text-[10px]">adminLog</code> with type <code className="font-mono text-[10px]">"account"</code> and the specific action label; logging is non-blocking and non-throwing</C>
+        </>} />
+        <Patch version="v1.6.25" date="Aug 26" title="Portal-wide activity logging" isCurrent changes={<>
+          <C type="feat">Activity Log now captures every meaningful write across the entire admin portal — announcements (broadcast/delete), camps, content-page saves, documents (publish/delete), calendar events, newsletters, leadership records and instructors, special teams, feedback status changes and deletes, orders and tasks, site settings (company list, document categories, page visibility), fundraiser entries and toggle, Honor Company logs and Org Day scores, meeting logs, AAR logs, S1 form events and status toggles, S2 items and inspection approve/reject, S6 carts and tasks, supply requests and approvals, Cadet Challenge records and cycle finalization, uniform sizes and finalization, and cadet yearly history (archive/edit/delete); every action records actor, role, target, and a human-readable description</C>
         </>} />
       </Minor>
 

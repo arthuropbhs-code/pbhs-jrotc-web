@@ -16,6 +16,7 @@ import {
   orderBy, onSnapshot, deleteDoc, doc, limit,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { ROLE_HIERARCHY, STAFF_LEVEL, ADMIN_LEVEL } from '../constants';
 import {
@@ -27,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
 
 const AdminOrders = () => {
-  const { userData, role } = useAuth();
+  const { user, userData, role } = useAuth();
   const userLevel    = ROLE_HIERARCHY[role] || 0;
   const isInstructor = userLevel >= 95;
   const isS7         = role === 's7_special_projects'; // kept for any other uses below
@@ -141,6 +142,12 @@ const AdminOrders = () => {
       setSelectedTargets([]);
       setOrderStatus({ loading: false, success: true });
       setTimeout(() => setOrderStatus({ loading: false, success: false }), 3000);
+      writeLog({
+        type: 'order', action: 'create',
+        description: `Published order: "${orderText.substring(0, 80)}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `targets:${selectedTargets.join(',')}`,
+      });
     } catch {
       setOrderStatus({ loading: false, success: false });
       showError('Failed to publish order.');
@@ -167,6 +174,12 @@ const AdminOrders = () => {
     try {
       await deleteDoc(doc(db, 'orders', deleteConfirm.id));
       setDeleteConfirm({ show: false, id: null });
+      writeLog({
+        type: 'order', action: 'delete',
+        description: `Deleted order`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConfirm.id,
+      });
     } catch {
       showError('Deletion failed.');
     }
@@ -188,6 +201,12 @@ const AdminOrders = () => {
       });
       setTaskText('');
       showToast('success', `Task deployed to ${taskTarget}`);
+      writeLog({
+        type: 'order', action: 'create',
+        description: `Assigned task to ${taskTarget}: "${taskText.substring(0, 80)}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `assignedTo:${taskTarget}`,
+      });
     } catch (err) {
       console.error(err);
       showToast('error', 'Failed to deploy task.');
@@ -203,6 +222,12 @@ const AdminOrders = () => {
       await deleteDoc(doc(db, 'tasks', taskDeleteConf));
       setTaskDeleteConf(null);
       showToast('success', 'Task removed.');
+      writeLog({
+        type: 'order', action: 'delete',
+        description: `Deleted task`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: taskDeleteConf,
+      });
     } catch {
       setTaskDeleteConf(null);
       showToast('error', 'Delete failed.');

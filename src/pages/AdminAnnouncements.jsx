@@ -4,11 +4,12 @@ import { collection, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy, on
 import { Megaphone, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY } from '../constants';
 import AdminPageHeader from '../components/AdminPageHeader';
 
 const AdminAnnouncements = () => {
-  const { userData, role } = useAuth();
+  const { user, userData, role } = useAuth();
   const [text, setText] = useState('');
   const [sent, setSent] = useState(false);
   const [existingAnnouncements, setExistingAnnouncements] = useState([]);
@@ -44,6 +45,12 @@ const AdminAnnouncements = () => {
       setText('');
       setSent(true);
       setTimeout(() => setSent(false), 3000);
+      writeLog({
+        type: 'announcement', action: 'create',
+        description: `Broadcast sent: "${text.substring(0, 80)}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       console.error("Broadcast Error:", err);
       showToast('error', 'Broadcast failed. Try again.');
@@ -64,6 +71,12 @@ const AdminAnnouncements = () => {
       await deleteDoc(doc(db, "announcements", deleteConfirm.id));
       setDeleteConfirm(null);
       showToast('success', 'Broadcast removed.');
+      writeLog({
+        type: 'announcement', action: 'delete',
+        description: `Deleted broadcast`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConfirm.id,
+      });
     } catch (err) {
       console.error("Delete error:", err);
       setDeleteConfirm(null);

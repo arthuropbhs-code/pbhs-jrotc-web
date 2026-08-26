@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, ADMIN_LEVEL } from '../constants';
 import {
@@ -23,7 +24,7 @@ const DEFAULT_COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"];
 const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
 
 const AdminCompanies = () => {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   // s6_technology is explicitly allowed via the route's allowedRoles; the
   // level check alone (>= 80) would block them since they sit at level 70.
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= ADMIN_LEVEL || role === 's6_technology';
@@ -80,6 +81,12 @@ const AdminCompanies = () => {
       await setDoc(doc(db, 'settings', 'companies'), { names: trimmed });
       setCompanies(trimmed);
       showStatus('success', 'Company list saved. Changes are live instantly.');
+      writeLog({
+        type: 'settings', action: 'update',
+        description: `Updated company list: ${trimmed.join(', ')}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       showStatus('error', 'Save failed: ' + err.message);
     } finally {
@@ -133,6 +140,12 @@ const AdminCompanies = () => {
       await setDoc(doc(db, 'settings', 'documentCategories'), { categories: trimmed });
       setCategories(trimmed);
       showStatus('success', 'Document categories saved. Changes are live instantly.');
+      writeLog({
+        type: 'settings', action: 'update',
+        description: `Updated document categories: ${trimmed.join(', ')}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       showStatus('error', 'Save failed: ' + err.message);
     } finally {
@@ -183,6 +196,12 @@ const AdminCompanies = () => {
     try {
       await setDoc(doc(db, 'settings', 'pageVisibility'), visibility);
       showStatus('success', 'Page visibility saved. Nav updates instantly for all visitors.');
+      writeLog({
+        type: 'settings', action: 'update',
+        description: `Updated public page visibility settings`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       showStatus('error', 'Save failed: ' + err.message);
     } finally {

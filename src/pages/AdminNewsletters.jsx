@@ -5,6 +5,7 @@ import {
   onSnapshot, query, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
@@ -32,7 +33,7 @@ const formatDate = (val) => {
 };
 
 const AdminNewsletters = () => {
-  const { role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   // Wait until auth+Firestore loading is done before evaluating authorization.
   // role is null until the Firestore snapshot resolves; evaluating early would
   // cause isAuthorized = false and fire the redirect on every initial render.
@@ -109,6 +110,12 @@ const AdminNewsletters = () => {
       setStatus('success');
       setTimeout(() => setStatus(null), 3000);
       closeModal();
+      writeLog({
+        type: 'newsletter', action: editingId ? 'update' : 'create',
+        description: `${editingId ? 'Updated' : 'Published'} newsletter: "${form.title || form.issue}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: editingId || '', targetName: form.title,
+      });
     } catch (err) {
       console.error('Save failed:', err);
       setStatus('error');
@@ -119,11 +126,18 @@ const AdminNewsletters = () => {
   };
 
   const handleDelete = async (id) => {
+    const item = newsletters.find(n => n.id === id);
     try {
       await deleteDoc(doc(db, 'newsletters', id));
       setDeleteConfirm(null);
       setStatus('success');
       setTimeout(() => setStatus(null), 3000);
+      writeLog({
+        type: 'newsletter', action: 'delete',
+        description: `Deleted newsletter: "${item?.title || id}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: item?.title,
+      });
     } catch {
       setStatus('error');
       setTimeout(() => setStatus(null), 3000);

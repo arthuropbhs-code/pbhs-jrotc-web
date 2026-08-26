@@ -10,6 +10,7 @@ import {
   collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, Timestamp,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL, ADMIN_LEVEL } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
@@ -186,7 +187,7 @@ const MEDAL_CLS = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const AdminHonorCompany = () => {
-  const { role, userData, loading: authLoading } = useAuth();
+  const { user, role, userData, loading: authLoading } = useAuth();
   const { companies: COMPANIES } = useCompanies();
   const myLevel   = () => ROLE_HIERARCHY[role] || 0;
   const isAuth          = myLevel() >= STAFF_LEVEL;
@@ -307,6 +308,13 @@ const AdminHonorCompany = () => {
       });
       setSavedLog(true);
       setTimeout(() => { setLogOpen(false); setLogForm(BLANK_LOG); setSavedLog(false); }, 1600);
+      writeLog({
+        type: 'honor_company', action: 'create',
+        description: `Logged HC entry: ${logForm.company} — ${logForm.category} (${logForm.points} pts) Q${logForm.quarter}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: logForm.company,
+        notes: `quarter:${logForm.quarter},category:${logForm.category}`,
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -317,6 +325,12 @@ const AdminHonorCompany = () => {
   const deleteEntry = async id => {
     if (!canAdmin || !window.confirm('Delete this entry?')) return;
     await deleteDoc(doc(db, 'honorCompanyEntries', id));
+    writeLog({
+      type: 'honor_company', action: 'delete',
+      description: `Deleted HC entry`,
+      userId: user?.uid || '', userFullName: userData?.fullName || '',
+      userRole: role || '', targetId: id,
+    });
   };
 
   const addCategory = async () => {
@@ -334,6 +348,12 @@ const AdminHonorCompany = () => {
     setCatInput('');
     setCatMaxScore('');
     setSavingCat(false);
+    writeLog({
+      type: 'honor_company', action: 'create',
+      description: `Added HC category "${val}" (max ${maxScore} pts) for Q${quarter}`,
+      userId: user?.uid || '', userFullName: userData?.fullName || '',
+      userRole: role || '',
+    });
   };
 
   const removeCategory = async cat => {
@@ -346,6 +366,12 @@ const AdminHonorCompany = () => {
       [key]:       currentCategories.filter(c => c !== cat),
       [detailKey]: existing,
     }, { merge: true });
+    writeLog({
+      type: 'honor_company', action: 'delete',
+      description: `Removed HC category "${cat}" for Q${quarter}`,
+      userId: user?.uid || '', userFullName: userData?.fullName || '',
+      userRole: role || '',
+    });
   };
 
   // ── Handlers — Org Day ────────────────────────────────────────────────────
@@ -370,6 +396,12 @@ const AdminHonorCompany = () => {
       );
       setSavedEvent(true);
       setTimeout(() => setSavedEvent(false), 2000);
+      writeLog({
+        type: 'honor_company', action: 'update',
+        description: `Updated Org Day scores for event "${expandedEvent}" (${orgYear})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -387,6 +419,12 @@ const AdminHonorCompany = () => {
       await deleteDoc(doc(db, 'settings', `orgDay_${orgYear}`));
       setExpandedEvent(null);
       setEventDraft({});
+      writeLog({
+        type: 'honor_company', action: 'delete',
+        description: `Cleared all Org Day scores for ${orgYear}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '',
+      });
     } catch (err) {
       console.error(err);
     } finally {

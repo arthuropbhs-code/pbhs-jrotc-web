@@ -4,6 +4,7 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import {
@@ -19,7 +20,7 @@ const inputClass = "w-full bg-slate-50 dark:bg-black/50 border border-slate-200 
 const labelClass = "text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1";
 
 const AdminCamps = () => {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, userData, role, loading: authLoading } = useAuth();
   const isAuthorized = (ROLE_HIERARCHY[role] || 0) >= STAFF_LEVEL;
 
   const [camps, setCamps] = useState([]);
@@ -65,6 +66,12 @@ const AdminCamps = () => {
       setEditingCamp(null);
       setCampForm(initialCampForm);
       showStatus("Camp Saved");
+      writeLog({
+        type: 'camp', action: editingCamp ? 'update' : 'create',
+        description: `${editingCamp ? 'Updated' : 'Created'} camp: ${campForm.name}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: editingCamp?.id || '', targetName: campForm.name,
+      });
     } catch (err) {
       console.error("Camp save failed:", err);
       showStatus("Save Failed");
@@ -76,6 +83,12 @@ const AdminCamps = () => {
       await deleteDoc(doc(db, "camps", deleteConfirm.id));
       setDeleteConfirm({ open: false, id: null, name: '' });
       showStatus("Camp Removed");
+      writeLog({
+        type: 'camp', action: 'delete',
+        description: `Deleted camp: ${deleteConfirm.name}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConfirm.id, targetName: deleteConfirm.name,
+      });
     } catch {
       showStatus("Delete Failed");
     }

@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { getIdToken } from 'firebase/auth';
 import { useAuth } from '../hooks/useAuth';
+import { writeLog } from '../lib/writeLog';
 import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import { uploadPhotoToStorage, deletePhotoFromStorage } from '../utils/storageUploadPhoto';
 import {
@@ -183,6 +184,12 @@ const ItemsTab = ({ user, userData, showToast }) => {
         showToast('Item added');
       }
       closeForm();
+      writeLog({
+        type: 's2', action: editing ? 'update' : 'create',
+        description: `${editing ? 'Updated' : 'Added'} S2 item: "${form.name}" (${form.area})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: form.name,
+      });
     } catch (err) { console.error(err); showToast('Save failed'); }
     finally { setSaving(false); }
   };
@@ -192,6 +199,12 @@ const ItemsTab = ({ user, userData, showToast }) => {
     try {
       await updateDoc(doc(db, 's2Items', deleteConf.id), { isActive: false });
       setDeleteConf(null); showToast('Item removed');
+      writeLog({
+        type: 's2', action: 'delete',
+        description: `Removed S2 item: "${deleteConf.name}"`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: deleteConf.id, targetName: deleteConf.name,
+      });
     } catch { showToast('Delete failed'); }
   };
 
@@ -352,6 +365,12 @@ const AssignTab = ({ user, userData, showToast }) => {
       setSelectedItems([]);
       setAssignTo('');
       showToast(`Inspection assigned to ${assistant?.fullName || 'assistant'}`);
+      writeLog({
+        type: 's2', action: 'assign',
+        description: `Assigned S2 inspection to ${assistant?.fullName || assignTo} (${selectedItems.length} items)`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetName: assistant?.fullName,
+      });
     } catch (err) { console.error(err); showToast('Assignment failed'); }
     finally { setSaving(false); }
   };
@@ -431,20 +450,34 @@ const ReviewTab = ({ user, userData, showToast, canManage }) => {
   }, []);
 
   const handleApprove = async (id) => {
+    const ins = inspections.find(i => i.id === id);
     try {
       await updateDoc(doc(db, 's2Inspections', id), {
         status: 'approved', approvedAt: serverTimestamp(), approvedByName: userData?.fullName || '',
       });
       setViewing(null); showToast('Inspection approved');
+      writeLog({
+        type: 's2', action: 'approve',
+        description: `Approved S2 inspection for ${ins?.assignedToName || id}`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: ins?.assignedToName,
+      });
     } catch { showToast('Failed'); }
   };
 
   const handleReject = async (id) => {
+    const ins = inspections.find(i => i.id === id);
     try {
       await updateDoc(doc(db, 's2Inspections', id), {
         status: 'rejected', rejectedAt: serverTimestamp(), rejectedByName: userData?.fullName || '',
       });
       setViewing(null); showToast('Inspection returned');
+      writeLog({
+        type: 's2', action: 'reject',
+        description: `Returned S2 inspection to ${ins?.assignedToName || id} for corrections`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: id, targetName: ins?.assignedToName,
+      });
     } catch { showToast('Failed'); }
   };
 
