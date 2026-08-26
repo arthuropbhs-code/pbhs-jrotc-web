@@ -12,7 +12,8 @@
 // FIELDS PER AAR
 //   Event name       — free text
 //   Event date       — date picker
-//   Company          — pre-fills from user's company; staff may change
+//   Company          — locked: battalion staff (70+) → null ("Battalion-wide");
+//                      company command (45–69) → their own company; never editable
 //   Attendee count   — number
 //   Facilitators     — tag-style list (add/remove names)
 //   Good items       — bullet-point list ("What went well")
@@ -21,7 +22,7 @@
 // DATA MODEL (Firestore collection: aarLogs)
 //   eventName      (string)
 //   eventDate      (Timestamp)
-//   company        (string)
+//   company        (string | null)   — null = battalion-wide; string = company name
 //   attendeeCount  (number)
 //   facilitators   (string[])
 //   goodItems      (string[])
@@ -36,7 +37,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useCompanies } from '../hooks/useCompanies';
 import { writeLog } from '../lib/writeLog';
 import { db, auth } from '../firebase';
 import {
@@ -198,7 +198,6 @@ const mkEmpty = (defaultCompany = '') => ({
 // ── Main page ──────────────────────────────────────────────────────────────────
 const AdminAARLogs = () => {
   const { user, userData, role, loading: authLoading } = useAuth();
-  const { companies } = useCompanies();
   const userLevel  = ROLE_HIERARCHY[role] || 0;
   const myCompany  = userData?.company || '';
 
@@ -237,7 +236,9 @@ const AdminAARLogs = () => {
 
   // ── Handlers ───────────────────────────────────────────────────────────────────
   const openCreate = () => {
-    setForm(mkEmpty(myCompany));
+    // Battalion staff (70+) always log for the whole battalion (company: null).
+    // Company command (45–69) always log for their own company.
+    setForm(mkEmpty(isStaff ? null : myCompany));
     setActiveAAR(null);
     setModalMode('create');
   };
@@ -246,7 +247,9 @@ const AdminAARLogs = () => {
     setForm({
       eventName:     aar.eventName    || '',
       eventDate:     timestampToDateStr(aar.eventDate),
-      company:       aar.company      || myCompany,
+      // Use ?? so a battalion-wide record (company: null) stays null instead
+      // of falling back to myCompany. Only truly-missing fields fall back.
+      company:       aar.company      ?? null,
       attendeeCount: aar.attendeeCount != null ? String(aar.attendeeCount) : '',
       facilitators:  aar.facilitators || [],
       goodItems:     aar.goodItems    || [],
@@ -264,7 +267,7 @@ const AdminAARLogs = () => {
   const closeModal = () => {
     setModalMode(null);
     setActiveAAR(null);
-    setForm(mkEmpty(myCompany));
+    setForm(mkEmpty(isStaff ? null : myCompany));
   };
 
   const handleSave = async () => {
@@ -415,7 +418,7 @@ const AdminAARLogs = () => {
                       {isStaff && (
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className="text-[10px] font-black uppercase tracking-wider bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 px-2 py-0.5 rounded">
-                            {aar.company || '—'}
+                            {aar.company || 'Battalion-wide'}
                           </span>
                         </td>
                       )}
@@ -537,24 +540,17 @@ const AdminAARLogs = () => {
                   )}
                 </div>
 
-                {/* Company */}
+                {/* Company — always locked: battalion staff → Battalion-wide (null);
+                      company command → their own company. */}
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 block mb-1.5">Company</label>
                   {modalMode === 'view' ? (
                     <span className="inline-block text-sm font-black uppercase tracking-wider bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 px-2.5 py-1 rounded-lg">
-                      {activeAAR?.company || '—'}
+                      {activeAAR?.company || 'Battalion-wide'}
                     </span>
-                  ) : isStaff ? (
-                    <select
-                      value={form.company}
-                      onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
-                      className="w-full bg-blue-50/50 dark:bg-slate-800 border border-blue-100 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-yellow-500/40 transition-colors appearance-none"
-                    >
-                      {companies.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
                   ) : (
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200 px-4 py-3 bg-blue-50/30 dark:bg-slate-800/50 rounded-xl border border-blue-100 dark:border-white/5">
-                      {myCompany || '—'}
+                      {form.company || 'Battalion-wide'}
                     </p>
                   )}
                 </div>
@@ -635,7 +631,7 @@ const AdminAARLogs = () => {
               {/* ── Created / updated info ────────────────────────────────────── */}
               {modalMode === 'view' && (
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-white/5 pt-3">
-                  Filed by {activeAAR?.createdByName || '—'} ({activeAAR?.company || '—'})
+                  Filed by {activeAAR?.createdByName || '—'} ({activeAAR?.company || 'Battalion-wide'})
                   {activeAAR?.updatedAt && ` · Updated ${fmtDate(activeAAR.updatedAt)} by ${activeAAR.updatedByName || '—'}`}
                 </p>
               )}

@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="31"      label="Releases"    />
-        <Stat value="333"     label="Commits"     />
+        <Stat value="32"      label="Releases"    />
+        <Stat value="334"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.26" label="Current"     />
+        <Stat value="v1.6.27" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -591,6 +591,12 @@ const AdminChangelog = () => {
           <C type="feat">Entry subtitle row now shows <code className="font-mono text-[10px]">targetName</code> alongside actor name and role when present — makes it easy to see which cadet, event, or record was affected without opening the source page</C>
           <C type="feat">Entry count in the page header switches to "X of Y entries" when a filter or search is active; "Clear filters" resets both simultaneously</C>
           <C type="feat">Filter tab row scrolls horizontally on smaller screens (scrollbar hidden) instead of wrapping to multiple rows</C>
+        </>} />
+        <Patch version="v1.6.27" date="Aug 26" title="AAR Logs — battalion-wide scope" isCurrent changes={<>
+          <C type="feat">Battalion staff (70+) logging an AAR no longer select a company — the report is filed battalion-wide; the company field is shown locked as "Battalion-wide" and stored as <code className="font-mono text-[10px]">null</code> in Firestore</C>
+          <C type="feat">Company command (45–69) continue to see their own company locked in the company field — behavior unchanged for that tier</C>
+          <C type="feat">Battalion-wide AARs (<code className="font-mono text-[10px]">company: null</code>) are visible to staff (70+) only — company command's existing company-scoped Firestore query already excludes them</C>
+          <C type="feat">Company column in the AAR table and "Filed by" line in the view modal now display "Battalion-wide" instead of a dash when company is null</C>
         </>} />
       </Minor>
 
