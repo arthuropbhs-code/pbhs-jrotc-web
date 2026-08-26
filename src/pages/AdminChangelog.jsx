@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="22"      label="Releases"    />
-        <Stat value="315"     label="Commits"     />
+        <Stat value="23"      label="Releases"    />
+        <Stat value="316"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.15" label="Current"     />
+        <Stat value="v1.6.18" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -534,9 +534,14 @@ const AdminChangelog = () => {
           <C type="feat">Denying an account registration removes the Firebase Auth entry and Firestore document in one action, matching the existing Delete Account flow but scoped to the pending-approval context with its own confirmation and "Registration Denied" toast</C>
         </>} />
 
-        <Patch version="v1.6.17" date="Aug 25" title="S3 assistant roster rights & S4 empty-state fix" isCurrent changes={<>
+        <Patch version="v1.6.17" date="Aug 25" title="S3 assistant roster rights & S4 empty-state fix" changes={<>
           <C type="feat">Company S3 assistant now has the same roster edit rights as S1 assistant — can create, edit, and delete cadets in their own company but cannot change a cadet's name or company assignment; Firestore roster create/update/delete rules updated to match</C>
           <C type="fix">Uniform Sizes page now shows "Company not configured — ask an admin to update your profile" instead of the generic "Select a company to begin" empty state when an S4 assistant's user document is missing a company field</C>
+        </>} />
+
+        <Patch version="v1.6.18" date="Aug 25" title="Roster → account sync always-on" isCurrent changes={<>
+          <C type="fix">Saving a roster entry now always pushes shared fields (rank, position, company, platoon, squad, gender, LET level) to the linked portal account — previously only fired when the entry's sync mode was set to "Roster is master", so accounts auto-created during approval (which default to portal-as-master) were never updated from the roster</C>
+          <C type="fix">Sync Settings labels updated in the roster modal: "Roster is master" → "One-way sync (Roster → Portal only)", "Portal is master" → "Two-way sync (Roster ↔ Portal)", with updated description text clarifying roster saves always push to the account</C>
         </>} />
       </Minor>
 

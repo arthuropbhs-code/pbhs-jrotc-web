@@ -278,11 +278,12 @@ const AdminRoster = () => {
         showToast('Cadet added');
       }
 
-      // ── Roster-is-master sync ─────────────────────────────────────────────
-      // When this roster entry is the source of truth and a portal account is
-      // linked, push the shared fields to the users/ doc so the portal profile
-      // stays in sync automatically.
-      if (form.linkedUid && payload.syncMaster === 'roster') {
+      // ── Roster → account sync ────────────────────────────────────────────
+      // Whenever a linked account exists, push the shared fields to the users/
+      // doc so the portal profile stays in sync automatically. This fires
+      // regardless of syncMaster — the syncMaster flag only controls the
+      // reverse direction (portal → roster, handled in AdminUsers.jsx).
+      if (form.linkedUid) {
         const syncFields = {
           fullName: payload.fullName,
           rank:     payload.rank,
@@ -817,14 +818,14 @@ const AdminRoster = () => {
                       Sync Settings
                     </p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                      Pick which record is the <strong className="text-slate-600 dark:text-slate-300">master</strong>. When saving, the master overwrites the other automatically.
+                      Roster saves <strong className="text-slate-600 dark:text-slate-300">always</strong> push updates to the linked account. This setting controls the reverse: whether saving from the account page also updates this roster entry.
                     </p>
 
                     {/* Master toggle */}
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { value: 'roster',  label: 'Roster is master',  desc: 'Roster → Portal on save' },
-                        { value: 'portal',  label: 'Portal is master',  desc: 'Portal → Roster on save' },
+                        { value: 'roster',  label: 'One-way sync',      desc: 'Roster → Portal only' },
+                        { value: 'portal',  label: 'Two-way sync',      desc: 'Roster ↔ Portal' },
                       ].map(opt => (
                         <button
                           key={opt.value}
