@@ -162,17 +162,18 @@ const parseTime = str => {
 
 const ordinal = n => ['1st','2nd','3rd','4th','5th'][n-1] || `${n}th`;
 
+// Points are fixed on a 5-4-3-2-1 scale regardless of company count:
+// 1st = 5 pts, 2nd = 4, 3rd = 3, 4th = 2, 5th = 1, 6th+ = 0.
 function rankCompanies(companies, getScore, higherBetter) {
   const pairs = companies.map(co => ({ co, score: getScore(co) }));
   const valid   = pairs.filter(p => p.score !== null && isFinite(p.score));
   const missing = pairs.filter(p => !valid.includes(p));
   valid.sort((a, b) => higherBetter ? b.score - a.score : a.score - b.score);
-  const n = companies.length;
   let i = 0;
   while (i < valid.length) {
     let j = i;
     while (j + 1 < valid.length && valid[j+1].score === valid[i].score) j++;
-    const pts = n - i;
+    const pts = Math.max(0, 5 - i);
     for (let k = i; k <= j; k++) { valid[k].rank = i + 1; valid[k].points = pts; }
     i = j + 1;
   }
