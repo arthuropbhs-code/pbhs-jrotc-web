@@ -107,6 +107,51 @@ const TYPE_META = {
   uniform_sizes:   { icon: Ruler,         color: 'text-violet-300',  bg: 'bg-violet-300/10',  border: 'border-violet-300/20',  label: 'Uniform Sizes'  },
 };
 
+// ── Action → card theme ───────────────────────────────────────────────────────
+// Maps the entry's `action` field to a semantic color theme for the card.
+// Type-badge / icon colors come from TYPE_META above and are unchanged.
+
+const ACTION_THEMES = {
+  // Green — creation / positive resolution
+  create:          'green',
+  approve:         'green',
+  fulfill:         'green',
+  finalize:        'green',
+  mark_complete:   'green',
+  open:            'green',
+  assign:          'green',
+  log:             'green',
+  add_category:    'green',
+  archive:         'green',
+  reactivate:      'green',
+  // Red — deletion / negative resolution
+  delete:          'red',
+  deny:            'red',
+  close:           'red',
+  void:            'red',
+  remove_category: 'red',
+  reset:           'red',
+  delete_year:     'red',
+  suspend:         'red',
+  reject:          'red',
+  // Yellow — modification
+  update:          'yellow',
+  mark_pending:    'yellow',
+  mark_reviewed:   'yellow',
+  save:            'yellow',
+  // Blue — authentication
+  sign_in:         'blue',
+  // Manual duty-log entries and anything else → default (no card tint)
+};
+
+const THEME_CARD = {
+  green:   { bg: 'bg-emerald-500/5',  border: 'border-emerald-500/20',  hover: 'hover:border-emerald-500/35',  action: 'text-emerald-400' },
+  red:     { bg: 'bg-red-500/5',      border: 'border-red-500/20',      hover: 'hover:border-red-500/35',      action: 'text-red-400'     },
+  yellow:  { bg: 'bg-yellow-500/5',   border: 'border-yellow-500/20',   hover: 'hover:border-yellow-500/35',   action: 'text-yellow-500'  },
+  blue:    { bg: 'bg-blue-500/5',     border: 'border-blue-500/20',     hover: 'hover:border-blue-500/35',     action: 'text-blue-400'    },
+  default: { bg: 'bg-slate-900',      border: 'border-white/5',         hover: 'hover:border-white/10',        action: 'text-slate-500'   },
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeAgo(ts) {
@@ -338,14 +383,16 @@ const AdminLog = () => {
           </div>
         ) : (
           filtered.map(entry => {
-            const meta = TYPE_META[entry.type] || TYPE_META.manual;
-            const Icon = meta.icon;
+            const meta  = TYPE_META[entry.type] || TYPE_META.manual;
+            const Icon  = meta.icon;
+            const theme = ACTION_THEMES[entry.action] ?? 'default';
+            const card  = THEME_CARD[theme];
             return (
               <div
                 key={entry.id}
-                className="bg-slate-900 border border-white/5 rounded-xl px-5 py-4 flex items-start gap-4 hover:border-white/10 transition-colors"
+                className={`${card.bg} border ${card.border} ${card.hover} rounded-xl px-5 py-4 flex items-start gap-4 transition-colors`}
               >
-                {/* Icon */}
+                {/* Icon — type color unchanged */}
                 <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${meta.bg} border ${meta.border}`}>
                   <Icon size={14} className={meta.color} />
                 </div>
@@ -355,11 +402,13 @@ const AdminLog = () => {
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        {/* Type badge — keeps type color */}
                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${meta.bg} ${meta.color} border ${meta.border}`}>
                           {entry.category || meta.label}
                         </span>
-                        <span className="text-[10px] font-bold uppercase text-slate-500">
-                          {entry.action}
+                        {/* Action label — colored by action theme */}
+                        <span className={`text-[10px] font-bold uppercase ${card.action}`}>
+                          {entry.action?.replace(/_/g, ' ')}
                         </span>
                       </div>
                       <p className="text-sm font-bold text-white leading-snug">{entry.description}</p>

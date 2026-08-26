@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="33"      label="Releases"    />
-        <Stat value="335"     label="Commits"     />
+        <Stat value="34"      label="Releases"    />
+        <Stat value="336"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.28" label="Current"     />
+        <Stat value="v1.6.29" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -604,6 +604,12 @@ const AdminChangelog = () => {
           <C type="feat">New shared <code className="font-mono text-[10px]">BulletListEditor</code> component (<code className="font-mono text-[10px]">src/components/BulletListEditor.jsx</code>) replaces the duplicate inline implementations; exports <code className="font-mono text-[10px]">normalizeBullets</code> and <code className="font-mono text-[10px]">flattenBullets</code> utilities</C>
           <C type="feat">Data model updated from <code className="font-mono text-[10px]">string[]</code> to <code className="font-mono text-[10px]">{'{ text, children }[]'}</code> — existing documents are backward-compatible and silently upgraded to the new format on next save</C>
           <C type="feat">Meeting Logs Google Sheets sync flattens sub-items as two-space-indented strings so indentation is preserved in the spreadsheet</C>
+        </>} />
+        <Patch version="v1.6.29" date="Aug 26" title="Activity Log — action-color card theming" isCurrent changes={<>
+          <C type="feat">Activity Log entry cards are now color-coded by action: green background for creates, approvals, finalize, mark-complete, archive, and other positive actions; red for deletes, denials, rejects, suspensions, and resets; yellow/amber for updates and modifications; blue for sign-ins; neutral (no tint) for manual duty-log entries</C>
+          <C type="feat">Action label text (e.g. "create", "delete", "update") is now colored to match the card theme — green/red/yellow/blue — while the type badge and icon on the left keep their per-module color (announcements pink, events rose, S2 red, etc.)</C>
+          <C type="feat">Action labels now display with spaces instead of underscores (e.g. "mark complete" instead of "mark_complete")</C>
+          <C type="feat">Hover border intensifies within the same hue rather than switching to a neutral white — green cards stay green on hover, red cards stay red, etc.</C>
         </>} />
       </Minor>
 
