@@ -2,8 +2,8 @@
 //
 // Activity Log — Staff (70+) only.
 // Shows a real-time feed of all adminLog entries: auto-generated action
-// records (sign-in, roster edits, uniform/form approvals) plus manual
-// duty-log entries written by staff.
+// records (sign-in, roster edits, uniform/form approvals, and all portal
+// mutations from v1.6.25+) plus manual duty-log entries written by staff.
 
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
@@ -11,8 +11,14 @@ import {
   collection, onSnapshot, orderBy, query, addDoc, serverTimestamp,
 } from 'firebase/firestore';
 import {
+  // existing
   ScrollText, Plus, X, Clock, LogIn, Shirt, ClipboardList,
-  Users, ShieldCheck, AlertCircle, FileText, Filter, Bell,
+  Users, ShieldCheck, AlertCircle, FileText, Bell,
+  // new
+  Search, Megaphone, Tent, Trophy, PenLine, File, Calendar,
+  MessageSquare, DollarSign, Archive, Award, Star, BookOpen,
+  NotebookPen, Newspaper, Package, Camera, ClipboardCheck,
+  Lock, Monitor, Settings, Box, UserCheck, Ruler, Filter,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,22 +35,76 @@ const MANUAL_CATEGORIES = [
 ];
 
 const LOG_TYPES = [
-  { key: 'all',     label: 'All' },
-  { key: 'manual',  label: 'Duty Log' },
-  { key: 'auth',    label: 'Sign-ins' },
-  { key: 'uniform', label: 'Uniforms' },
-  { key: 'form',    label: 'Form Requests' },
-  { key: 'roster',  label: 'Roster' },
-  { key: 'account', label: 'Accounts' },
+  { key: 'all',             label: 'All' },
+  // Staff / auth
+  { key: 'manual',          label: 'Duty Log' },
+  { key: 'auth',            label: 'Sign-ins' },
+  { key: 'account',         label: 'Accounts' },
+  { key: 'settings',        label: 'Settings' },
+  // People & org
+  { key: 'roster',          label: 'Roster' },
+  { key: 'leadership',      label: 'Leadership' },
+  { key: 'team',            label: 'Teams' },
+  { key: 'honor_company',   label: 'Honor Company' },
+  // Events & activities
+  { key: 'event',           label: 'Events' },
+  { key: 'camp',            label: 'Camps' },
+  { key: 'cadet_challenge', label: 'Cadet Challenge' },
+  { key: 'meeting_log',     label: 'Meeting Logs' },
+  { key: 'aar_log',         label: 'AAR Logs' },
+  { key: 's1',              label: 'S1 / S4' },
+  // Supply & logistics
+  { key: 'supply',          label: 'Supply' },
+  { key: 'order',           label: 'Orders' },
+  { key: 's2',              label: 'S2' },
+  { key: 's6',              label: 'S6' },
+  { key: 'uniform',         label: 'Uniforms' },
+  { key: 'uniform_sizes',   label: 'Uniform Sizes' },
+  { key: 'form',            label: 'Form Requests' },
+  // Content & comms
+  { key: 'announcement',    label: 'Announcements' },
+  { key: 'newsletter',      label: 'Newsletters' },
+  { key: 'document',        label: 'Documents' },
+  { key: 'photos',          label: 'Photos' },
+  { key: 'content',         label: 'Content' },
+  { key: 'feedback',        label: 'Feedback' },
+  // Finance & records
+  { key: 'fundraiser',      label: 'Fundraiser' },
+  { key: 'history',         label: 'History' },
 ];
 
 const TYPE_META = {
-  manual:  { icon: FileText,     color: 'text-yellow-500',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20',  label: 'Duty Log'     },
-  auth:    { icon: LogIn,        color: 'text-blue-400',    bg: 'bg-blue-500/10',    border: 'border-blue-500/20',    label: 'Sign-in'      },
-  uniform: { icon: Shirt,        color: 'text-purple-400',  bg: 'bg-purple-500/10',  border: 'border-purple-500/20',  label: 'Uniform'      },
-  form:    { icon: ClipboardList,color: 'text-cyan-400',    bg: 'bg-cyan-500/10',    border: 'border-cyan-500/20',    label: 'Form Request' },
-  roster:  { icon: Users,        color: 'text-green-400',   bg: 'bg-green-500/10',   border: 'border-green-500/20',   label: 'Roster'       },
-  account: { icon: ShieldCheck,  color: 'text-orange-400',  bg: 'bg-orange-500/10',  border: 'border-orange-500/20',  label: 'Account'      },
+  // ── Original types ─────────────────────────────────────────────────────────
+  manual:          { icon: FileText,      color: 'text-yellow-500',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20',  label: 'Duty Log'       },
+  auth:            { icon: LogIn,         color: 'text-blue-400',    bg: 'bg-blue-500/10',    border: 'border-blue-500/20',    label: 'Sign-in'        },
+  uniform:         { icon: Shirt,         color: 'text-purple-400',  bg: 'bg-purple-500/10',  border: 'border-purple-500/20',  label: 'Uniform'        },
+  form:            { icon: ClipboardList, color: 'text-cyan-400',    bg: 'bg-cyan-500/10',    border: 'border-cyan-500/20',    label: 'Form Request'   },
+  roster:          { icon: Users,         color: 'text-green-400',   bg: 'bg-green-500/10',   border: 'border-green-500/20',   label: 'Roster'         },
+  account:         { icon: ShieldCheck,   color: 'text-orange-400',  bg: 'bg-orange-500/10',  border: 'border-orange-500/20',  label: 'Account'        },
+  // ── v1.6.25 types ──────────────────────────────────────────────────────────
+  announcement:    { icon: Megaphone,     color: 'text-pink-400',    bg: 'bg-pink-500/10',    border: 'border-pink-500/20',    label: 'Announcement'   },
+  camp:            { icon: Tent,          color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', label: 'Camp'           },
+  cadet_challenge: { icon: Trophy,        color: 'text-amber-400',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   label: 'Cadet Challenge'},
+  content:         { icon: PenLine,       color: 'text-violet-400',  bg: 'bg-violet-500/10',  border: 'border-violet-500/20',  label: 'Content'        },
+  document:        { icon: File,          color: 'text-slate-300',   bg: 'bg-slate-500/10',   border: 'border-slate-500/20',   label: 'Document'       },
+  event:           { icon: Calendar,      color: 'text-rose-400',    bg: 'bg-rose-500/10',    border: 'border-rose-500/20',    label: 'Event'          },
+  feedback:        { icon: MessageSquare, color: 'text-teal-400',    bg: 'bg-teal-500/10',    border: 'border-teal-500/20',    label: 'Feedback'       },
+  fundraiser:      { icon: DollarSign,    color: 'text-lime-400',    bg: 'bg-lime-500/10',    border: 'border-lime-500/20',    label: 'Fundraiser'     },
+  history:         { icon: Archive,       color: 'text-indigo-400',  bg: 'bg-indigo-500/10',  border: 'border-indigo-500/20',  label: 'History'        },
+  honor_company:   { icon: Award,         color: 'text-yellow-300',  bg: 'bg-yellow-300/10',  border: 'border-yellow-300/20',  label: 'Honor Company'  },
+  leadership:      { icon: Star,          color: 'text-amber-300',   bg: 'bg-amber-300/10',   border: 'border-amber-300/20',   label: 'Leadership'     },
+  meeting_log:     { icon: BookOpen,      color: 'text-sky-400',     bg: 'bg-sky-500/10',     border: 'border-sky-500/20',     label: 'Meeting Log'    },
+  aar_log:         { icon: NotebookPen,   color: 'text-blue-300',    bg: 'bg-blue-300/10',    border: 'border-blue-300/20',    label: 'AAR Log'        },
+  newsletter:      { icon: Newspaper,     color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20', label: 'Newsletter'     },
+  order:           { icon: Package,       color: 'text-orange-300',  bg: 'bg-orange-300/10',  border: 'border-orange-300/20',  label: 'Order'          },
+  photos:          { icon: Camera,        color: 'text-purple-300',  bg: 'bg-purple-300/10',  border: 'border-purple-300/20',  label: 'Photos'         },
+  s1:              { icon: ClipboardCheck,color: 'text-green-300',   bg: 'bg-green-300/10',   border: 'border-green-300/20',   label: 'S1 / S4'        },
+  s2:              { icon: Lock,          color: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20',     label: 'S2'             },
+  s6:              { icon: Monitor,       color: 'text-cyan-300',    bg: 'bg-cyan-300/10',    border: 'border-cyan-300/20',    label: 'S6'             },
+  settings:        { icon: Settings,      color: 'text-slate-400',   bg: 'bg-slate-500/10',   border: 'border-slate-500/20',   label: 'Settings'       },
+  supply:          { icon: Box,           color: 'text-amber-500',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   label: 'Supply'         },
+  team:            { icon: UserCheck,     color: 'text-teal-300',    bg: 'bg-teal-300/10',    border: 'border-teal-300/20',    label: 'Team'           },
+  uniform_sizes:   { icon: Ruler,         color: 'text-violet-300',  bg: 'bg-violet-300/10',  border: 'border-violet-300/20',  label: 'Uniform Sizes'  },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -52,8 +112,8 @@ const TYPE_META = {
 function timeAgo(ts) {
   if (!ts?.toDate) return '—';
   const secs = Math.floor((Date.now() - ts.toDate().getTime()) / 1000);
-  if (secs < 60)   return 'just now';
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 60)    return 'just now';
+  if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
   return ts.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -75,6 +135,7 @@ const AdminLog = () => {
 
   const [entries,    setEntries]    = useState([]);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading,    setLoading]    = useState(true);
 
   // Manual entry modal state
@@ -139,10 +200,17 @@ const AdminLog = () => {
   if (authLoading) return null;
   if (!isAuth) return <Navigate to="/admin/dashboard" />;
 
-  // ── Filtered entries ─────────────────────────────────────────────────────────
-  const filtered = typeFilter === 'all'
-    ? entries
-    : entries.filter(e => e.type === typeFilter);
+  // ── Filtered entries ────────────────────────────────────────────────────────
+  const filtered = entries.filter(e => {
+    const matchesType = typeFilter === 'all' || e.type === typeFilter;
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term || [
+      e.description, e.userFullName, e.targetName, e.action, e.notes, e.category,
+    ].some(f => (f || '').toLowerCase().includes(term));
+    return matchesType && matchesSearch;
+  });
+
+  const isFiltered = typeFilter !== 'all' || searchTerm.trim() !== '';
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 pt-24 font-sans">
@@ -177,7 +245,9 @@ const AdminLog = () => {
             <ScrambleText text="Activity Log" trigger="mount" />
           </h1>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 mt-1">
-            {entries.length} total entries
+            {isFiltered
+              ? `${filtered.length} of ${entries.length} entries`
+              : `${entries.length} total entries`}
           </p>
         </div>
         <button
@@ -188,31 +258,59 @@ const AdminLog = () => {
         </button>
       </div>
 
-      {/* Type filter tabs */}
-      <div className="max-w-5xl mx-auto mb-6 flex flex-wrap gap-2">
-        {LOG_TYPES.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTypeFilter(key)}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-              typeFilter === key
-                ? 'bg-yellow-500 text-slate-950'
-                : 'bg-slate-900 text-slate-500 hover:text-slate-300 border border-white/5'
-            }`}
-          >
-            {key !== 'all' && (() => {
-              const meta = TYPE_META[key];
-              const Icon = meta.icon;
-              return <Icon size={10} />;
-            })()}
-            {label}
-            {key !== 'all' && (
-              <span className="ml-0.5 opacity-60">
-                {entries.filter(e => e.type === key).length}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Search */}
+      <div className="max-w-5xl mx-auto mb-4">
+        <div className="relative">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search entries by description, name, or action…"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-900 border border-white/5 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-yellow-500/40 transition-colors"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Type filter tabs — horizontal scroll */}
+      <div
+        className="max-w-5xl mx-auto mb-6 overflow-x-auto pb-2"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
+          {LOG_TYPES.map(({ key, label }) => {
+            const meta = TYPE_META[key];
+            const Icon = meta?.icon;
+            const count = key === 'all' ? null : entries.filter(e => e.type === key).length;
+            return (
+              <button
+                key={key}
+                onClick={() => setTypeFilter(key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${
+                  typeFilter === key
+                    ? 'bg-yellow-500 text-slate-950'
+                    : 'bg-slate-900 text-slate-500 hover:text-slate-300 border border-white/5'
+                }`}
+              >
+                {Icon && key !== 'all' && <Icon size={10} />}
+                {label}
+                {count !== null && count > 0 && (
+                  <span className={`ml-0.5 ${typeFilter === key ? 'opacity-70' : 'opacity-40'}`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Feed */}
@@ -224,8 +322,15 @@ const AdminLog = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-white/10 rounded-3xl">
             <ScrollText className="mx-auto text-slate-600 mb-4" size={36} />
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No entries yet</p>
-            {typeFilter === 'all' && (
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No entries found</p>
+            {isFiltered ? (
+              <button
+                onClick={() => { setTypeFilter('all'); setSearchTerm(''); }}
+                className="mt-3 text-yellow-500 text-xs font-black uppercase tracking-widest hover:opacity-70 transition-all"
+              >
+                Clear filters
+              </button>
+            ) : (
               <p className="text-slate-600 text-xs mt-2">
                 Actions logged by staff will appear here automatically.
               </p>
@@ -264,6 +369,7 @@ const AdminLog = () => {
                       <p className="text-[10px] text-slate-600 mt-1 font-bold">
                         {entry.userFullName || 'Unknown'}
                         {entry.userRole ? ` · ${entry.userRole.replace(/_/g, ' ')}` : ''}
+                        {entry.targetName ? ` · ${entry.targetName}` : ''}
                       </p>
                     </div>
                     <span className="text-[10px] text-slate-600 font-bold shrink-0" title={fullDate(entry.timestamp)}>

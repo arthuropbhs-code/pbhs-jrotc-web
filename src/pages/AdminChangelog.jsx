@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="30"      label="Releases"    />
-        <Stat value="332"     label="Commits"     />
+        <Stat value="31"      label="Releases"    />
+        <Stat value="333"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.25" label="Current"     />
+        <Stat value="v1.6.26" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -582,8 +582,15 @@ const AdminChangelog = () => {
         <Patch version="v1.6.24" date="Aug 26" title="Account change logging" changes={<>
           <C type="feat">Admin action log now records every account lifecycle event — account creation, approval, role change, profile update, suspend, reactivate, permanent delete, and registration denial; entries written to <code className="font-mono text-[10px]">adminLog</code> with type <code className="font-mono text-[10px]">"account"</code> and the specific action label; logging is non-blocking and non-throwing</C>
         </>} />
-        <Patch version="v1.6.25" date="Aug 26" title="Portal-wide activity logging" isCurrent changes={<>
+        <Patch version="v1.6.25" date="Aug 26" title="Portal-wide activity logging" changes={<>
           <C type="feat">Activity Log now captures every meaningful write across the entire admin portal — announcements (broadcast/delete), camps, content-page saves, documents (publish/delete), calendar events, newsletters, leadership records and instructors, special teams, feedback status changes and deletes, orders and tasks, site settings (company list, document categories, page visibility), fundraiser entries and toggle, Honor Company logs and Org Day scores, meeting logs, AAR logs, S1 form events and status toggles, S2 items and inspection approve/reject, S6 carts and tasks, supply requests and approvals, Cadet Challenge records and cycle finalization, uniform sizes and finalization, and cadet yearly history (archive/edit/delete); every action records actor, role, target, and a human-readable description</C>
+        </>} />
+        <Patch version="v1.6.26" date="Aug 26" title="Activity Log — full type coverage" isCurrent changes={<>
+          <C type="feat">Activity Log filter tabs now include all 30 log types from v1.6.25 (announcements, camps, events, documents, newsletters, photos, content, feedback, fundraiser, Honor Company, leadership, teams, meeting logs, AAR logs, S1, S2, S6, supply, orders, Cadet Challenge, uniform sizes, cadet history, settings) — each with a distinct icon and accent color</C>
+          <C type="feat">Search bar added above the filter tabs — filters live across description, author name, target name, action, notes, and category fields; clears with the × button or "Clear filters" link in the empty state</C>
+          <C type="feat">Entry subtitle row now shows <code className="font-mono text-[10px]">targetName</code> alongside actor name and role when present — makes it easy to see which cadet, event, or record was affected without opening the source page</C>
+          <C type="feat">Entry count in the page header switches to "X of Y entries" when a filter or search is active; "Clear filters" resets both simultaneously</C>
+          <C type="feat">Filter tab row scrolls horizontally on smaller screens (scrollbar hidden) instead of wrapping to multiple rows</C>
         </>} />
       </Minor>
 
