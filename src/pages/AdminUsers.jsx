@@ -76,7 +76,7 @@ const AdminUsers = () => {
   // privilege-cloning (setting someone to your own or a higher role).
   const ROLE_OPTIONS = Object.entries(ROLE_LABELS)
     .filter(([slug]) => (ROLE_HIERARCHY[slug] || 0) < userLevel);
-  const { companiesWithBattalion: COMPANIES } = useCompanies();
+  const { companies: COMPANIES } = useCompanies();
 
   // Dropdown Constants
   const JROTC_RANKS = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
@@ -85,13 +85,14 @@ const AdminUsers = () => {
   const SQUADS = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad"];
   // JROTC_POSITIONS imported from constants.js — do not duplicate here.
 
-  // Zulu = Battalion. Members of Zulu are battalion-level staff and don't
-  // belong to a lettered company platoon/squad structure, but they still
-  // attend a class period with one. secondaryCompany captures that.
-  const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+  // Battalion members are HQ staff — they don't belong to a lettered company
+  // platoon/squad structure, but they may still attend a class period with
+  // one (secondaryCompany). Legacy records with company:"Zulu" are treated
+  // identically to "Battalion" throughout.
+  const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
 
   const initialFormState = {
-    fullName: '', email: '', company: user?.company || COMPANIES[0] || 'Zulu',
+    fullName: '', email: '', company: user?.company || COMPANIES[0] || 'Alpha',
     platoon: '1st Platoon', squad: '1st Squad', rank: 'C/PVT',
     position: 'Squad Member', letLevel: 'LET 1', status: 'Active',
     gender: 'Male', isManual: true, role: 'cadet', secondaryCompany: ''
@@ -185,7 +186,7 @@ const AdminUsers = () => {
         // the roster. Battalion entries (Zulu/Battalion) always have null
         // platoon/squad regardless of what the portal doc says.
         try {
-          const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+          const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
           const rosterSnap = await getDocs(
             query(collection(db, 'roster'), where('linkedUid', '==', editingRecord.id))
           );
@@ -237,7 +238,7 @@ const AdminUsers = () => {
             ]);
 
             if (byUid.empty && byName.empty) {
-              const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+              const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
               const isBn = BATTALION_COMPANIES.includes(formData.company || '');
               await addDoc(collection(db, 'roster'), {
                 fullName:         (formData.fullName || '').trim().toUpperCase(),
@@ -288,7 +289,7 @@ const AdminUsers = () => {
           ]);
 
           if (byUid.empty && byName.empty) {
-            const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+            const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
             const isBn = BATTALION_COMPANIES.includes(formData.company || '');
             await addDoc(collection(db, 'roster'), {
               fullName:         (formData.fullName || '').trim().toUpperCase(),
@@ -641,7 +642,9 @@ const AdminUsers = () => {
                         : (isPrevBn ? { platoon: '1st Platoon', squad: '1st Squad' } : {}))
                     });
                   }}>
-                    {COMPANIES.map(c => <option key={c} value={c} className="bg-white dark:bg-slate-900">{c}</option>)}
+                    {/* Battalion is not a company — it is a separate fixed designation */}
+                    <option value="Battalion" className="bg-white dark:bg-slate-900">Battalion (HQ)</option>
+                    {COMPANIES.map(c => <option key={c} value={c} className="bg-white dark:bg-slate-900">{c} Company</option>)}
                   </select>
                 </div>
 
@@ -652,7 +655,7 @@ const AdminUsers = () => {
                   </select>
                 </div>
 
-                {/* Platoon / Squad — hidden for Zulu (Battalion) members */}
+                {/* Platoon / Squad — hidden for Battalion members */}
                 {!BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Platoon</label>
@@ -678,7 +681,7 @@ const AdminUsers = () => {
                   </div>
                 )}
 
-                {/* Secondary Company — Zulu/Battalion members only: the class
+                {/* Secondary Company — Battalion members only: the class
                     period company they attend but are not officially part of */}
                 {BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="md:col-span-2 space-y-1">

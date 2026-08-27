@@ -189,9 +189,10 @@ const MEDAL_CLS = {
 
 const AdminHonorCompany = () => {
   const { user, role, userData, loading: authLoading } = useAuth();
-  // Zulu is the battalion HQ company and does not compete for Honor Company.
+  // Battalion is not a company and does not compete for Honor Company.
+  // (Safety net filter — Battalion should not appear in the companies list.)
   const { companies: allCompanies } = useCompanies();
-  const COMPANIES = allCompanies.filter(co => co !== 'Zulu');
+  const COMPANIES = allCompanies.filter(co => co !== 'Battalion');
   const myLevel   = () => ROLE_HIERARCHY[role] || 0;
   const isAuth          = myLevel() >= STAFF_LEVEL;
   const canLog          = myLevel() >= STAFF_LEVEL;

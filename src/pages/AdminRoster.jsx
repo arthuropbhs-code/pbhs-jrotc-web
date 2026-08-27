@@ -40,7 +40,9 @@ const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad'];
 const LET_LEVELS = ['LET 1', 'LET 2', 'LET 3', 'LET 4'];
 const GENDERS  = ['Male', 'Female', 'Other'];
 
-const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+// 'Zulu' kept for backward compat — old Firestore records still carry it.
+// All new records use 'Battalion'. Both are treated as HQ throughout.
+const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
 
 const EMPTY_FORM = {
   fullName: '', rank: '', position: '', company: '',
@@ -54,7 +56,7 @@ const lCls = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-50
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-// Handles null/undefined gracefully — Zulu battalion entries store platoon/squad
+// Handles null/undefined gracefully — Battalion entries store platoon/squad
 // as null, and searching would throw if we called null.trim() directly.
 const normalize = (s) => (s ?? '').trim().toLowerCase();
 
@@ -95,16 +97,15 @@ const AdminRoster = () => {
     && (canManageAll || canManageOwn || canS1Edit);
   const myCompany     = userData?.company || '';
 
-  // default to the user's own company, or first company for staff
-  const defaultTab = canManageAll ? (companies[0] || '') : myCompany;
+  // Staff default to the Battalion tab; company command default to their own company.
   const [activeCompany, setActiveCompany] = useState('');
 
-  // set the tab once companies + auth are ready
+  // set the tab once auth is ready
   useEffect(() => {
-    if (!authLoading && companies.length && !activeCompany) {
-      setActiveCompany(canManageAll ? companies[0] : myCompany);
+    if (!authLoading && !activeCompany) {
+      setActiveCompany(canManageAll ? 'Battalion' : myCompany);
     }
-  }, [authLoading, companies, canManageAll, myCompany, activeCompany]);
+  }, [authLoading, canManageAll, myCompany, activeCompany]);
 
   const [rosterEntries,    setRosterEntries]    = useState([]);
   const [challengeRecords, setChallengeRecords] = useState([]);
@@ -193,9 +194,14 @@ const AdminRoster = () => {
     return m;
   }, [portalUsers]);
 
-  // Entries for the active company tab, filtered by search
+  // Entries for the active company tab, filtered by search.
+  // Battalion tab shows both 'Battalion' and legacy 'Zulu' records.
   const visibleEntries = useMemo(() => {
-    const base = rosterEntries.filter(e => e.company === activeCompany);
+    const base = rosterEntries.filter(e =>
+      BATTALION_COMPANIES.includes(activeCompany)
+        ? BATTALION_COMPANIES.includes(e.company)
+        : e.company === activeCompany
+    );
     if (!search.trim()) return base;
     const q = normalize(search);
     return base.filter(e =>
@@ -432,7 +438,8 @@ const AdminRoster = () => {
 
         {/* ── Company tabs ── */}
         <div className="flex gap-1 mb-6 flex-wrap">
-          {(canManageAll ? companies : [myCompany]).filter(Boolean).map(co => {
+          {/* Staff see Battalion tab first, then lettered companies */}
+          {(canManageAll ? ['Battalion', ...companies] : [myCompany]).filter(Boolean).map(co => {
             const isBn = BATTALION_COMPANIES.includes(co);
             return (
               <button
@@ -523,7 +530,7 @@ const AdminRoster = () => {
                         </span>
                       </td>
 
-                      {/* Name + account indicator + company-watch badge for Zulu */}
+                      {/* Name + account indicator + company-watch badge for Battalion */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">
@@ -537,7 +544,7 @@ const AdminRoster = () => {
                               <Link2 size={12} />
                             </span>
                           )}
-                          {/* "Watches over" badge — only shown for Zulu/Battalion members */}
+                          {/* "Watches over" badge — only shown for Battalion members */}
                           {BATTALION_COMPANIES.includes(entry.company) && entry.secondaryCompany && (
                             <span
                               title={`Watches over ${entry.secondaryCompany} Company`}
@@ -745,7 +752,7 @@ const AdminRoster = () => {
                     />
                   </div>
 
-                  {/* Platoon / Squad — hidden for Zulu (Battalion) */}
+                  {/* Platoon / Squad — hidden for Battalion */}
                   {!BATTALION_COMPANIES.includes(form.company) && (
                     <div>
                       <label className={lCls}>Platoon</label>
@@ -782,7 +789,7 @@ const AdminRoster = () => {
                     </div>
                   )}
 
-                  {/* Secondary company — only for Zulu/Battalion */}
+                  {/* Secondary company — only for Battalion */}
                   {BATTALION_COMPANIES.includes(form.company) && (
                     <div className="col-span-2">
                       <label className={lCls}>Class Period Company</label>

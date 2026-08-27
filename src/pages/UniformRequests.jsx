@@ -30,7 +30,7 @@ const UniformRequests = () => {
     cadetName: '',
     rosterDocId: null,
     linkedUid: null,
-    company: COMPANIES[0] ?? 'Zulu',
+    company: COMPANIES[0] ?? 'Alpha',
     rank: '',
     item: '',
     detail: '',
@@ -88,7 +88,7 @@ const UniformRequests = () => {
           setFormData(prev => ({
             ...prev,
             issuedBy: canRequest ? (data.fullName || '') : '',
-            company: data.company || COMPANIES[0] || 'Zulu'
+            company: data.company || COMPANIES[0] || 'Alpha'
           }));
         }
       }
@@ -841,7 +841,7 @@ const UniformRequests = () => {
                       <select
                         className="w-full bg-black/50 border border-white/10 p-3 rounded-xl text-sm text-white"
                         value={formData.company}
-                        onChange={e => setFormData({ ...formData, company: e.target.value || COMPANIES[0] || 'Zulu' })}
+                        onChange={e => setFormData({ ...formData, company: e.target.value || COMPANIES[0] || 'Alpha' })}
                       >
                         {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>

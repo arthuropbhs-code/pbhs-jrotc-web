@@ -5,9 +5,14 @@
 // reflects a change made in AdminCompanies instantly, with no redeploy.
 //
 // Shape of the Firestore doc:
-//   settings/companies  →  { names: ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"] }
+//   settings/companies  →  { names: ["Alpha", "Bravo", "Charlie", "Delta"] }
 //
-// Falls back to the five default names while loading or when the doc
+// "Battalion" is NOT a company — it is a separate designation for battalion
+// staff / leadership and is never stored in this list. Pages that need to
+// present Battalion as an option (roster tabs, account forms, etc.) inject
+// it manually.
+//
+// Falls back to the four default names while loading or when the doc
 // doesn't exist yet (first-run / offline), so every caller is safe to
 // destructure without guarding for undefined.
 
@@ -15,7 +20,7 @@ import { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const DEFAULT_COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"];
+const DEFAULT_COMPANIES = ["Alpha", "Bravo", "Charlie", "Delta"];
 
 export function useCompanies() {
   const [companies, setCompanies] = useState(DEFAULT_COMPANIES);
@@ -47,11 +52,8 @@ export function useCompanies() {
   }, []);
 
   // companiesWithBattalion is kept for backward compatibility with callers
-  // that still reference it, but is now identical to `companies`. "Battalion"
-  // is no longer appended as a separate option — Zulu (the first configured
-  // company) serves as the battalion-level company. Existing records with
-  // company:"Battalion" remain valid in Firestore; only new signups and edits
-  // use the Firestore-configured list, where Zulu fills that role.
+  // that still use it — it is identical to `companies` (lettered companies
+  // only: Alpha, Bravo, Charlie, Delta). Battalion is NOT in this list.
   const companiesWithBattalion = companies;
 
   return { companies, companiesWithBattalion, loading };

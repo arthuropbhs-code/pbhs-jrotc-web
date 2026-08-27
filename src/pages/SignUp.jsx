@@ -72,15 +72,15 @@ const SignUp = () => {
     company: '',
     platoon: '1st Platoon', // Added default
     squad: '1st Squad',     // Added default
-    secondaryCompany: '',   // Zulu/Battalion only — the class period company they attend
+    secondaryCompany: '',   // Battalion only — the class period company they attend
     phone: '',
     secretCode: ''
   });
 
-  // Zulu = Battalion. Members of Zulu are battalion-level staff and don't
-  // belong to a lettered company, but they still attend a class period with
-  // one. secondaryCompany captures that "class period" company.
-  const BATTALION_COMPANIES = ['Zulu', 'Battalion'];
+  // Battalion members are HQ staff — they don't belong to a lettered company,
+  // but they still attend a class period with one (secondaryCompany).
+  // Legacy 'Zulu' entries are treated the same as 'Battalion'.
+  const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -125,7 +125,7 @@ const SignUp = () => {
 
   // positions imported from constants.js (single source of truth shared with AdminUsers.jsx)
   const ranks = ["C/PVT", "C/PFC", "C/CPL", "C/SGT", "C/SSG", "C/SFC", "C/MSG", "C/1SG", "C/SGM", "C/CSM", "C/2LT", "C/1LT", "C/CPT", "C/MAJ", "C/LTC", "C/COL"];
-  const { companiesWithBattalion: companies } = useCompanies();
+  const { companies } = useCompanies();
   const platoons = ["1st Platoon", "2nd Platoon", "3rd Platoon", "HQ Platoon"];
   const squads = ["1st Squad", "2nd Squad", "3rd Squad", "4th Squad", "Staff"];
 
@@ -327,7 +327,7 @@ const SignUp = () => {
               </select>
             </div>
 
-            {/* Platoon / Squad — hidden for Zulu (Battalion) members */}
+            {/* Platoon / Squad — hidden for Battalion members */}
             {!BATTALION_COMPANIES.includes(formData.company) && (
               <div className="relative">
                 <select required value={formData.platoon} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-yellow-500 outline-none appearance-none font-bold text-white" onChange={(e) => setFormData({...formData, platoon: e.target.value})}>
@@ -344,9 +344,9 @@ const SignUp = () => {
               </div>
             )}
 
-            {/* Secondary Company — only for Zulu/Battalion: the class period
+            {/* Secondary Company — only for Battalion members: the class period
                 they're assigned to observe (not officially a member of) */}
-            {formData.company === 'Zulu' && (
+            {BATTALION_COMPANIES.includes(formData.company) && (
               <div className="relative col-span-full">
                 <select
                   required
@@ -355,7 +355,7 @@ const SignUp = () => {
                   onChange={(e) => setFormData({...formData, secondaryCompany: e.target.value})}
                 >
                   <option value="" disabled>— CLASS PERIOD (SECONDARY COMPANY) —</option>
-                  {companies.filter(c => c !== 'Zulu').map(c => (
+                  {companies.map(c => (
                     <option key={c} value={c} className="bg-slate-900 text-white">{c} Company (Class Period)</option>
                   ))}
                 </select>
@@ -380,6 +380,8 @@ const SignUp = () => {
                 });
               }}>
                 <option value="" disabled>— ASSIGN COMPANY —</option>
+                {/* Battalion is not a company — separate HQ designation */}
+                <option value="Battalion" className="bg-slate-900">Battalion (HQ)</option>
                 {companies.map(c => <option key={c} value={c} className="bg-slate-900">{c} Company</option>)}
               </select>
             </div>

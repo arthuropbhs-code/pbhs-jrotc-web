@@ -117,7 +117,7 @@ const AdminCadetChallenge = () => {
 
   // Which companies to display in the cycle-status subscription.
   // Always include myCompany even if it's not in the admin-configured companies list
-  // (battalion HQ company "Zulu" may not appear in the lettered-company settings).
+  // (Battalion is not a lettered company and won't appear in that list).
   const visibleCompanies = useMemo(() => {
     if (!canViewAll) return myCompany ? [myCompany] : [];
     const extra = myCompany && !companies.includes(myCompany) ? [myCompany] : [];
@@ -129,7 +129,7 @@ const AdminCadetChallenge = () => {
   const [viewMode,        setViewMode]         = useState('table');    // 'table' | 'individual'
   const [filterCompany,   setFilterCompany]    = useState('');         // staff filter
   // Default Battalion S1 (canViewAll) to their own company so they immediately
-  // see Zulu's table + cycle status + action buttons on first load.
+  // see their own table + cycle status + action buttons on first load.
   const initFilterRef = useRef(false);
   useEffect(() => {
     if (!initFilterRef.current && canViewAll && myCompany) {
@@ -733,7 +733,7 @@ const AdminCadetChallenge = () => {
                 className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent outline-none pr-2"
               >
                 <option value="">All Companies</option>
-                {/* Include myCompany (e.g. Zulu) even if not in the admin-configured list */}
+                {/* Include myCompany (e.g. Battalion) even if not in the admin-configured list */}
                 {myCompany && !companies.includes(myCompany) && (
                   <option key={myCompany}>{myCompany}</option>
                 )}

@@ -466,10 +466,10 @@ const MyProfile = () => {
             <div>
               <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Company</p>
               <p className="text-sm font-bold">
-                {userData?.company || '—'}
-                {userData?.company === 'Zulu' && (
-                  <span className="ml-2 text-[9px] font-black uppercase text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">Battalion</span>
-                )}
+                {/* Show "Battalion" for both new and legacy Zulu records */}
+                {['Battalion', 'Zulu'].includes(userData?.company)
+                  ? 'Battalion'
+                  : (userData?.company || '—')}
               </p>
             </div>
             {userData?.company && !['Battalion', 'Zulu'].includes(userData.company) && (
@@ -478,7 +478,7 @@ const MyProfile = () => {
                 <p className="text-sm font-bold">{userData?.platoon || '—'} &middot; {userData?.squad || '—'}</p>
               </div>
             )}
-            {userData?.company === 'Zulu' && userData?.secondaryCompany && (
+            {['Battalion', 'Zulu'].includes(userData?.company) && userData?.secondaryCompany && (
               <div>
                 <p className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1">Class Period Company</p>
                 <p className="text-sm font-bold">{userData.secondaryCompany} Company

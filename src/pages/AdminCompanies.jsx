@@ -20,7 +20,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
 import AdminPageHeader from '../components/AdminPageHeader';
 
-const DEFAULT_COMPANIES = ["Zulu", "Alpha", "Bravo", "Charlie", "Delta"];
+// "Battalion" is a fixed designation for HQ staff — it is NOT a company and
+// must never appear in this list or be added by an admin.
+const DEFAULT_COMPANIES = ["Alpha", "Bravo", "Charlie", "Delta"];
 const DEFAULT_CATEGORIES = ["Regulations", "Forms", "Handbooks & Guides", "Uniform", "Other"];
 
 const AdminCompanies = () => {
@@ -97,6 +99,10 @@ const AdminCompanies = () => {
   const handleAdd = () => {
     const name = newName.trim();
     if (!name) return;
+    if (name.toLowerCase() === 'battalion') {
+      showStatus('error', '"Battalion" is a reserved designation for HQ staff — it cannot be added as a company.');
+      return;
+    }
     if (companies.map(c => c.toLowerCase()).includes(name.toLowerCase())) {
       showStatus('error', `"${name}" already exists.`);
       return;

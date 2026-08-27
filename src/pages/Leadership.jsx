@@ -87,9 +87,10 @@ const Leadership = () => {
 
   // --- 3. DYNAMIC COMPANY GENERATOR ---
   // Derived from useCompanies() → matches AdminLeadership's format exactly.
-  // Zulu is the battalion HQ placeholder company — exclude it from the public Company Leadership tab
+  // Battalion is not a lettered company — exclude it from the public Company Leadership tab
+  // (safety net: Battalion should no longer appear in rawCompanies)
   const companyNames = rawCompanies
-    .filter(c => c.toLowerCase() !== 'zulu')
+    .filter(c => c.toLowerCase() !== 'battalion')
     .map(c => `${c} Company`);
 
   const companies = companyNames.map((companyName) => {
