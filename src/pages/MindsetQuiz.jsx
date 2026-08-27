@@ -432,11 +432,14 @@ const MindsetQuiz = () => {
   const [selections, setSelections] = useState(() => new Array(QUESTIONS.length).fill(null));
   const [scores, setScores]         = useState(() => new Array(QUESTIONS.length).fill(null));
 
-  // Scroll to top of quiz area on question change
+  // Scroll to top when moving between questions or entering the quiz/results.
+  // window.scrollTo is used instead of scrollIntoView because the anchor sits
+  // at y≈0 and scroll-margin can't pull below the document origin — scrollTo
+  // always lands at the correct position above the fixed navbar.
   const topRef = useRef(null);
   useEffect(() => {
-    if (screen === 'quiz') {
-      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (screen !== 'intro') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentQ, screen]);
 
@@ -499,12 +502,11 @@ const MindsetQuiz = () => {
         </div>
       </div>
 
-      {/* Scroll anchor — scroll-mt-20 offsets the sticky navbar */}
-      <div ref={topRef} className="scroll-mt-20" />
+      <div ref={topRef} />
 
       {/* Intro — fills remaining viewport height, content centred */}
       {screen === 'intro' && (
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-16">
+        <div className="min-h-[calc(100vh-4rem)] mt-16 flex items-center justify-center px-6 py-16">
           <div className="w-full max-w-4xl">
             <IntroScreen onStart={() => setScreen('quiz')} />
           </div>
@@ -513,7 +515,7 @@ const MindsetQuiz = () => {
 
       {/* Quiz & results — comfortable reading width */}
       {screen !== 'intro' && (
-        <div className="max-w-2xl mx-auto px-5 sm:px-8 py-12 md:py-16">
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 pt-24 pb-16 md:pt-28 md:pb-20">
           {screen === 'quiz' && (
             <QuizScreen
               question={QUESTIONS[currentQ]}
