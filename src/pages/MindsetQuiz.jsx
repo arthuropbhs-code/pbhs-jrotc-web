@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Star, ChevronRight, ChevronLeft, RotateCcw, Copy, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, RotateCcw, Copy, Check } from 'lucide-react';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 // ─── Quiz data ─────────────────────────────────────────────────────────────
@@ -177,12 +177,6 @@ const RESULTS = [
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-const QuizBadge = ({ children }) => (
-  <span className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/25 text-yellow-500 text-[0.65rem] font-bold tracking-[0.18em] uppercase px-3.5 py-1.5 rounded-full">
-    {children}
-  </span>
-);
-
 const MilitaryLabel = ({ children, className = '' }) => (
   <span className={`text-[0.65rem] font-bold tracking-[0.2em] uppercase text-slate-500 dark:text-slate-500 ${className}`}>
     {children}
@@ -192,40 +186,33 @@ const MilitaryLabel = ({ children, className = '' }) => (
 // ─── Screens ───────────────────────────────────────────────────────────────
 
 const IntroScreen = ({ onStart }) => (
-  <div className="animate-[fadeUp_0.35s_ease_both]">
-    <div className="mb-6">
-      <QuizBadge>
-        <Star size={11} className="fill-yellow-500" />
-        Leadership Development Program
-      </QuizBadge>
-    </div>
-
-    <h1 className="font-black uppercase italic tracking-tighter text-5xl md:text-7xl leading-none text-slate-900 dark:text-white mb-2">
+  <div className="animate-[fadeUp_0.35s_ease_both] text-center">
+    <h1 className="font-black uppercase italic tracking-tighter text-[clamp(3.5rem,11vw,8rem)] leading-none text-slate-900 dark:text-white mb-3">
       Mindset<br />
       <span className="text-yellow-500">Readiness</span>
     </h1>
-    <p className="text-sm font-bold tracking-[0.12em] uppercase text-slate-400 mb-8">
+    <p className="text-sm font-bold tracking-[0.14em] uppercase text-slate-400 mb-10">
       Self-Assessment · Cadet Edition
     </p>
 
-    <p className="text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mb-10 text-[0.95rem]">
+    <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-12 text-[0.97rem] max-w-xl mx-auto">
       Your mindset is one of the most powerful weapons in your arsenal as a leader.
       This assessment reveals whether your current thinking patterns support growth,
       resilience, and mission success — or limit your potential before training even begins.
     </p>
 
-    <div className="flex gap-10 mb-12">
+    <div className="flex gap-14 mb-14 justify-center">
       {[['14', 'Questions'], ['~5', 'Minutes'], ['4', 'Outcomes']].map(([val, lbl]) => (
         <div key={lbl}>
-          <div className="font-black text-3xl text-yellow-500 leading-none tabular-nums">{val}</div>
-          <div className="text-[0.65rem] font-bold tracking-[0.14em] uppercase text-slate-400 mt-1">{lbl}</div>
+          <div className="font-black text-4xl text-yellow-500 leading-none tabular-nums">{val}</div>
+          <div className="text-[0.65rem] font-bold tracking-[0.14em] uppercase text-slate-400 mt-1.5">{lbl}</div>
         </div>
       ))}
     </div>
 
     <button
       onClick={onStart}
-      className="inline-flex items-center gap-2.5 bg-yellow-500 hover:bg-yellow-400 active:bg-yellow-600 text-slate-900 text-sm font-bold tracking-[0.06em] uppercase px-8 py-3.5 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-yellow-500 focus-visible:outline-offset-2"
+      className="inline-flex items-center gap-2.5 bg-yellow-500 hover:bg-yellow-400 active:bg-yellow-600 text-slate-900 text-sm font-bold tracking-[0.06em] uppercase px-10 py-4 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-yellow-500 focus-visible:outline-offset-2"
     >
       Begin Assessment
       <ChevronRight size={16} />
@@ -524,38 +511,34 @@ const MindsetQuiz = () => {
       {/* Scroll anchor */}
       <div ref={topRef} />
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-5 sm:px-8 py-14 md:py-20">
-
-        {/* Page eyebrow — always visible */}
-        {screen === 'intro' && (
-          <div className="flex items-center gap-2 mb-10">
-            <Shield size={14} className="text-yellow-500" />
-            <span className="text-[0.65rem] font-bold tracking-[0.2em] uppercase text-slate-400">
-              PBHS JROTC · Tornado Battalion
-            </span>
+      {/* Intro — fills remaining viewport height, content centred */}
+      {screen === 'intro' && (
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-16">
+          <div className="w-full max-w-4xl">
+            <IntroScreen onStart={() => setScreen('quiz')} />
           </div>
-        )}
+        </div>
+      )}
 
-        {screen === 'intro' && <IntroScreen onStart={() => setScreen('quiz')} />}
-
-        {screen === 'quiz' && (
-          <QuizScreen
-            question={QUESTIONS[currentQ]}
-            questionIndex={currentQ}
-            selection={selections[currentQ]}
-            onSelect={handleSelect}
-            onNext={handleNext}
-            onBack={handleBack}
-            total={QUESTIONS.length}
-          />
-        )}
-
-        {screen === 'results' && (
-          <ResultsScreen scores={scores} onRetake={handleRetake} />
-        )}
-
-      </div>
+      {/* Quiz & results — comfortable reading width */}
+      {screen !== 'intro' && (
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 py-12 md:py-16">
+          {screen === 'quiz' && (
+            <QuizScreen
+              question={QUESTIONS[currentQ]}
+              questionIndex={currentQ}
+              selection={selections[currentQ]}
+              onSelect={handleSelect}
+              onNext={handleNext}
+              onBack={handleBack}
+              total={QUESTIONS.length}
+            />
+          )}
+          {screen === 'results' && (
+            <ResultsScreen scores={scores} onRetake={handleRetake} />
+          )}
+        </div>
+      )}
     </div>
   );
 };
