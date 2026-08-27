@@ -197,8 +197,8 @@ const IntroScreen = ({ onStart }) => (
 
     <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-12 text-[0.97rem] max-w-xl mx-auto">
       Your mindset is one of the most powerful weapons in your arsenal as a leader.
-      This assessment reveals whether your current thinking patterns support growth,
-      resilience, and mission success — or limit your potential before training even begins.
+      This assessment reveals whether your current thinking patterns support growth
+      and resilience or limit your potential.
     </p>
 
     <div className="flex gap-14 mb-14 justify-center">
@@ -485,7 +485,7 @@ const MindsetQuiz = () => {
 
       {/* Progress bar — fixed below navbar-level, full width */}
       <div
-        className="sticky top-0 z-30 h-[3px] bg-slate-200 dark:bg-slate-800"
+        className="sticky top-16 z-30 h-[3px] bg-slate-200 dark:bg-slate-800"
         role="progressbar"
         aria-valuenow={progress}
         aria-valuemin={0}
