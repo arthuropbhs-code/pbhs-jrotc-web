@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="35"      label="Releases"    />
-        <Stat value="337"     label="Commits"     />
+        <Stat value="36"      label="Releases"    />
+        <Stat value="338"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.30" label="Current"     />
+        <Stat value="v1.6.31" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -611,8 +611,11 @@ const AdminChangelog = () => {
           <C type="feat">Action labels now display with spaces instead of underscores (e.g. "mark complete" instead of "mark_complete")</C>
           <C type="feat">Hover border intensifies within the same hue rather than switching to a neutral white — green cards stay green on hover, red cards stay red, etc.</C>
         </>} />
-        <Patch version="v1.6.30" date="Aug 26" title="Honor Company — fixed 5-4-3-2-1 Org Day point scale" isCurrent changes={<>
+        <Patch version="v1.6.30" date="Aug 26" title="Honor Company — fixed 5-4-3-2-1 Org Day point scale" changes={<>
           <C type="feat">Org Day event placements now award points on a fixed scale: 1st = 5 pts, 2nd = 4, 3rd = 3, 4th = 2, 5th = 1, 6th+ = 0 — regardless of how many companies are competing; previously the scale was dynamic (n−i), so the top award varied with company count</C>
+        </>} />
+        <Patch version="v1.6.31" date="Aug 26" title="Honor Company — exclude Zulu from competition" isCurrent changes={<>
+          <C type="feat">Zulu Company (battalion HQ) is no longer included in the Honor Company scoreboard, Org Day rankings, or the Log Points company selector — only Alpha, Bravo, Charlie, and Delta compete; Zulu remains available on all other pages</C>
         </>} />
       </Minor>
 
