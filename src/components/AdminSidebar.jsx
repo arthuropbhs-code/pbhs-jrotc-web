@@ -341,12 +341,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {groupLabel('Programs')}
             {navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
 
-            {/* Personal-only access — no full management for Fundraiser or Uniforms */}
-            <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
-              {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
-              {navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
-              {navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
-            </div>
           </>
         )}
 
@@ -405,16 +399,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
           </div>
         )}
 
-        {/* ── Personal-view links — company assistants (35+) who lack full management access.
-            Platoon/squad leadership (5–25) use My Profile instead. ── */}
-        {userLevel >= 35 && !isS1S3Assistant && (!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
-          <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
-            {!hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
-            {!hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
-            {!canSeeUniforms && navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
-            {!canSeeUniformSizes && navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
-          </div>
-        )}
         {/* ── PORTAL ──────────────────────────────── */}
         <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
           {groupLabel('Portal')}
