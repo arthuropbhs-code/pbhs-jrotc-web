@@ -338,15 +338,6 @@ const ResultsScreen = ({ scores, onRetake }) => {
 
   return (
     <div className="animate-[fadeUp_0.35s_ease_both]">
-      {/* Rank badge */}
-      <div className="flex items-center gap-2.5 mb-6">
-        <span className="w-2.5 h-2.5 bg-yellow-500 rotate-45 flex-shrink-0" />
-        <span className="text-[0.72rem] font-extrabold tracking-[0.28em] uppercase text-yellow-500">
-          {result.rank}
-        </span>
-        <span className="w-2.5 h-2.5 bg-yellow-500 rotate-45 flex-shrink-0" />
-      </div>
-
       <h2 className="font-black uppercase italic tracking-tighter text-4xl md:text-6xl leading-none text-slate-900 dark:text-white mb-4">
         {result.title}
       </h2>
@@ -508,8 +499,8 @@ const MindsetQuiz = () => {
         </div>
       </div>
 
-      {/* Scroll anchor */}
-      <div ref={topRef} />
+      {/* Scroll anchor — scroll-mt-20 offsets the sticky navbar */}
+      <div ref={topRef} className="scroll-mt-20" />
 
       {/* Intro — fills remaining viewport height, content centred */}
       {screen === 'intro' && (
