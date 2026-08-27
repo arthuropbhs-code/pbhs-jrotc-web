@@ -32,7 +32,10 @@ const AdminOrders = () => {
   const userLevel    = ROLE_HIERARCHY[role] || 0;
   const isInstructor = userLevel >= 95;
   const isS7         = role === 's7_special_projects'; // kept for any other uses below
-  const canDelete    = userLevel >= ADMIN_LEVEL;
+  // Top four (SGM/XO/CSM/BC = level 80+) can delete anyone's orders/tasks.
+  const canDeleteAny = userLevel >= ADMIN_LEVEL;
+  // Legacy alias — keep for existing order-delete flow
+  const canDelete    = canDeleteAny;
 
   // ── Order state ──────────────────────────────────────────────────────────────
   const [orderText,        setOrderText]        = useState('');
@@ -128,13 +131,14 @@ const AdminOrders = () => {
     setOrderStatus({ loading: true, success: false });
     try {
       await addDoc(collection(db, 'orders'), {
-        content:    orderText,
-        targets:    selectedTargets,
-        issuer:     `${userData?.rank || ''} ${userData?.fullName || userData?.name || ''}`.trim(),
-        issuerRole: role,
-        company:    userData?.company || 'Battalion',
-        timestamp:  serverTimestamp(),
-        active:     true,
+        content:      orderText,
+        targets:      selectedTargets,
+        issuer:       `${userData?.rank || ''} ${userData?.fullName || userData?.name || ''}`.trim(),
+        issuerRole:   role,
+        issuedByUid:  user?.uid || '',
+        company:      userData?.company || 'Battalion',
+        timestamp:    serverTimestamp(),
+        active:       true,
       });
       setOrderText('');
       setSelectedTargets([]);
@@ -154,16 +158,20 @@ const AdminOrders = () => {
 
   // ── Order delete ──────────────────────────────────────────────────────────────
   const requestOrderDelete = (item) => {
-    const userWeight   = ROLE_HIERARCHY[role] || 0;
-    const issuerWeight = ROLE_HIERARCHY[item.issuerRole] ?? 0;
-    if (userWeight < issuerWeight) {
-      showError('RANK INSUFFICIENT: Cannot delete higher-echelon transmissions.');
+    const isOwnOrder = item.issuedByUid && item.issuedByUid === user?.uid;
+    // Only top 4 (ADMIN_LEVEL 80+) can delete others' orders.
+    if (!isOwnOrder && !canDeleteAny) {
+      showError('ACCESS DENIED: You can only delete your own transmissions.');
       return;
     }
-    const sameCompany = !item.company || item.company === 'Battalion' || item.company === userData?.company;
-    if (userWeight < STAFF_LEVEL && !sameCompany) {
-      showError('ACCESS DENIED: Outside your company\'s transmissions.');
-      return;
+    // Top 4 cannot delete orders from a higher-rank issuer.
+    if (canDeleteAny && !isOwnOrder) {
+      const userWeight   = ROLE_HIERARCHY[role] || 0;
+      const issuerWeight = ROLE_HIERARCHY[item.issuerRole] ?? 0;
+      if (userWeight < issuerWeight) {
+        showError('RANK INSUFFICIENT: Cannot delete higher-echelon transmissions.');
+        return;
+      }
     }
     setDeleteConfirm({ show: true, id: item.id });
   };
@@ -196,6 +204,7 @@ const AdminOrders = () => {
         assignedToPosition: taskTarget,
         status:             'pending',
         timestamp:          serverTimestamp(),
+        issuedByUid:        user?.uid || '',
       });
       setTaskText('');
       showToast('success', `Task deployed to ${taskTarget}`);
@@ -292,7 +301,7 @@ const AdminOrders = () => {
               <textarea
                 value={orderText}
                 onChange={e => setOrderText(e.target.value)}
-                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white outline-none transition-all min-h-[140px] placeholder:text-blue-200 font-medium shadow-inner"
+                className="w-full bg-blue-50/30 dark:bg-black/40 border-2 border-blue-50 dark:border-white/5 rounded-3xl p-6 text-slate-900 dark:text-white text-sm focus:border-yellow-500 focus:bg-white dark:focus:bg-black/60 outline-none transition-all min-h-[140px] placeholder:text-blue-200 dark:placeholder:text-slate-600 font-medium shadow-inner"
                 placeholder="Enter battalion orders for broadcast…"
               />
 
@@ -328,7 +337,7 @@ const AdminOrders = () => {
                       <span className="text-[9px] text-blue-600 dark:text-slate-400 font-bold uppercase tracking-widest">| By: {item.issuer}</span>
                     </div>
                   </div>
-                  {(ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[item.issuerRole] || 0) && (
+                  {(canDeleteAny || item.issuedByUid === user?.uid) && (
                     <button onClick={() => requestOrderDelete(item)} title="Delete"
                       className="p-3.5 text-slate-300 dark:text-slate-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all">
                       <Trash2 size={18} />
@@ -400,24 +409,35 @@ const AdminOrders = () => {
               <div className="h-px flex-1 bg-blue-100 dark:bg-white/5 mx-4" />
             </div>
             <div className="space-y-3">
-              {recentTasks.length === 0 ? (
-                <p className="text-slate-500 dark:text-slate-600 text-xs italic py-4 text-center">No tasks assigned yet.</p>
-              ) : recentTasks.map(t => (
-                <div key={t.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl p-5 flex justify-between items-start gap-4 hover:border-yellow-500/20 transition-all shadow-sm">
-                  <div className="min-w-0">
-                    <p className="text-sm text-slate-800 dark:text-slate-200 font-bold leading-tight">{t.taskContent}</p>
-                    <p className="text-[9px] text-blue-600 dark:text-slate-500 font-black uppercase tracking-widest mt-2">
-                      To: {t.assignedToPosition} · By: {t.assignedBy}
-                    </p>
-                  </div>
-                  {canDelete && (
-                    <button onClick={() => setTaskDeleteConf(t.id)} title="Delete task"
-                      className="text-slate-300 dark:text-slate-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl transition-all flex-shrink-0">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
+              {(() => {
+                // Top 4 (ADMIN_LEVEL 80+) see all tasks; everyone else sees only their own.
+                const visibleTasks = canDeleteAny
+                  ? recentTasks
+                  : recentTasks.filter(t => t.issuedByUid === user?.uid);
+                if (visibleTasks.length === 0) return (
+                  <p className="text-slate-500 dark:text-slate-600 text-xs italic py-4 text-center">No tasks assigned yet.</p>
+                );
+                return visibleTasks.map(t => {
+                  const isOwnTask = t.issuedByUid === user?.uid;
+                  const canDeleteThisTask = canDeleteAny || isOwnTask;
+                  return (
+                    <div key={t.id} className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-2xl p-5 flex justify-between items-start gap-4 hover:border-yellow-500/20 transition-all shadow-sm">
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-800 dark:text-slate-200 font-bold leading-tight">{t.taskContent}</p>
+                        <p className="text-[9px] text-blue-600 dark:text-slate-500 font-black uppercase tracking-widest mt-2">
+                          To: {t.assignedToPosition} · By: {t.assignedBy}
+                        </p>
+                      </div>
+                      {canDeleteThisTask && (
+                        <button onClick={() => setTaskDeleteConf(t.id)} title="Delete task"
+                          className="text-slate-300 dark:text-slate-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl transition-all flex-shrink-0">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
         </section>

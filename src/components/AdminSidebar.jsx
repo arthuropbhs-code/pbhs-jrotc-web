@@ -343,7 +343,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
 
             {/* Personal-only access — no full management for Fundraiser or Uniforms */}
             <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
               {navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
               {navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}
               {navLink('/admin/uniform-sizes', <Ruler size={18} />, 'Uniform Sizes')}
@@ -410,7 +409,6 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             Platoon/squad leadership (5–25) use My Profile instead. ── */}
         {userLevel >= 35 && !isS1S3Assistant && (!hasFullChallengeAccess || !hasFullFundraiserAccess || !canSeeUniforms || !canSeeUniformSizes) && (
           <div className="mt-4 pt-4 border-t border-blue-100 dark:border-white/5 space-y-0.5">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 dark:text-slate-600 px-3 pt-2 pb-1">My Records</p>
             {!hasFullChallengeAccess && navLink('/admin/cadet-challenge', <Activity size={18} />, 'Cadet Challenge')}
             {!hasFullFundraiserAccess && navLink('/admin/fundraiser', <Heart size={18} />, 'Fundraiser')}
             {!canSeeUniforms && navLink('/uniform-requests', <Shirt size={18} />, 'Uniform Items')}

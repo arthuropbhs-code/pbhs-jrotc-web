@@ -41,6 +41,8 @@ import AdminPageHeader from '../components/AdminPageHeader';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const CYCLES = [1, 2, 3];
+// Roster entries stored under any of these company values are Battalion/HQ members.
+const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
 
 // Roles that can input records (company-level command + assistants).
 // company_master_sergeant has edit access here specifically —
@@ -241,9 +243,13 @@ const AdminCadetChallenge = () => {
     if (!myCompany && !canViewAll) return;
     if (!targetCompany) { setCadets([]); return; }
 
+    // When filtering for Battalion, include legacy 'Zulu' records too.
+    const companyFilter = BATTALION_COMPANIES.includes(targetCompany)
+      ? BATTALION_COMPANIES
+      : [targetCompany];
     const q = query(
       collection(db, 'roster'),
-      where('company', '==', targetCompany),
+      where('company', 'in', companyFilter),
       orderBy('fullName', 'asc'),
     );
     const unsub = onSnapshot(q, snap => {
@@ -373,8 +379,10 @@ const AdminCadetChallenge = () => {
   // where secondaryCompany matches (battalion members observing this company).
   const companyRecords = useMemo(() => {
     if (canViewAll && !filterCompany) return allRecords;
+    const isBn = BATTALION_COMPANIES.includes(activeCompany);
     return allRecords.filter(r =>
-      r.company === activeCompany || r.secondaryCompany === activeCompany
+      (isBn ? BATTALION_COMPANIES.includes(r.company) : r.company === activeCompany)
+      || r.secondaryCompany === activeCompany
     );
   }, [allRecords, activeCompany, canViewAll, filterCompany]);
 

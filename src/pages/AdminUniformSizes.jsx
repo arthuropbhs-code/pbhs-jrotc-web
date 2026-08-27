@@ -72,6 +72,9 @@ const JACKET_SIZES_FEMALE = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20].flatMap(n => ['
 
 // ── Role / access constants ────────────────────────────────────────────────────
 
+// Roster entries stored under any of these company values are Battalion/HQ members.
+const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
+
 const INPUT_ROLES    = ['company_s4_assistant', 'company_commander', 'company_xo', 'company_1sg'];
 const FINALIZE_ROLE  = 'company_s4_assistant';
 const ACKNOWLEDGE_ROLE = 's4_logistics';
@@ -168,9 +171,12 @@ const AdminUniformSizes = () => {
     if (canViewAll && !filterCompany) {
       q = query(collection(db, 'uniformSizes'), orderBy('cadetName', 'asc'));
     } else if (activeCompany) {
+      const companyFilter = BATTALION_COMPANIES.includes(activeCompany)
+        ? BATTALION_COMPANIES
+        : [activeCompany];
       q = query(
         collection(db, 'uniformSizes'),
-        where('company', '==', activeCompany),
+        where('company', 'in', companyFilter),
         orderBy('cadetName', 'asc'),
       );
     } else {
@@ -187,9 +193,12 @@ const AdminUniformSizes = () => {
   // ── Subscribe: roster cadets ──────────────────────────────────────────────────
   useEffect(() => {
     if (!activeCompany) { setCadets([]); return; }
+    const companyFilter = BATTALION_COMPANIES.includes(activeCompany)
+      ? BATTALION_COMPANIES
+      : [activeCompany];
     const q = query(
       collection(db, 'roster'),
-      where('company', '==', activeCompany),
+      where('company', 'in', companyFilter),
       orderBy('fullName', 'asc'),
     );
     const unsub = onSnapshot(q, snap => {
@@ -243,6 +252,9 @@ const AdminUniformSizes = () => {
   // ── Computed ──────────────────────────────────────────────────────────────────
   const displaySizes = useMemo(() => {
     if (canViewAll && !filterCompany) return sizes;
+    if (BATTALION_COMPANIES.includes(activeCompany)) {
+      return sizes.filter(s => BATTALION_COMPANIES.includes(s.company));
+    }
     return sizes.filter(s => s.company === activeCompany);
   }, [sizes, activeCompany, canViewAll, filterCompany]);
 

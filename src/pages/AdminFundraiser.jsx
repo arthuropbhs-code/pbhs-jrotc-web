@@ -64,6 +64,8 @@ const PAYMENT_COLORS = {
 
 const ADMIN_LEVEL = 80;
 const STAFF_LEVEL = 70;
+// Roster entries belonging to Battalion HQ (not a lettered company).
+const BATTALION_COMPANIES = ['Battalion', 'Zulu'];
 
 // $2 = 1 flag, round down
 const toFlags = (amount) => Math.floor((amount || 0) / 2);
@@ -631,59 +633,76 @@ const AdminFundraiser = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
-                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Raised ($)
+                <div className="w-3 h-3 rounded-sm bg-emerald-500" /> Companies Raised ($)
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
-                <div className="w-3 h-3 rounded-sm bg-yellow-500/40 border-2 border-yellow-500" /> Weekly Goal (roster-based)
+                <div className="w-3 h-3 rounded-sm bg-yellow-500" /> Battalion Raised ($)
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500">
+                <div className="w-3 h-3 rounded-sm bg-yellow-500/40 border-2 border-yellow-500" /> Weekly Goal
               </div>
             </div>
 
-            {/* Bars */}
-            <div className="space-y-4">
-              {companyNames.map(co => {
-                const actual      = companyTotals[co] || 0;
-                const goalFlags   = companyGoals[co] || 0;
-                const goalDollars = goalFlags * 2; // $2 = 1 flag
-                const maxVal      = Math.max(goalDollars, ...companyNames.map(c => companyTotals[c] || 0), 1);
-                const pct         = (actual    / maxVal) * 100;
-                const gPct        = (goalDollars / maxVal) * 100;
-                const ahead       = actual >= goalDollars && goalDollars > 0;
-                return (
-                  <div key={co}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
-                        {goalFlags > 0 && (
-                          <span className="text-[9px] text-slate-400 dark:text-slate-500">
-                            Goal: {goalFlags.toLocaleString()} flags/wk (${goalDollars.toLocaleString()})
+            {/* Bars — lettered companies first, then Battalion HQ as a separate group */}
+            {(() => {
+              // Battalion total: sum all entries with company in BATTALION_COMPANIES
+              const bnTotal = allEntries.filter(e => !e.voided && BATTALION_COMPANIES.includes(e.company))
+                .reduce((s, e) => s + (e.amount || 0), 0);
+              const bnGoalFlags = BATTALION_COMPANIES.reduce((s, co) => s + (companyGoals[co] || 0), 0);
+              const bnGoalDollars = bnGoalFlags * 2;
+
+              const allBars = [
+                ...companyNames.map(co => ({ co, label: co, actual: companyTotals[co] || 0, goalFlags: companyGoals[co] || 0, isBn: false })),
+                ...(bnTotal > 0 || bnGoalDollars > 0 ? [{ co: '_battalion', label: 'Battalion', actual: bnTotal, goalFlags: bnGoalFlags, isBn: true }] : []),
+              ];
+              const maxVal = Math.max(1, ...allBars.map(b => Math.max(b.actual, b.goalFlags * 2)));
+
+              return (
+                <div className="space-y-4">
+                  {allBars.map(({ co, label, actual, goalFlags, isBn }) => {
+                    const goalDollars = goalFlags * 2;
+                    const pct  = (actual      / maxVal) * 100;
+                    const gPct = (goalDollars / maxVal) * 100;
+                    const ahead = actual >= goalDollars && goalDollars > 0;
+                    return (
+                      <div key={co}>
+                        {isBn && <div className="border-t border-dashed border-slate-200 dark:border-white/5 mt-3 mb-4" />}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-black uppercase ${isBn ? 'text-yellow-600 dark:text-yellow-500' : 'text-slate-600 dark:text-slate-400'}`}>
+                              {label}{isBn && ' · HQ'}
+                            </span>
+                            {goalFlags > 0 && (
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                                Goal: {goalFlags.toLocaleString()} flags/wk (${goalDollars.toLocaleString()})
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-[10px] font-black ${ahead ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                            ${actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {ahead && ' ✓'}
                           </span>
-                        )}
+                        </div>
+                        <div className="relative h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${isBn ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                          {goalDollars > 0 && (
+                            <div
+                              className="absolute inset-y-0 border-r-2 border-yellow-500"
+                              style={{ left: `${Math.min(gPct, 100)}%` }}
+                            />
+                          )}
+                        </div>
                       </div>
-                      <span className={`text-[10px] font-black ${ahead ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                        ${actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        {ahead && ' ✓'}
-                      </span>
-                    </div>
-                    <div className="relative h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                      {/* Actual bar */}
-                      <div
-                        className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                      {/* Goal marker */}
-                      {goalDollars > 0 && (
-                        <div
-                          className="absolute inset-y-0 border-r-2 border-yellow-500"
-                          style={{ left: `${Math.min(gPct, 100)}%` }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 

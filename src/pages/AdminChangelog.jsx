@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="40"      label="Releases"    />
-        <Stat value="342"     label="Commits"     />
+        <Stat value="41"      label="Releases"    />
+        <Stat value="343"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.35" label="Current"     />
+        <Stat value="v1.6.36" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -633,11 +633,21 @@ const AdminChangelog = () => {
           <C type="fix">Accounts route: removed <code className="font-mono text-[10px]">excludedRoles</code> guard that specifically blocked SGM; sidebar Accounts and Teams links updated to show for SGM the same as CSM</C>
           <C type="fix">Feedback Hub sidebar link now shows for SGM; AAR and Meeting Logs elevated-edit (delete, edit any entry) extended to SGM; Uniform Request approve action extended to SGM; Orders page: SGM now gets the same broad STAFF_TARGETS as CSM instead of the narrower company-command-only list</C>
         </>} />
-        <Patch version="v1.6.35" date="Aug 27" title="Mindset Readiness Assessment — public quiz page" isCurrent changes={<>
+        <Patch version="v1.6.35" date="Aug 27" title="Mindset Readiness Assessment — public quiz page" changes={<>
           <C type="feat">New public route <code className="font-mono text-[10px]">/mindset-quiz</code> — 14-question growth vs. fixed mindset self-assessment designed for cadets; no login required</C>
           <C type="feat">Questions adapted from 1SG (Ret) Chevrestt's mindset curriculum with JROTC framing (After Action Review, mission difficulty, accountability, peer comparison, character &amp; change)</C>
           <C type="feat">Scored 0–42; results yield one of four ranks: Recruit (fixed mindset) → Cadet → Sergeant → Commander (elite growth mindset), each with a tailored development message</C>
           <C type="feat">Progress bar, animated score gauge, breakdown stat cards, and a Copy Link share button on results screen; matches full site dark/light theme</C>
+        </>} />
+        <Patch version="v1.6.36" date="Aug 27" title="Admin UX — roster dropdown, penalty points, task permissions" isCurrent changes={<>
+          <C type="feat">Roster company selector converted from tab pills to a compact filter dropdown — cleaner layout especially at higher company counts</C>
+          <C type="feat">Honor Company log modal: Award / Penalty toggle — penalty entries store a negative point value and display in red in the scoreboard and audit trail</C>
+          <C type="fix">Cadet Challenge &amp; Uniform Sizes: Battalion filter now correctly loads all battalion HQ members (previously only matched the first stored company value, leaving most cadets invisible)</C>
+          <C type="feat">Fundraiser performance graph: Battalion HQ shown as its own distinct bar (yellow) below company bars, separated by a divider — no longer merged into company totals</C>
+          <C type="fix">Orders &amp; Tasks: battalion staff (below level 80) can now delete their own orders and tasks; only BC/CSM/XO/SGM can delete others'</C>
+          <C type="fix">Task visibility: battalion staff below top-4 see only their own tasks in the recent-tasks list; CSM/BC/XO/SGM see all tasks</C>
+          <C type="fix">Issue Orders textarea: dark-mode focus no longer sets a white background, preventing white-on-white text</C>
+          <C type="fix">Sidebar "My Records" section header removed — linked pages remain accessible through their existing sidebar categories</C>
         </>} />
       </Minor>
 

@@ -213,7 +213,7 @@ const AdminHonorCompany = () => {
   const [dataLoading, setDataLoading] = useState(true);
 
   // ── Log modal ─────────────────────────────────────────────────────────────
-  const BLANK_LOG = { quarter: 'Q1', category: '', company: COMPANIES[0], points: '', notes: '' };
+  const BLANK_LOG = { quarter: 'Q1', category: '', company: COMPANIES[0], points: '', notes: '', isDeduction: false };
   const [logOpen,   setLogOpen]   = useState(false);
   const [logForm,   setLogForm]   = useState(BLANK_LOG);
   const [savingLog, setSavingLog] = useState(false);
@@ -298,13 +298,16 @@ const AdminHonorCompany = () => {
   // ── Handlers — Quarterly ──────────────────────────────────────────────────
   const submitLog = async () => {
     if (!logForm.category || !logForm.company || !logForm.points) return;
+    const rawPts = Math.abs(Number(logForm.points));
+    const finalPts = logForm.isDeduction ? -rawPts : rawPts;
     setSavingLog(true);
     try {
       await addDoc(collection(db, 'honorCompanyEntries'), {
         quarter:      logForm.quarter,
         category:     logForm.category,
         company:      logForm.company,
-        points:       Number(logForm.points),
+        points:       finalPts,
+        isDeduction:  logForm.isDeduction,
         notes:        logForm.notes.trim(),
         loggedBy:     userData?.uid      || '',
         loggedByName: userData?.fullName || 'Unknown',
@@ -314,7 +317,7 @@ const AdminHonorCompany = () => {
       setTimeout(() => { setLogOpen(false); setLogForm(BLANK_LOG); setSavedLog(false); }, 1600);
       writeLog({
         type: 'honor_company', action: 'create',
-        description: `Logged HC entry: ${logForm.company} — ${logForm.category} (${logForm.points} pts) Q${logForm.quarter}`,
+        description: `Logged HC entry: ${logForm.company} — ${logForm.category} (${finalPts} pts) Q${logForm.quarter}${logForm.isDeduction ? ' [PENALTY]' : ''}`,
         userId: user?.uid || '', userFullName: userData?.fullName || '',
         userRole: role || '', targetName: logForm.company,
         notes: `quarter:${logForm.quarter},category:${logForm.category}`,
@@ -443,7 +446,7 @@ const AdminHonorCompany = () => {
   if (!isAuth) return <Navigate to="/admin/dashboard" />;
 
   // ─────────────────────────────────────────────────────────────────────────
-  const maxTotal = Math.max(1, ...Object.values(companyTotals));
+  const maxTotal = Math.max(1, ...Object.values(companyTotals).map(v => Math.max(0, v)));
   const maxOrgTotal = Math.max(1, ...Object.values(orgDayRankings.totalPts));
 
   return (
@@ -513,9 +516,9 @@ const AdminHonorCompany = () => {
                       <span className="w-20 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">{co}</span>
                       <div className="flex-1 h-5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-yellow-500 rounded-full transition-all duration-500"
-                          style={{ width: `${(companyTotals[co] / maxTotal) * 100}%` }} />
+                          style={{ width: `${(Math.max(0, companyTotals[co]) / maxTotal) * 100}%` }} />
                       </div>
-                      <span className="w-8 text-right text-sm font-black text-slate-900 dark:text-white">{companyTotals[co]}</span>
+                      <span className={`w-8 text-right text-sm font-black ${companyTotals[co] < 0 ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{companyTotals[co]}</span>
                     </div>
                   );
                 })}
@@ -607,7 +610,9 @@ const AdminHonorCompany = () => {
                           <tr key={e.id} className="border-b border-slate-50 dark:border-white/[0.03] hover:bg-slate-50 dark:hover:bg-white/[0.02]">
                             <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{e.company}</td>
                             <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{e.category}</td>
-                            <td className="px-4 py-2.5 font-black text-yellow-600 dark:text-yellow-500">{e.points}</td>
+                            <td className={`px-4 py-2.5 font-black ${e.isDeduction || e.points < 0 ? 'text-red-500' : 'text-yellow-600 dark:text-yellow-500'}`}>
+                              {e.isDeduction || e.points < 0 ? `−${Math.abs(e.points)}` : `+${e.points}`}
+                            </td>
                             <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{e.loggedByName}</td>
                             <td className="px-4 py-2.5 text-slate-400 dark:text-slate-600 whitespace-nowrap">
                               {e.loggedAt?.toDate ? e.loggedAt.toDate().toLocaleDateString() : '–'}
@@ -855,15 +860,43 @@ const AdminHonorCompany = () => {
                   </div>
                 </div>
 
+                {/* Award / Penalty toggle */}
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Type *</label>
+                  <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setLogForm(f => ({ ...f, isDeduction: false }))}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase transition-all ${
+                        !logForm.isDeduction
+                          ? 'bg-yellow-500 text-slate-950'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >Award</button>
+                    <button
+                      type="button"
+                      onClick={() => setLogForm(f => ({ ...f, isDeduction: true }))}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase transition-all ${
+                        logForm.isDeduction
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >Penalty</button>
+                  </div>
+                </div>
+
                 {/* Points */}
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Points *</label>
-                  <input type="number" min="0" value={logForm.points}
+                  <input type="number" min="1" value={logForm.points}
                     onChange={e => setLogForm(f => ({ ...f, points: e.target.value }))}
                     onKeyDown={e => e.stopPropagation()}
                     placeholder="0"
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-yellow-500/40 transition-colors"
                   />
+                  {logForm.isDeduction && logForm.points && (
+                    <p className="text-[9px] text-red-500 mt-1 ml-1">−{Math.abs(Number(logForm.points))} pts will be deducted</p>
+                  )}
                 </div>
 
                 {/* Notes */}

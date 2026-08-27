@@ -27,7 +27,7 @@ import {
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
   Loader2, CheckCircle2, Search, ChevronDown, Eye, RefreshCw,
-  History, GraduationCap, Trophy, Tent, BookOpen, ChevronRight,
+  History, GraduationCap, Trophy, Tent, BookOpen, ChevronRight, Filter,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
@@ -436,34 +436,28 @@ const AdminRoster = () => {
           )}
         </div>
 
-        {/* ── Company tabs ── */}
-        <div className="flex gap-1 mb-6 flex-wrap">
-          {/* Staff see Battalion tab first, then lettered companies */}
-          {(canManageAll ? ['Battalion', ...companies] : [myCompany]).filter(Boolean).map(co => {
-            const isBn = BATTALION_COMPANIES.includes(co);
-            return (
-              <button
-                key={co}
-                onClick={() => setActiveCompany(co)}
-                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                  activeCompany === co
-                    ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
-                    : 'bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-yellow-500/30'
-                }`}
+        {/* ── Company filter ── */}
+        <div className="flex items-center gap-4 mb-6 flex-wrap">
+          {canManageAll ? (
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-xl px-4 py-2.5 shadow-sm">
+              <Filter size={13} className="text-slate-400 shrink-0" />
+              <select
+                value={activeCompany}
+                onChange={e => setActiveCompany(e.target.value)}
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent outline-none pr-2 cursor-pointer"
               >
-                {co}
-                {isBn && (
-                  <span className={`text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded ${
-                    activeCompany === co
-                      ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500'
-                  }`}>
-                    HQ
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                {['Battalion', ...companies].filter(Boolean).map(co => (
+                  <option key={co} value={co}>
+                    {BATTALION_COMPANIES.includes(co) ? `${co} · HQ` : `${co} Company`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">
+              {BATTALION_COMPANIES.includes(myCompany) ? `${myCompany} · HQ` : `${myCompany} Company`}
+            </span>
+          )}
           <span className="ml-auto self-center text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
             {visibleEntries.length} cadet{visibleEntries.length !== 1 ? 's' : ''}
           </span>
