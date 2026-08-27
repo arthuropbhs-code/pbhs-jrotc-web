@@ -236,12 +236,11 @@ const AppContent = () => {
               }
             />
 
-            {/* Personnel: S1 + S6 manage accounts; XO/BC/CSM/instructors can view.
-                SGM excluded — operational command, not portal admin. */}
+            {/* Personnel: S1 + S6 manage accounts; XO/BC/CSM/SGM/instructors can view. */}
             <Route
               path="/admin/users"
               element={
-                <ProtectedRoute allowedRoles={['s1_adjutant', 's6_technology']} excludedRoles={['sergeant_major']}>
+                <ProtectedRoute allowedRoles={['s1_adjutant', 's6_technology']}>
                   <AdminUsers />
                 </ProtectedRoute>
               }

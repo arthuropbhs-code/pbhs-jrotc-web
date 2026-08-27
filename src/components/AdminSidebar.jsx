@@ -160,8 +160,8 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
   // AAR Logs — staff (70+) and company command (45+) can access.
   const canSeeAARLogs = userLevel >= COMMAND_LEVEL;
 
-  // Feedback Hub — S5, S6, battalion top 3 (XO/CSM/BC), instructors
-  const FEEDBACK_VIEW_ROLES = ['s5_public_affairs', 's6_technology', 'battalion_xo', 'battalion_csm', 'battalion_commander'];
+  // Feedback Hub — S5, S6, battalion command (XO/CSM/SGM/BC), instructors
+  const FEEDBACK_VIEW_ROLES = ['s5_public_affairs', 's6_technology', 'battalion_xo', 'battalion_csm', 'sergeant_major', 'battalion_commander'];
   const canSeeFeedback = FEEDBACK_VIEW_ROLES.includes(role) || userLevel >= 95;
 
   const isActive = (path) => location.pathname === path;
@@ -263,8 +263,8 @@ const AdminSidebar = ({ open = false, onClose = () => {} }) => {
             {/* ── PERSONNEL ───────────────────────── */}
             {groupLabel('Personnel')}
             {navLink('/admin/roster', <BookUser size={18} />, 'Battalion Roster')}
-            {(role === 's1_adjutant' || role === 's6_technology' || (isTopFour && role !== 'sergeant_major')) && navLink('/admin/users', <UserCog size={18} />, 'Accounts')}
-            {isStaffOrS4 && role !== 's1_adjutant' && (role !== 'sergeant_major' || isOnTeam) && navLink('/admin/teams', <Users size={18} />, 'Teams')}
+            {(role === 's1_adjutant' || role === 's6_technology' || isTopFour) && navLink('/admin/users', <UserCog size={18} />, 'Accounts')}
+            {isStaffOrS4 && role !== 's1_adjutant' && navLink('/admin/teams', <Users size={18} />, 'Teams')}
             {canSeeS1 && navLink('/admin/s1', <ClipboardList size={18} />, 'S1 Tracker')}
             {userLevel >= STAFF_LEVEL && navLink('/admin/honor-company', <Trophy size={18} />, 'Honor Company')}
             {navLink('/admin/cadet-history', <History size={18} />, 'Cadet History')}

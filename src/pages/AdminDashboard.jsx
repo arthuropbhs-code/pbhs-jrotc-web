@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   // matching the sidebar and route protection rules so the checklist never
   // links somewhere the user would get immediately redirected away from.
   const canSeePersonnel = role === 's1_adjutant' || role === 's6_technology'
-    || (isTopFour && role !== 'sergeant_major');
+    || isTopFour;
   const canSeeBroadcast = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);
   const canSeeNewsletter = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);
   const canSeeLeadership = role === 's5_public_affairs' || (isTopFour && !isRestrictedCmd);

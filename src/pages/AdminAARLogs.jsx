@@ -53,7 +53,7 @@ import { ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
 // Who can edit ANYONE's AAR and delete:
-const ELEVATED_EDIT_ROLES = ['battalion_xo', 'battalion_csm', 'battalion_commander', 's1_adjutant'];
+const ELEVATED_EDIT_ROLES = ['battalion_xo', 'battalion_csm', 'sergeant_major', 'battalion_commander', 's1_adjutant'];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(ts) {

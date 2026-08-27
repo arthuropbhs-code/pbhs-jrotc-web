@@ -56,7 +56,7 @@ const UniformRequests = () => {
   // Roles that can APPROVE requests (Pending → Approved): S4 logistics, XO, BC, CSM.
   // Note: BC/CSM outrank XO so they're included even though the request said "S4 and XO" —
   // omitting senior command would block them from managing logistics which is clearly not intent.
-  const APPROVE_ROLES = ['s4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm'];
+  const APPROVE_ROLES = ['s4_logistics', 'battalion_xo', 'battalion_commander', 'battalion_csm', 'sergeant_major'];
   const canApprove = APPROVE_ROLES.includes(userRole);
 
   // MARK AS ISSUED (Approved → Issued): only the person who submitted the request.

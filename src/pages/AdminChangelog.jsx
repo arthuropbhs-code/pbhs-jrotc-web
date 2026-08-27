@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="38"      label="Releases"    />
-        <Stat value="340"     label="Commits"     />
+        <Stat value="39"      label="Releases"    />
+        <Stat value="341"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.33" label="Current"     />
+        <Stat value="v1.6.34" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -625,8 +625,13 @@ const AdminChangelog = () => {
           <C type="feat">Admin Companies page now blocks adding "Battalion" as a company name with a clear error message</C>
           <C type="fix">Signup and Manage Personnel company selectors show Battalion (HQ) as a distinct option above the lettered company list, not mixed in with them</C>
         </>} />
-        <Patch version="v1.6.33" date="Aug 26" title="Fix: Global Broadcast accessible to SGM" isCurrent changes={<>
+        <Patch version="v1.6.33" date="Aug 26" title="Fix: Global Broadcast accessible to SGM" changes={<>
           <C type="fix">Sergeant Major could see the Global Broadcast link in the sidebar (correct — level 80+) but was blocked by an <code className="font-mono text-[10px]">excludedRoles</code> guard on the route; the exclusion is removed so all admin-level roles (BC, XO, CSM, SGM, instructors) can access the page as intended</C>
+        </>} />
+        <Patch version="v1.6.34" date="Aug 26" title="SGM access parity with Battalion CSM" isCurrent changes={<>
+          <C type="feat">Sergeant Major now has identical portal access to Battalion CSM across all pages — Accounts (Manage Personnel), Teams, Feedback Hub, AAR Logs elevated edit, Meeting Logs elevated edit, Uniform Request approvals, and full Order targets</C>
+          <C type="fix">Accounts route: removed <code className="font-mono text-[10px]">excludedRoles</code> guard that specifically blocked SGM; sidebar Accounts and Teams links updated to show for SGM the same as CSM</C>
+          <C type="fix">Feedback Hub sidebar link now shows for SGM; AAR and Meeting Logs elevated-edit (delete, edit any entry) extended to SGM; Uniform Request approve action extended to SGM; Orders page: SGM now gets the same broad STAFF_TARGETS as CSM instead of the narrower company-command-only list</C>
         </>} />
       </Minor>
 

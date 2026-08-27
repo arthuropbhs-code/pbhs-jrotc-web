@@ -54,7 +54,7 @@ import { ROLE_HIERARCHY, ADMIN_LEVEL, STAFF_LEVEL } from '../constants';
 
 // ── Role constants ─────────────────────────────────────────────────────────────
 // Who can edit ANYONE's log and delete:
-const ELEVATED_EDIT_ROLES = ['battalion_xo', 'battalion_csm', 'battalion_commander', 's1_adjutant'];
+const ELEVATED_EDIT_ROLES = ['battalion_xo', 'battalion_csm', 'sergeant_major', 'battalion_commander', 's1_adjutant'];
 // Company Top 3 + MSgt can view logs flagged companyAccess:true:
 const COMPANY_VIEW_ROLES = ['company_commander', 'company_xo', 'company_1sg', 'company_master_sergeant'];
 
