@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="37"      label="Releases"    />
-        <Stat value="339"     label="Commits"     />
+        <Stat value="38"      label="Releases"    />
+        <Stat value="340"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="210d"    label="In Dev"      />
-        <Stat value="v1.6.32" label="Current"     />
+        <Stat value="v1.6.33" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -617,13 +617,16 @@ const AdminChangelog = () => {
         <Patch version="v1.6.31" date="Aug 26" title="Honor Company — exclude Zulu from competition" changes={<>
           <C type="feat">Zulu Company (battalion HQ) is no longer included in the Honor Company scoreboard, Org Day rankings, or the Log Points company selector — only Alpha, Bravo, Charlie, and Delta compete; Zulu remains available on all other pages</C>
         </>} />
-        <Patch version="v1.6.32" date="Aug 26" title="Zulu removed — Battalion replaces it site-wide" isCurrent changes={<>
+        <Patch version="v1.6.32" date="Aug 26" title="Zulu removed — Battalion replaces it site-wide" changes={<>
           <C type="feat">Zulu Company is completely removed from the website; battalion staff and leadership now fall under the "Battalion" designation — a fixed HQ category that is separate from the lettered companies and cannot be added as one</C>
           <C type="feat">Default company list is now Alpha, Bravo, Charlie, Delta; Battalion is injected as a non-company option at the top of every account and signup form</C>
           <C type="feat">Battalion Roster defaults to the Battalion tab for staff; the tab list shows Battalion first, then lettered companies; legacy records with <code className="font-mono text-[10px]">company:"Zulu"</code> appear under the Battalion tab automatically</C>
           <C type="feat">My Profile shows "Battalion" for both new and legacy records — visitors never see "Zulu" anywhere on the site</C>
           <C type="feat">Admin Companies page now blocks adding "Battalion" as a company name with a clear error message</C>
           <C type="fix">Signup and Manage Personnel company selectors show Battalion (HQ) as a distinct option above the lettered company list, not mixed in with them</C>
+        </>} />
+        <Patch version="v1.6.33" date="Aug 26" title="Fix: Global Broadcast accessible to SGM" isCurrent changes={<>
+          <C type="fix">Sergeant Major could see the Global Broadcast link in the sidebar (correct — level 80+) but was blocked by an <code className="font-mono text-[10px]">excludedRoles</code> guard on the route; the exclusion is removed so all admin-level roles (BC, XO, CSM, SGM, instructors) can access the page as intended</C>
         </>} />
       </Minor>
 

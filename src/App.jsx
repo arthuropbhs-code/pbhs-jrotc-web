@@ -226,12 +226,11 @@ const AppContent = () => {
             } />
 
             {/* --- GLOBAL ANNOUNCEMENTS (ADMIN) --- */}
-            {/* S5 + battalion XO + instructors. SGM/BC/CSM excluded — they
-                issue orders but don't broadcast battalion-wide announcements. */}
+            {/* S5 + all admin-level (80+): BC, XO, CSM, SGM, instructors */}
             <Route
               path="/admin/announcements"
               element={
-                <ProtectedRoute allowedRoles={['s5_public_affairs']} excludedRoles={RESTRICTED_CMD}>
+                <ProtectedRoute allowedRoles={['s5_public_affairs']}>
                   <AdminAnnouncements />
                 </ProtectedRoute>
               }
