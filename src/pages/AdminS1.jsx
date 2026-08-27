@@ -307,6 +307,9 @@ const AdminS1 = () => {
     || userLevel >= ADMIN_LEVEL;
   // Only S1 Adjutant (+ instructors) can create battalion-wide events.
   const isS1 = role === 's1_adjutant' || userLevel >= ADMIN_LEVEL;
+  // Promotion Board is restricted — S1/S3 assistants and Master Sergeants see Forms tab only.
+  const BOARD_BLOCKED_ROLES = ['company_s1_assistant', 'company_s3_assistant', 'company_master_sergeant'];
+  const canViewBoard = !BOARD_BLOCKED_ROLES.includes(role);
 
   // ── State ────────────────────────────────────────────────────────────────────
   const [view,            setView]            = useState('list'); // 'list' | 'detail'
@@ -825,7 +828,7 @@ const AdminS1 = () => {
         <div className="flex gap-1 mb-8 bg-blue-50/70 dark:bg-slate-800/50 rounded-2xl p-1 max-w-xs">
           {[
             { key: 'forms', label: 'Form Tracker',    Icon: ClipboardList },
-            { key: 'board', label: 'Promotion Board', Icon: Trophy        },
+            ...(canViewBoard ? [{ key: 'board', label: 'Promotion Board', Icon: Trophy }] : []),
           ].map(({ key, label, Icon }) => (
             <button
               key={key}
@@ -902,7 +905,7 @@ const AdminS1 = () => {
         {/* ══════════════════════════════════════════════════════════════════════════
             PROMOTION BOARD
         ══════════════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'board' && (
+        {activeTab === 'board' && canViewBoard && (
           <S1PromotionBoard
             userData={userData}
             role={role}

@@ -229,6 +229,13 @@ const CartsTab = ({ user, showToast }) => {
       </div>
 
       {loading ? <div className="h-12 bg-slate-100 dark:bg-slate-900/60 rounded-xl animate-pulse" /> :
+        carts.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+            <Laptop className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+            <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No carts configured yet</p>
+            <p className="text-slate-400 text-xs mt-2">Add your first cart above to get started.</p>
+          </div>
+        ) :
         carts.map(cart => (
           <div key={cart.id} className="flex items-center justify-between bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-xl p-4 shadow-sm">
             <div>
@@ -401,7 +408,15 @@ const TasksTab = ({ user, showToast }) => {
         </button>
       </div>
 
-      {Object.entries(grouped).map(([cartId, { cartName, tasks: cartTasks }]) => (
+      {loading ? (
+        [1,2,3].map(n => <div key={n} className="h-12 bg-slate-100 dark:bg-slate-900/60 rounded-xl animate-pulse" />)
+      ) : tasks.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+          <ClipboardList className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+          <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No tasks configured yet</p>
+          <p className="text-slate-400 text-xs mt-2">Add tasks for each cart using the button above.</p>
+        </div>
+      ) : Object.entries(grouped).map(([cartId, { cartName, tasks: cartTasks }]) => (
         <div key={cartId}>
           <p className="text-[10px] font-black uppercase text-yellow-500 tracking-widest mb-2">{cartName}</p>
           <div className="space-y-2">
@@ -526,6 +541,12 @@ const TodayTab = ({ user, userData, showToast }) => {
       </p>
       {loading ? (
         [1,2].map(n => <div key={n} className="h-24 bg-slate-100 dark:bg-slate-900/60 rounded-2xl animate-pulse" />)
+      ) : carts.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
+          <Calendar className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
+          <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No carts set up yet</p>
+          <p className="text-slate-400 text-xs mt-2">Configure carts in the Carts tab first.</p>
+        </div>
       ) : carts.map(cart => {
         const cl = checklists.find(c => c.cartId === cart.id);
         const isSubmitted = cl?.status === 'submitted' || cl?.status === 'reviewed';

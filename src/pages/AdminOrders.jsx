@@ -57,13 +57,13 @@ const AdminOrders = () => {
   const ALL_TARGETS = [
     "All Battalion", "All Staff", "All Company Leadership",
     "Battalion Commander", "Battalion XO", "Battalion CSM", "Sergeant Major",
-    "S1 - Adjutant", "S2 - Intelligence", "S3 - Operations",
+    "S1 - Adjutant", "S2 - Safety", "S3 - Operations",
     "S4 - Logistics", "S5 - Public Affairs", "S6 - Technology", "S7 - Special Projects",
     "Company Commanders", "Company XOs", "First Sergeants",
   ];
   const STAFF_TARGETS = [
     "All Staff",
-    "S1 - Adjutant", "S2 - Intelligence", "S3 - Operations",
+    "S1 - Adjutant", "S2 - Safety", "S3 - Operations",
     "S4 - Logistics", "S5 - Public Affairs", "S6 - Technology", "S7 - Special Projects",
   ];
   const S7_TARGETS = ["S7 - Assistants", "Company XOs"]; // kept for fallback reference

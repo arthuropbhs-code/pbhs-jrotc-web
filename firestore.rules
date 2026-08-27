@@ -255,7 +255,7 @@ service cloud.firestore {
         myLevel() >= 70 ||
         (myLevel() >= 45 && resource.data.company == userDoc().company) ||
         (myLevel() >= 35 && resource.data.company == userDoc().company &&
-          userDoc().role in ['company_s1_assistant', 'company_s3_assistant'])
+          userDoc().role in ['company_s1_assistant', 'company_s3_assistant', 'company_s4_assistant'])
       );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||

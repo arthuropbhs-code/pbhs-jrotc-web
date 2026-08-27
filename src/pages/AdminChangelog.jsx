@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="41"      label="Releases"    />
-        <Stat value="343"     label="Commits"     />
+        <Stat value="42"      label="Releases"    />
+        <Stat value="344"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.36" label="Current"     />
+        <Stat value="v1.6.37" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -639,7 +639,7 @@ const AdminChangelog = () => {
           <C type="feat">Scored 0–42; results yield one of four ranks: Recruit (fixed mindset) → Cadet → Sergeant → Commander (elite growth mindset), each with a tailored development message</C>
           <C type="feat">Progress bar, animated score gauge, breakdown stat cards, and a Copy Link share button on results screen; matches full site dark/light theme</C>
         </>} />
-        <Patch version="v1.6.36" date="Aug 27" title="Admin UX — roster dropdown, penalty points, task permissions" isCurrent changes={<>
+        <Patch version="v1.6.36" date="Aug 27" title="Admin UX — roster dropdown, penalty points, task permissions" changes={<>
           <C type="feat">Roster company selector converted from tab pills to a compact filter dropdown — cleaner layout especially at higher company counts</C>
           <C type="feat">Honor Company log modal: Award / Penalty toggle — penalty entries store a negative point value and display in red in the scoreboard and audit trail</C>
           <C type="fix">Cadet Challenge &amp; Uniform Sizes: Battalion filter now correctly loads all battalion HQ members (previously only matched the first stored company value, leaving most cadets invisible)</C>
@@ -648,6 +648,12 @@ const AdminChangelog = () => {
           <C type="fix">Task visibility: battalion staff below top-4 see only their own tasks in the recent-tasks list; CSM/BC/XO/SGM see all tasks</C>
           <C type="fix">Issue Orders textarea: dark-mode focus no longer sets a white background, preventing white-on-white text</C>
           <C type="fix">Sidebar "My Records" section header removed — linked pages remain accessible through their existing sidebar categories</C>
+        </>} />
+        <Patch version="v1.6.37" date="Aug 27" title="Access control, S6 UX, safety rename, S4 roster fix" isCurrent changes={<>
+          <C type="fix">S6 page: all tabs (Carts, Tasks, Today, History) now show a proper empty state instead of perpetual skeleton when no data is available</C>
+          <C type="fix">Promotion Board tab hidden from S1 assistants, S3 assistants, and Master Sergeants — Forms tab only; Promotion Board is sensitive grade data</C>
+          <C type="fix">S4 Assistants can now see their company's cadets in Uniform Sizes — Firestore roster read rule expanded to include company_s4_assistant</C>
+          <C type="fix">Orders &amp; Tasks: "S2 - Intelligence" renamed to "S2 - Safety" in all target audience lists</C>
         </>} />
       </Minor>
 
