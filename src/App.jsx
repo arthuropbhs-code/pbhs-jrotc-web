@@ -76,6 +76,7 @@ const AdminLog            = lazy(() => import('./pages/AdminLog'));
 const AdminSupplyRequests = lazy(() => import('./pages/AdminSupplyRequests'));
 const AdminCadetHistory   = lazy(() => import('./pages/AdminCadetHistory'));
 const AdminChangelog      = lazy(() => import('./pages/AdminChangelog'));
+const MindsetQuiz         = lazy(() => import('./pages/MindsetQuiz'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -196,6 +197,7 @@ const AppContent = () => {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cadet-info/winning-colors" element={<WinningColors />} />
           <Route path="/how-to-join" element={<HowToJoin />} />
+          <Route path="/mindset-quiz" element={<MindsetQuiz />} />
 
           {/* --- PROTECTED ADMIN ROUTES (wrapped in AdminLayout for persistent sidebar) --- */}
           {/* AdminLayout is a pathless layout route that renders <AdminSidebar /> +
