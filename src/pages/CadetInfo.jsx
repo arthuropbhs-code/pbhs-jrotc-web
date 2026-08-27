@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Star, Users, Award, Target, Scale, GraduationCap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Shield, Star, Users, Award, Target, Scale, GraduationCap, ChevronRight } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_CADET_INFO } from '../data/defaultPageContent';
@@ -317,6 +318,50 @@ const CadetInfo = () => {
             </Reveal>
           </div>
         </div>
+
+        {/* ── Mindset Assessment CTA ──────────────────────────────────────── */}
+        <Reveal delay={0.15} className="mt-8">
+          <div className="relative overflow-hidden bg-slate-900 dark:bg-black/40 border border-white/5 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row md:items-center gap-8">
+            {/* Decorative diamond */}
+            <div className="absolute -top-8 -right-8 w-40 h-40 bg-yellow-500/5 rotate-45 rounded-xl pointer-events-none" />
+            <div className="absolute -bottom-10 right-24 w-24 h-24 bg-yellow-500/5 rotate-45 rounded-lg pointer-events-none" />
+
+            {/* Text */}
+            <div className="flex-1 min-w-0 relative z-10">
+              <p className="text-[0.65rem] font-black tracking-[0.25em] uppercase text-yellow-500 mb-3">
+                Leadership Development · Cadet Self-Assessment
+              </p>
+              <h2 className="text-3xl md:text-4xl font-black uppercase italic tracking-tighter text-white leading-none mb-4">
+                Mindset<br />
+                <span className="text-yellow-500">Readiness</span>
+              </h2>
+              <p className="text-sm text-slate-400 leading-relaxed max-w-md">
+                Your mindset is one of the most powerful weapons in your arsenal as a leader.
+                Take the 14-question assessment and discover where you stand.
+              </p>
+            </div>
+
+            {/* Stats + button */}
+            <div className="flex flex-col gap-6 relative z-10 shrink-0">
+              <div className="flex gap-8">
+                {[['14', 'Questions'], ['~5', 'Minutes'], ['4', 'Outcomes']].map(([val, lbl]) => (
+                  <div key={lbl}>
+                    <div className="font-black text-2xl text-yellow-500 leading-none tabular-nums">{val}</div>
+                    <div className="text-[0.6rem] font-bold tracking-[0.14em] uppercase text-slate-500 mt-1">{lbl}</div>
+                  </div>
+                ))}
+              </div>
+              <Link
+                to="/mindset-quiz"
+                className="inline-flex items-center gap-2.5 bg-yellow-500 hover:bg-yellow-400 active:bg-yellow-600 text-slate-900 text-sm font-bold tracking-[0.06em] uppercase px-7 py-3.5 rounded-xl transition-colors self-start"
+              >
+                Begin Assessment
+                <ChevronRight size={15} />
+              </Link>
+            </div>
+          </div>
+        </Reveal>
+
       </div>
     </div>
   );

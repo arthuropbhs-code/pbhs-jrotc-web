@@ -170,7 +170,7 @@ const RESULTS = [
   {
     minScore: 35, maxScore: 42,
     rank:  'Commander',
-    title: 'Elite Growth Mindset',
+    title: 'Growth Mindset',
     desc:  'You think like a leader built for sustained excellence. You actively seek challenge, learn from every failure, and understand that ability is developed — not assigned. Mission-ready mindset. Above and beyond.',
   },
 ];
