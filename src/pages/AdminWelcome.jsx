@@ -10,10 +10,11 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
-import { Mail, Smartphone, CheckCircle, Loader2, ShieldCheck, RefreshCw, ArrowRight } from 'lucide-react';
+import { Mail, Smartphone, CheckCircle, Loader2, ShieldCheck, RefreshCw, ArrowRight, Shield, CheckCircle2 } from 'lucide-react';
 import SmoothInput from '../components/SmoothInput';
+import { CURRENT_TOS_VERSION } from '../components/TosGate';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -72,6 +73,12 @@ const AdminWelcome = () => {
   const [reauthError, setReauthError] = useState(null);
   const [reauthStatus, setReauthStatus] = useState(null); // null | 'loading'
 
+  // TOS step state
+  const [tosChecked,     setTosChecked]     = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [tosScrolled,    setTosScrolled]    = useState(false);
+  const tosScrollRef = useRef(null);
+
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const mfaMandatory = userLevel >= STAFF_LEVEL;
 
@@ -82,8 +89,8 @@ const AdminWelcome = () => {
     const alreadyEnrolled = multiFactor(user).enrolledFactors.length > 0;
 
     if (alreadyVerified && alreadyEnrolled) {
-      // Both complete — just mark done and go
-      finishOnboarding();
+      // Both complete — advance to TOS step (final step before finishing)
+      setStep('tos');
       return;
     }
     setStep(alreadyVerified ? 'phone' : 'email');
@@ -124,10 +131,16 @@ const AdminWelcome = () => {
   }, [step, user]);
 
   // ── Finish onboarding ────────────────────────
+  // Called only from the TOS step agree button — always sets tosAccepted at the same time.
   const finishOnboarding = async () => {
     setStep('completing');
     try {
-      await updateDoc(doc(db, 'users', user.uid), { onboardingComplete: true });
+      await updateDoc(doc(db, 'users', user.uid), {
+        onboardingComplete: true,
+        tosAccepted:        true,
+        tosAcceptedAt:      serverTimestamp(),
+        tosVersion:         CURRENT_TOS_VERSION,
+      });
     } catch { /* best-effort */ }
     navigate('/admin/dashboard');
   };
@@ -283,7 +296,7 @@ const AdminWelcome = () => {
         }).catch(console.error);
       });
 
-      await finishOnboarding();
+      setStep('tos');
     } catch (err) {
       setMfaStatus(
         err.code === 'auth/invalid-verification-code'
@@ -322,16 +335,18 @@ const AdminWelcome = () => {
 
         {/* Step indicators */}
         <div className="flex items-center gap-2 mb-8">
-          <StepPip number={1} active={step === 'email'} done={step === 'phone'} label="Email" />
+          <StepPip number={1} active={step === 'email'} done={step === 'phone' || step === 'tos'} label="Email" />
           <div className="flex-1 h-px bg-white/10" />
-          <StepPip number={2} active={step === 'phone'} done={false} label="2FA" />
+          <StepPip number={2} active={step === 'phone'} done={step === 'tos'} label="2FA" />
+          <div className="flex-1 h-px bg-white/10" />
+          <StepPip number={3} active={step === 'tos'} done={false} label="Terms" />
         </div>
 
         {/* ── Step 1: Email Verification ── */}
         {step === 'email' && (
           <div className="space-y-5">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">Step 1 of 2</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">Step 1 of 3</p>
               <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Verify Your Email</h2>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 We sent a verification link to <span className="text-white font-bold">{user?.email}</span>. Open it, then come back.
@@ -408,7 +423,7 @@ const AdminWelcome = () => {
         {step === 'phone' && (
           <div className="space-y-5">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">Step 2 of 2</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">Step 2 of 3</p>
               <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Secure Your Account</h2>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 {mfaMandatory
@@ -493,7 +508,7 @@ const AdminWelcome = () => {
                 {!mfaMandatory && (
                   <button
                     type="button"
-                    onClick={finishOnboarding}
+                    onClick={() => setStep('tos')}
                     className="w-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors"
                   >
                     Skip for now
@@ -543,6 +558,80 @@ const AdminWelcome = () => {
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {/* ── Step 3: Terms of Service ── */}
+        {step === 'tos' && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">Step 3 of 3</p>
+              <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Terms & Privacy</h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Review and agree before entering the portal.
+              </p>
+            </div>
+
+            {/* Scrollable summary */}
+            <div
+              ref={tosScrollRef}
+              onScroll={() => {
+                const el = tosScrollRef.current;
+                if (!el) return;
+                if (el.scrollTop / (el.scrollHeight - el.clientHeight) >= 0.85) setTosScrolled(true);
+              }}
+              className="h-44 overflow-y-auto bg-black/30 border border-white/8 rounded-2xl px-4 py-3 text-xs text-slate-400 leading-relaxed space-y-3"
+            >
+              <p><strong className="text-white">Restricted Access —</strong> This portal is for authorized PBHS JROTC personnel only. Unauthorized access is prohibited and may result in school disciplinary action.</p>
+              <p><strong className="text-white">Credential Security —</strong> Your login credentials are yours alone. Never share your password or allow anyone else to use your account. Treat this portal the same way you treat Canvas or Focus Student Portal.</p>
+              <p><strong className="text-white">Cadet Data Confidentiality —</strong> The portal contains personally identifiable information (PII). You must not share cadet data, screenshots, or records outside the portal in any form. Violations may constitute a FERPA breach.</p>
+              <p><strong className="text-white">Acceptable Use —</strong> Use the portal only for its intended JROTC operational purposes. Submitting false information, bypassing security controls, or harassing cadets or staff is strictly prohibited.</p>
+              <p><strong className="text-white">Privacy —</strong> Your actions are logged for accountability. Data is stored securely in Firebase (Google Cloud) and is not sold or shared with third parties.</p>
+              <p><strong className="text-white">Violations</strong> may result in immediate access suspension, school disciplinary referral, and JROTC chain-of-command proceedings.</p>
+              <p className="text-slate-600 text-[10px] pt-1">Version {CURRENT_TOS_VERSION} · August 2026</p>
+            </div>
+
+            {!tosScrolled && (
+              <p className="text-[10px] text-slate-600 font-bold text-center">↓ Scroll to the bottom to enable</p>
+            )}
+
+            {/* TOS checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="mt-0.5 shrink-0">
+                <input type="checkbox" checked={tosChecked} onChange={e => setTosChecked(e.target.checked)} disabled={!tosScrolled} className="sr-only" />
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                  tosChecked ? 'bg-yellow-500 border-yellow-500' : tosScrolled ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
+                }`}>
+                  {tosChecked && <CheckCircle2 size={10} className="text-slate-950" />}
+                </div>
+              </div>
+              <span className={`text-xs leading-relaxed ${tosScrolled ? 'text-slate-300' : 'text-slate-600'}`}>
+                I agree to the <strong className="text-white">Terms of Use</strong> — no sharing cadet data, screenshots, or credentials.
+              </span>
+            </label>
+
+            {/* Privacy checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="mt-0.5 shrink-0">
+                <input type="checkbox" checked={privacyChecked} onChange={e => setPrivacyChecked(e.target.checked)} disabled={!tosScrolled} className="sr-only" />
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                  privacyChecked ? 'bg-yellow-500 border-yellow-500' : tosScrolled ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
+                }`}>
+                  {privacyChecked && <CheckCircle2 size={10} className="text-slate-950" />}
+                </div>
+              </div>
+              <span className={`text-xs leading-relaxed ${tosScrolled ? 'text-slate-300' : 'text-slate-600'}`}>
+                I acknowledge the <strong className="text-white">Privacy Policy</strong> — I understand my actions are logged.
+              </span>
+            </label>
+
+            <button
+              onClick={finishOnboarding}
+              disabled={!tosChecked || !privacyChecked || !tosScrolled}
+              className="w-full py-3.5 rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <Shield size={14} /> Agree &amp; Enter Portal
+            </button>
           </div>
         )}
       </div>

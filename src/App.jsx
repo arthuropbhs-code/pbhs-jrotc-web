@@ -15,6 +15,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 import AdminLayout from './components/AdminLayout';
+import TosGate from './components/TosGate';
 
 // --- PAGES ---
 // Lazy-loaded so each route gets its own chunk instead of all ~30 pages
@@ -109,6 +110,15 @@ const ProtectedRoute = ({ children, minLevel, allowedRoles, excludedRoles }) => 
   // treated as complete so no disruption to anyone already using the portal.
   if (userData?.onboardingComplete === false && location.pathname !== '/admin/welcome') {
     return <Navigate to="/admin/welcome" replace />;
+  }
+
+  // TOS gate: every authenticated user must accept Terms of Service before
+  // accessing any portal page. New users handle this during the onboarding
+  // wizard (where finishOnboarding also writes tosAccepted:true), so the gate
+  // only triggers once onboarding is complete (onboardingComplete !== false).
+  // We also skip it on /admin/welcome itself to avoid a double-block.
+  if (userData?.tosAccepted !== true && location.pathname !== '/admin/welcome') {
+    return <TosGate userData={userData} />;
   }
 
   // allowedRoles isolates specific roles (e.g. S5/S6) that a level threshold

@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="43"      label="Releases"    />
-        <Stat value="345"     label="Commits"     />
+        <Stat value="44"      label="Releases"    />
+        <Stat value="347"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.38" label="Current"     />
+        <Stat value="v1.6.39" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -655,11 +655,17 @@ const AdminChangelog = () => {
           <C type="fix">S4 Assistants can now see their company's cadets in Uniform Sizes — Firestore roster read rule expanded to include company_s4_assistant</C>
           <C type="fix">Orders &amp; Tasks: "S2 - Intelligence" renamed to "S2 - Safety" in all target audience lists</C>
         </>} />
-        <Patch version="v1.6.38" date="Aug 28" title="Meeting Logs — PDF and PowerPoint attachments" isCurrent changes={<>
+        <Patch version="v1.6.38" date="Aug 28" title="Meeting Logs — PDF and PowerPoint attachments" changes={<>
           <C type="feat">Meeting Logs now support file attachments — PDF, PPTX, and PPT; hard limit 10 MB; validated by magic bytes (not just extension)</C>
           <C type="feat">Attachment upload/replace/remove in create and edit modal; view mode shows a download link</C>
           <C type="feat">Paperclip icon appears on log list rows that have an attachment for quick visual reference</C>
           <C type="fix">Existing log deletions now also clean up attached files from Firebase Storage</C>
+        </>} />
+        <Patch version="v1.6.39" date="Aug 28" title="Terms of Service & Privacy Policy acceptance gate" isCurrent changes={<>
+          <C type="sec">All portal users must now accept Terms of Service and Privacy Policy before accessing any page</C>
+          <C type="sec">Inescapable full-screen TOS gate: scroll-required, dual-checkbox (Terms + Privacy), I Agree writes tosAccepted/tosAcceptedAt/tosVersion to Firestore</C>
+          <C type="feat">New user onboarding wizard gains step 3 (Terms) — acceptance recorded as part of finishOnboarding alongside existing email-verify and 2FA steps</C>
+          <C type="law">TOS covers restricted access, credential security, cadet PII confidentiality, acceptable use, FERPA implications, and consequences of violation</C>
         </>} />
       </Minor>
 
