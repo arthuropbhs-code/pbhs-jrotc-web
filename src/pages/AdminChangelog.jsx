@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="42"      label="Releases"    />
-        <Stat value="344"     label="Commits"     />
+        <Stat value="43"      label="Releases"    />
+        <Stat value="345"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.37" label="Current"     />
+        <Stat value="v1.6.38" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -649,11 +649,17 @@ const AdminChangelog = () => {
           <C type="fix">Issue Orders textarea: dark-mode focus no longer sets a white background, preventing white-on-white text</C>
           <C type="fix">Sidebar "My Records" section header removed — linked pages remain accessible through their existing sidebar categories</C>
         </>} />
-        <Patch version="v1.6.37" date="Aug 27" title="Access control, S6 UX, safety rename, S4 roster fix" isCurrent changes={<>
+        <Patch version="v1.6.37" date="Aug 27" title="Access control, S6 UX, safety rename, S4 roster fix" changes={<>
           <C type="fix">S6 page: all tabs (Carts, Tasks, Today, History) now show a proper empty state instead of perpetual skeleton when no data is available</C>
           <C type="fix">Promotion Board tab hidden from S1 assistants, S3 assistants, and Master Sergeants — Forms tab only; Promotion Board is sensitive grade data</C>
           <C type="fix">S4 Assistants can now see their company's cadets in Uniform Sizes — Firestore roster read rule expanded to include company_s4_assistant</C>
           <C type="fix">Orders &amp; Tasks: "S2 - Intelligence" renamed to "S2 - Safety" in all target audience lists</C>
+        </>} />
+        <Patch version="v1.6.38" date="Aug 28" title="Meeting Logs — PDF and PowerPoint attachments" isCurrent changes={<>
+          <C type="feat">Meeting Logs now support file attachments — PDF, PPTX, and PPT; hard limit 10 MB; validated by magic bytes (not just extension)</C>
+          <C type="feat">Attachment upload/replace/remove in create and edit modal; view mode shows a download link</C>
+          <C type="feat">Paperclip icon appears on log list rows that have an attachment for quick visual reference</C>
+          <C type="fix">Existing log deletions now also clean up attached files from Firebase Storage</C>
         </>} />
       </Minor>
 

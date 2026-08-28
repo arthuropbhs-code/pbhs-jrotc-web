@@ -39,14 +39,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { writeLog } from '../lib/writeLog';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import {
   collection, query, where, onSnapshot,
   doc, addDoc, updateDoc, deleteDoc, Timestamp,
 } from 'firebase/firestore';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { uploadFileToPath } from '../utils/storageUploadPhoto';
 import {
   NotepadText, Plus, X, Pencil, Trash2,
   Eye, CheckCircle2, AlertCircle, Loader2,
+  Paperclip, FileText, Download,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
 import BulletListEditor, { normalizeBullets, flattenBullets } from '../components/BulletListEditor';
@@ -86,6 +89,32 @@ function timestampToDateStr(ts) {
   const mo = String(d.getMonth() + 1).padStart(2, '0');
   const da = String(d.getDate()).padStart(2, '0');
   return `${y}-${mo}-${da}`;
+}
+
+// ── Attachment validation ──────────────────────────────────────────────────────
+// Accepted: PDF (%PDF magic), PPTX (ZIP magic + .pptx ext), PPT (OLE2 + .ppt ext)
+// Hard cap: 10 MB — reasonable for a meeting document
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+async function validateMeetingAttachment(file) {
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { valid: false, error: `File too large — max 10 MB (got ${(file.size / 1024 / 1024).toFixed(1)} MB).` };
+  }
+  const buf   = await file.slice(0, 8).arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const ext   = file.name.split('.').pop().toLowerCase();
+
+  // PDF: %PDF
+  const isPdf  = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  // PPTX: ZIP (PK\x03\x04) with .pptx extension
+  const isPptx = bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04 && ext === 'pptx';
+  // PPT: OLE2 compound document (D0 CF 11 E0) with .ppt extension
+  const isPpt  = bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0 && ext === 'ppt';
+
+  if (!isPdf && !isPptx && !isPpt) {
+    return { valid: false, error: 'Only PDF, PPTX, or PPT files are accepted.' };
+  }
+  return { valid: true };
 }
 
 // ── Empty log template ─────────────────────────────────────────────────────────
@@ -128,6 +157,11 @@ const AdminMeetingLogs = () => {
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [saving,    setSaving]    = useState(false);
   const [deleting,  setDeleting]  = useState(null); // id being deleted
+
+  // ── Attachment state ──────────────────────────────────────────────────────────
+  const [attachFile,    setAttachFile]    = useState(null);  // File object pending upload
+  const [attachError,   setAttachError]   = useState('');
+  const [clearAttach,   setClearAttach]   = useState(false); // flag to remove existing attachment on save
 
   // ── Sync state ────────────────────────────────────────────────────────────────
   // 'idle' | 'syncing' | 'ok' | 'error'
@@ -228,22 +262,52 @@ const AdminMeetingLogs = () => {
     setModalMode(null);
     setActiveLog(null);
     setForm(EMPTY_FORM);
+    setAttachFile(null);
+    setAttachError('');
+    setClearAttach(false);
   };
 
   const handleSave = async () => {
     if (!form.meetingDate || !form.meetingName.trim()) return;
     setSaving(true);
     try {
+      // ── Handle attachment ──────────────────────────────────────────────────
+      let attachmentUrl         = activeLog?.attachmentUrl         || null;
+      let attachmentName        = activeLog?.attachmentName        || null;
+      let attachmentStoragePath = activeLog?.attachmentStoragePath || null;
+
+      if (attachFile) {
+        // Upload new file
+        const path = `meeting-attachments/${Date.now()}_${attachFile.name.replace(/\s+/g, '_')}`;
+        const result = await uploadFileToPath(attachFile, path);
+        // Delete old attachment from Storage if replacing
+        if (activeLog?.attachmentStoragePath) {
+          try { await deleteObject(storageRef(storage, activeLog.attachmentStoragePath)); } catch { /* best-effort */ }
+        }
+        attachmentUrl         = result.url;
+        attachmentName        = attachFile.name;
+        attachmentStoragePath = result.storagePath;
+      } else if (clearAttach) {
+        // User removed the attachment
+        if (activeLog?.attachmentStoragePath) {
+          try { await deleteObject(storageRef(storage, activeLog.attachmentStoragePath)); } catch { /* best-effort */ }
+        }
+        attachmentUrl = null; attachmentName = null; attachmentStoragePath = null;
+      }
+
       const payload = {
-        meetingNumber:  parseInt(form.meetingNumber) || nextMeetingNumber,
-        meetingDate:    dateStrToTimestamp(form.meetingDate),
-        meetingName:    form.meetingName.trim(),
-        attendance:     form.attendance.trim(),
-        agendaItems:    form.agendaItems,
-        noteItems:      form.noteItems,
-        companyAccess:  form.companyAccess || false,
-        updatedAt:      Timestamp.now(),
-        updatedByName:  userData?.fullName || '',
+        meetingNumber:        parseInt(form.meetingNumber) || nextMeetingNumber,
+        meetingDate:          dateStrToTimestamp(form.meetingDate),
+        meetingName:          form.meetingName.trim(),
+        attendance:           form.attendance.trim(),
+        agendaItems:          form.agendaItems,
+        noteItems:            form.noteItems,
+        companyAccess:        form.companyAccess || false,
+        attachmentUrl,
+        attachmentName,
+        attachmentStoragePath,
+        updatedAt:            Timestamp.now(),
+        updatedByName:        userData?.fullName || '',
       };
 
       let updatedLogs;
@@ -282,11 +346,25 @@ const AdminMeetingLogs = () => {
     }
   };
 
+  const handleAttachmentChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAttachError('');
+    const { valid, error } = await validateMeetingAttachment(file);
+    if (!valid) { setAttachError(error); return; }
+    setAttachFile(file);
+    setClearAttach(false);
+  };
+
   const handleDelete = async (log) => {
     const ok = window.confirm(`Delete Meeting #${log.meetingNumber} — "${log.meetingName}"? This cannot be undone.`);
     if (!ok) return;
     setDeleting(log.id);
     try {
+      if (log.attachmentStoragePath) {
+        try { await deleteObject(storageRef(storage, log.attachmentStoragePath)); } catch { /* best-effort */ }
+      }
       await deleteDoc(doc(db, 'meetingLogs', log.id));
       const updatedLogs = logs.filter(l => l.id !== log.id);
       syncToSheets(updatedLogs);
@@ -417,7 +495,12 @@ const AdminMeetingLogs = () => {
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{fmtDate(log.meetingDate)}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">{log.meetingName || '—'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{log.meetingName || '—'}</p>
+                          {log.attachmentUrl && (
+                            <Paperclip size={11} className="text-yellow-500 shrink-0" title="Has attachment" />
+                          )}
+                        </div>
                         {log.attendance && (
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[180px]">{log.attendance}</p>
                         )}
@@ -627,6 +710,88 @@ const AdminMeetingLogs = () => {
                   />
                 )}
               </div>
+
+              {/* ── Attachment ─────────────────────────────────────────────── */}
+              {modalMode === 'view' ? (
+                activeLog?.attachmentUrl && (
+                  <div className="flex items-center gap-3 py-3 border-t border-slate-100 dark:border-white/5">
+                    <FileText size={15} className="text-yellow-500 shrink-0" />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate flex-1">
+                      {activeLog.attachmentName || 'Attachment'}
+                    </span>
+                    <a
+                      href={activeLog.attachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500 hover:text-slate-950 transition-all border border-yellow-500/20"
+                    >
+                      <Download size={11} /> Open
+                    </a>
+                  </div>
+                )
+              ) : (
+                <div className="border-t border-slate-100 dark:border-white/5 pt-4">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 block mb-2">
+                    Attachment <span className="normal-case font-medium tracking-normal text-slate-300 dark:text-slate-600">— PDF, PPTX, or PPT · max 10 MB</span>
+                  </label>
+
+                  {/* Show existing attachment */}
+                  {activeLog?.attachmentUrl && !clearAttach && !attachFile && (
+                    <div className="flex items-center gap-3 mb-2 px-3 py-2.5 bg-blue-50/50 dark:bg-slate-800 rounded-xl border border-blue-100 dark:border-white/5">
+                      <FileText size={14} className="text-yellow-500 shrink-0" />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate flex-1">
+                        {activeLog.attachmentName || 'Existing attachment'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setClearAttach(true); setAttachFile(null); }}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                        title="Remove attachment"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Show pending new file */}
+                  {attachFile && (
+                    <div className="flex items-center gap-3 mb-2 px-3 py-2.5 bg-yellow-50 dark:bg-yellow-500/5 rounded-xl border border-yellow-200 dark:border-yellow-500/20">
+                      <FileText size={14} className="text-yellow-500 shrink-0" />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate flex-1">
+                        {attachFile.name}
+                        <span className="ml-2 font-medium text-slate-400">({(attachFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachFile(null)}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                        title="Remove"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {attachError && (
+                    <p className="text-xs text-red-500 font-bold mb-2 flex items-center gap-1.5">
+                      <AlertCircle size={12} /> {attachError}
+                    </p>
+                  )}
+
+                  <label className="flex items-center gap-2 cursor-pointer w-fit">
+                    <input
+                      type="file"
+                      accept=".pdf,.pptx,.ppt"
+                      onChange={handleAttachmentChange}
+                      className="hidden"
+                    />
+                    <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-yellow-500/40 hover:text-yellow-600 dark:hover:text-yellow-500 transition-all">
+                      <Paperclip size={12} />
+                      {attachFile ? 'Replace file' : activeLog?.attachmentUrl && !clearAttach ? 'Replace file' : 'Attach file'}
+                    </span>
+                  </label>
+                </div>
+              )}
 
               {/* Company Access toggle */}
               {modalMode === 'view' ? (
