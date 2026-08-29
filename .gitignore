@@ -32,15 +32,3 @@ yarn-error.log*
 # Vercel
 .vercel
 .firebase/
-
-# Capacitor — native project build artifacts and copied web assets.
-# The /ios and /android scaffold folders ARE committed (they're the Xcode and
-# Gradle projects). Only exclude what 'cap sync' generates or what builds produce.
-ios/App/App/public/
-ios/App/build/
-ios/App/App.xcworkspace/xcuserdata/
-ios/.xcode.env.local
-android/app/src/main/assets/public/
-android/.gradle/
-android/app/build/
-android/build/
