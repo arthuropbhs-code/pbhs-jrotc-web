@@ -118,7 +118,7 @@ const AdminChangelog = () => {
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
         <Stat value="45"      label="Releases"    />
-        <Stat value="358"     label="Commits"     />
+        <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
         <Stat value="v1.6.41" label="Current"     />
@@ -695,6 +695,14 @@ const AdminChangelog = () => {
           <C type="feat">Vercel cron: /api/activity-digest fires daily at 06:00 ET; weekly digest auto-triggers on Mondays; digest is skipped entirely if no activity occurred (no noise)</C>
           <C type="fix">Uniform form webhook rate limit was entirely non-functional — checkRateLimit was receiving the request object as its Redis key and the return value was never checked; fixed with proper string key and .allowed check</C>
           <C type="feat">Uniform form webhook: global burst cap 50 submissions / 5 min (handles a full company submitting at once; blocks scripted spam); per-cadet dedup blocks same name resubmitting within 30 min; rejections return 200 so Google Apps Script does not retry</C>
+          {/* ── Threat model gap closures ── */}
+          <C type="sec">Firestore rule: rank and position changes now require level 70+ (S1 Adjutant and above); company commanders (55) can no longer promote or demote subordinates through the portal</C>
+          <C type="sec">Firestore rule: secondaryCompany field locked for company command tier (45–69), closing a cross-company data-exposure vector via that field</C>
+          <C type="sec">Firestore rule: self-approval block — user managers cannot approve an account whose linkedUid points to their own roster entry; same check enforced client-side in AdminUsers</C>
+          <C type="sec">Firestore rule: adminLog userFullName locked to the authenticated user's stored fullName — prevents fake actor attribution in log entries (userId was already constrained; name is now too)</C>
+          <C type="feat">AdminRoster: S1 adjutant rank/position changes write flaggedForApproval to rosterChangelog and emit a security log entry for BC/CSM review, per chain-of-command policy</C>
+          <C type="fix">AdminUniformSizes: finalize is hard-blocked when any cadet is missing a required column — prevents S4 assistants from submitting incomplete size data as if it were done</C>
+          <C type="feat">Activity digest: S1 rank-change hazard detector added; burst detector flags any single user generating 30+ log entries in the digest period (potential log-flood attack)</C>
         </>} />
       </Minor>
 
