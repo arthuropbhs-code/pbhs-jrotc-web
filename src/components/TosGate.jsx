@@ -60,7 +60,7 @@ const TosGate = ({ userData }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/95 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/95 p-4"
       // Prevent click-outside dismissal — intentionally no onClick handler
     >
       <div className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[92vh]">
@@ -93,7 +93,8 @@ const TosGate = ({ userData }) => {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-8 py-6 space-y-6 text-sm text-slate-300 leading-relaxed"
+          className="flex-1 overflow-y-auto px-8 py-6 space-y-6 text-sm text-slate-300 leading-relaxed will-change-scroll"
+          style={{ transform: 'translateZ(0)' }}
         >
           {/* Section 1 */}
           <section>
