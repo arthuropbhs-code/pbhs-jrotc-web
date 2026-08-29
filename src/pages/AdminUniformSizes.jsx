@@ -42,6 +42,7 @@ import { ROLE_HIERARCHY, ROLE_LABELS } from '../constants';
 import {
   Shirt, Plus, Trash2, Edit3, X, Loader2, CheckCircle2,
   Filter, Send, Lock, Unlock, AlertTriangle, ChevronDown,
+  Settings2, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -112,6 +113,28 @@ const EMPTY_FORM = {
   hasClassA: false, classAJacketSize: '',
 };
 
+// ── Column definitions (shared across config, table, and finalize modal) ─────────
+
+const ALL_COLUMNS = [
+  { key: 'classBShirtSize',  label: 'Class B Shirt',  short: 'Cl. B Shirt'  },
+  { key: 'classBPantsSize',  label: 'Class B Pants',  short: 'Cl. B Pants'  },
+  { key: 'ptShirtSize',      label: 'PT Shirt',        short: 'PT Shirt'     },
+  { key: 'classBShoeSize',   label: 'Class B Shoes',  short: 'Shoes'        },
+  { key: 'companyShirtSize', label: 'Company Shirt',   short: 'Co. Shirt'    },
+  { key: 'classAJacketSize', label: 'Class A Jacket', short: 'Cl. A Jacket' },
+];
+const ALL_COLUMN_KEYS = ALL_COLUMNS.map(c => c.key);
+
+// Returns true when a size record is missing at least one required column.
+// Class A jacket is only expected when the record explicitly has hasClassA = true.
+function isMissingRequired(rec, requiredCols) {
+  return requiredCols.some(col =>
+    col === 'classAJacketSize'
+      ? rec.hasClassA && !rec.classAJacketSize
+      : !rec[col]
+  );
+}
+
 // Returns true when a roster position string indicates company-level leadership
 // (Commander, XO, 1SG) — used to auto-check Class A jacket. Platoon leaders,
 // squad leaders, and specialty-team commanders are intentionally excluded so
@@ -160,6 +183,18 @@ const AdminUniformSizes = () => {
   // a successful save and as an auto-retry after a permission error).
   const [sizesFetchKey,  setSizesFetchKey]  = useState(0);
 
+  // ── Column config state (S4 logistics only) ───────────────────────────────────
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
+  const [configCols,      setConfigCols]      = useState(ALL_COLUMN_KEYS);
+  const [savingConfig,    setSavingConfig]     = useState(false);
+
+  // ── Finalize column selection ─────────────────────────────────────────────────
+  const [submitCols, setSubmitCols] = useState(ALL_COLUMN_KEYS);
+
+  // ── Reopen state (S4 logistics only) ─────────────────────────────────────────
+  const [reopenConf, setReopenConf] = useState(false);
+  const [reopening,  setReopening]  = useState(false);
+
   // ── Personal-view state ───────────────────────────────────────────────────────
   const [myRosterDocId,     setMyRosterDocId]     = useState(null);
   const [myRosterDocLoaded, setMyRosterDocLoaded] = useState(false);
@@ -181,6 +216,13 @@ const AdminUniformSizes = () => {
       initRef.current = true;
     }
   }, [canViewAll, myCompany]);
+
+  // Keep the column-config checkboxes in sync with whatever Firestore has
+  // for the selected company (resets whenever the status doc changes or the
+  // company filter changes so the panel always reflects the saved state).
+  useEffect(() => {
+    setConfigCols(statusDoc.requiredColumns || ALL_COLUMN_KEYS);
+  }, [statusDoc]);
 
   // ── Subscribe: uniformSizes ───────────────────────────────────────────────────
   // sizesFetchKey is incremented after each successful save (so the table
@@ -314,6 +356,9 @@ const AdminUniformSizes = () => {
   const currentStatus  = statusDoc.status || 'draft';
   const isSubmitted    = currentStatus === 'submitted';
   const isPending      = currentStatus === 'pending';
+  // Which size columns are required for this company (set by S4 logistics;
+  // defaults to all columns if not yet configured).
+  const requiredCols   = statusDoc.requiredColumns || ALL_COLUMN_KEYS;
   // canViewAll users must have a specific company selected (filterCompany) before
   // adding/editing — "All Companies" mode is a read-only overview. Without a
   // selected company, activeCompany falls back to myCompany ('Battalion'), which
@@ -516,6 +561,7 @@ const AdminUniformSizes = () => {
         submittedAt:       serverTimestamp(),
         submittedByUid:    user.uid,
         submittedByName:   userData?.fullName || '',
+        submittedColumns:  submitCols,
       }, { merge: true });
 
       // Notify S4 logistics + battalion XO
@@ -568,6 +614,59 @@ const AdminUniformSizes = () => {
       showToast('Acknowledge failed');
     } finally {
       setAcknowledging(false);
+    }
+  };
+
+  // ── Save required-column config (S4 logistics) ───────────────────────────────
+  const handleSaveConfig = async () => {
+    if (!filterCompany) return;
+    setSavingConfig(true);
+    try {
+      await setDoc(doc(db, 'uniformSizeStatus', filterCompany), {
+        requiredColumns: configCols,
+      }, { merge: true });
+      showToast('Required fields updated');
+      writeLog({
+        type: 'uniform_sizes', action: 'configure',
+        description: `Updated required size columns for ${filterCompany}: ${
+          configCols.map(k => ALL_COLUMNS.find(c => c.key === k)?.label).join(', ')
+        }`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `company:${filterCompany}`,
+      });
+    } catch (err) {
+      console.error(err);
+      showToast('Save failed');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  // ── Reopen (S4 logistics) — resets submitted/pending back to draft ────────────
+  const handleReopen = async () => {
+    const targetCompany = filterCompany || activeCompany;
+    setReopening(true);
+    try {
+      await setDoc(doc(db, 'uniformSizeStatus', targetCompany), {
+        status:         'draft',
+        reopenedAt:     serverTimestamp(),
+        reopenedByUid:  user.uid,
+        reopenedByName: userData?.fullName || '',
+        pendingNote:    null,
+      }, { merge: true });
+      setReopenConf(false);
+      showToast(`${targetCompany} sizes reopened`);
+      writeLog({
+        type: 'uniform_sizes', action: 'reopen',
+        description: `Reopened ${targetCompany} uniform sizes for revision`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', notes: `company:${targetCompany}`,
+      });
+    } catch (err) {
+      console.error(err);
+      showToast('Reopen failed');
+    } finally {
+      setReopening(false);
     }
   };
 
@@ -670,6 +769,72 @@ const AdminUniformSizes = () => {
           </div>
         )}
 
+        {/* ── S4 Logistics: Required-column configuration panel ── */}
+        {canAcknowledge && filterCompany && (
+          <div className="mb-4 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setShowConfigPanel(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-xs font-black uppercase tracking-widest text-slate-500"
+            >
+              <span className="flex items-center gap-2">
+                <Settings2 size={13} className="text-yellow-500" />
+                Required Fields — {filterCompany}
+                {!showConfigPanel && (
+                  <span className="font-normal normal-case tracking-normal text-slate-400 text-[10px]">
+                    ({requiredCols.length === ALL_COLUMN_KEYS.length ? 'All' : requiredCols.length} required)
+                  </span>
+                )}
+              </span>
+              <ChevronDown size={13} className={`transition-transform duration-200 ${showConfigPanel ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence initial={false}>
+              {showConfigPanel && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 space-y-3 border-t border-slate-100 dark:border-white/5">
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Check the size categories this company must provide. Cadets with records missing checked fields will show as <strong className="text-yellow-600 dark:text-yellow-400">Incomplete</strong>. Unchecked columns are still visible and editable — they just won't count against completeness.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ALL_COLUMNS.map(col => {
+                        const active = configCols.includes(col.key);
+                        return (
+                          <button
+                            key={col.key} type="button"
+                            onClick={() => setConfigCols(prev =>
+                              active ? prev.filter(k => k !== col.key) : [...prev, col.key]
+                            )}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all text-left ${
+                              active
+                                ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400'
+                                : 'border-slate-200 dark:border-white/10 text-slate-400 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border ${active ? 'bg-yellow-500 border-yellow-500' : 'border-slate-300 dark:border-white/30'}`}>
+                              {active && <Check size={9} className="text-slate-950" />}
+                            </div>
+                            {col.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={handleSaveConfig} disabled={savingConfig}
+                      className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-60 text-slate-950 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
+                    >
+                      {savingConfig ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                      Save Configuration
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Status banner + actions */}
         {activeCompany && (!canViewAll || filterCompany) && (
           <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -692,9 +857,19 @@ const AdminUniformSizes = () => {
               </div>
             )}
 
+            {/* Reopen — S4 logistics can unlock a submitted/pending submission */}
+            {canAcknowledge && (isSubmitted || isPending) && (
+              <button
+                onClick={() => setReopenConf(true)}
+                className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+              >
+                <Unlock size={13} /> Reopen
+              </button>
+            )}
+
             {canFinalize && currentStatus === 'draft' && (
               <button
-                onClick={() => setFinalizeConf(true)}
+                onClick={() => { setSubmitCols(requiredCols.length > 0 ? requiredCols : ALL_COLUMN_KEYS); setFinalizeConf(true); }}
                 disabled={displaySizes.length === 0}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
               >
@@ -705,7 +880,12 @@ const AdminUniformSizes = () => {
             {isSubmitted && (
               <span className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5">
                 <Lock size={12} />
-                Submitted by {statusDoc.submittedByName || 'S4 Assistant'} — editing will mark as pending
+                Submitted by {statusDoc.submittedByName || 'S4 Assistant'}
+                {statusDoc.submittedColumns && statusDoc.submittedColumns.length < ALL_COLUMN_KEYS.length && (
+                  <span className="font-normal">
+                    {' '}· {statusDoc.submittedColumns.map(k => ALL_COLUMNS.find(c => c.key === k)?.short).filter(Boolean).join(', ')}
+                  </span>
+                )}
               </span>
             )}
 
@@ -723,11 +903,18 @@ const AdminUniformSizes = () => {
             <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/5 rounded-xl px-4 py-2 text-xs font-black uppercase text-slate-500">
               {displaySizes.length} / {cadets.length} cadets entered
             </div>
-            {displaySizes.filter(s => !s.classBShirtSize).length > 0 && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-2 text-xs font-black uppercase text-yellow-600 dark:text-yellow-400">
-                {displaySizes.filter(s => !s.classBShirtSize).length} incomplete
-              </div>
-            )}
+            {(() => {
+              const incompleteCount = displaySizes.filter(s => isMissingRequired(s, requiredCols)).length;
+              return incompleteCount > 0 ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-2 text-xs font-black uppercase text-yellow-600 dark:text-yellow-400">
+                  {incompleteCount} incomplete
+                </div>
+              ) : displaySizes.length > 0 ? (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2 text-xs font-black uppercase text-green-600 dark:text-green-400">
+                  All complete
+                </div>
+              ) : null;
+            })()}
           </div>
         )}
 
@@ -759,9 +946,18 @@ const AdminUniformSizes = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/5">
-                  {['Cadet', 'Gender', 'Cl. B Shirt', 'Cl. B Pants', 'PT Shirt', 'Shoes', 'Co. Shirt', 'Cl. A Jacket', ''].map(h => (
+                  {['Cadet', 'Gender'].map(h => (
                     <th key={h} className="text-left p-3 font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 whitespace-nowrap min-w-[80px]">{h}</th>
                   ))}
+                  {ALL_COLUMNS.map(col => {
+                    const isReq = requiredCols.includes(col.key);
+                    return (
+                      <th key={col.key} className={`text-left p-3 font-black uppercase tracking-widest whitespace-nowrap min-w-[80px] ${isReq ? 'text-yellow-600 dark:text-yellow-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {col.short}{isReq && <span className="ml-0.5 text-yellow-500">*</span>}
+                      </th>
+                    );
+                  })}
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 whitespace-nowrap min-w-[80px]"></th>
                 </tr>
               </thead>
               <tbody>
@@ -778,16 +974,27 @@ const AdminUniformSizes = () => {
                         {cadet.rank && <div className="text-[9px] text-slate-400 font-bold uppercase">{cadet.rank}</div>}
                       </td>
                       <td className="p-3 text-slate-500 font-bold">{cadet.gender || '—'}</td>
-                      <SizeCell value={rec?.classBShirtSize} />
-                      <SizeCell value={rec?.classBPantsSize} />
-                      <SizeCell value={rec?.ptShirtSize} />
-                      <SizeCell value={rec?.classBShoeSize} />
-                      <SizeCell value={rec?.companyShirtSize} />
-                      <td className="p-3">
-                        {rec?.hasClassA
-                          ? <span className="text-slate-700 dark:text-slate-300 font-bold">{rec.classAJacketSize || '✓ (size TBD)'}</span>
-                          : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                      </td>
+                      {ALL_COLUMNS.map(col => {
+                        // Compute the display value (Class A has special rendering)
+                        let displayVal;
+                        if (col.key === 'classAJacketSize') {
+                          displayVal = rec?.hasClassA ? (rec.classAJacketSize || '✓ (size TBD)') : null;
+                        } else {
+                          displayVal = rec?.[col.key] || null;
+                        }
+                        // Class A is only required for cadets flagged hasClassA
+                        const effectiveRequired =
+                          requiredCols.includes(col.key) &&
+                          (col.key === 'classAJacketSize' ? !!rec?.hasClassA : true);
+                        return (
+                          <SizeCell
+                            key={col.key}
+                            value={displayVal}
+                            required={effectiveRequired}
+                            hasRecord={!!rec}
+                          />
+                        );
+                      })}
                       <td className="p-3 whitespace-nowrap">
                         {canEdit && (
                           <div className="flex gap-1">
@@ -985,28 +1192,62 @@ const AdminUniformSizes = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Finalize Confirmation ── */}
+      {/* ── Finalize Confirmation (with column selection) ── */}
       <AnimatePresence>
         {finalizeConf && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 border border-green-200 dark:border-green-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
-              <Send className="mx-auto text-green-500 mb-4" size={32} />
-              <h3 className="font-black uppercase text-sm tracking-widest mb-2">Finalize Uniform Sizes?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
-                Submits <strong>{displaySizes.length} records</strong> for <strong>{activeCompany} Company</strong>.
-              </p>
-              <p className="text-xs text-slate-400 mb-6">S4 Logistics and Battalion XO will be notified. You can still edit sizes after submission — changes will be flagged for review.</p>
+              className="bg-white dark:bg-slate-900 border border-green-200 dark:border-green-500/20 rounded-3xl p-6 max-w-sm w-full">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                  <Send className="text-green-500" size={18} />
+                </div>
+                <div>
+                  <h3 className="font-black uppercase text-sm tracking-widest">Finalize Uniform Sizes</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{displaySizes.length} records · {activeCompany} Company</p>
+                </div>
+              </div>
+
+              {/* Column selection */}
+              <div className="mb-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Columns included in this submission</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ALL_COLUMNS.map(col => {
+                    const active = submitCols.includes(col.key);
+                    return (
+                      <button
+                        key={col.key} type="button"
+                        onClick={() => setSubmitCols(prev =>
+                          active ? prev.filter(k => k !== col.key) : [...prev, col.key]
+                        )}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all text-left ${
+                          active
+                            ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400'
+                            : 'border-slate-200 dark:border-white/10 text-slate-400'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded flex-shrink-0 flex items-center justify-center border ${active ? 'bg-green-500 border-green-500' : 'border-slate-300 dark:border-white/30'}`}>
+                          {active && <Check size={8} className="text-white" />}
+                        </div>
+                        {col.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400 mb-4">S4 Logistics and Battalion XO will be notified. You can still edit after submission — changes will be flagged for review.</p>
+
               <div className="flex gap-3">
                 <button onClick={() => setFinalizeConf(false)}
                   className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 font-black text-xs uppercase text-slate-600 dark:text-slate-400">
                   Cancel
                 </button>
-                <button onClick={handleFinalize} disabled={finalizing}
+                <button onClick={handleFinalize} disabled={finalizing || submitCols.length === 0}
                   className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-60 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
                   {finalizing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  {finalizing ? 'Sending…' : 'Confirm'}
+                  {finalizing ? 'Sending…' : 'Submit'}
                 </button>
               </div>
             </motion.div>
@@ -1039,6 +1280,37 @@ const AdminUniformSizes = () => {
                   className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
                   {acknowledging ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                   Acknowledge
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Reopen Confirmation ── */}
+      <AnimatePresence>
+        {reopenConf && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-yellow-200 dark:border-yellow-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
+              <Unlock className="mx-auto text-yellow-500 mb-4" size={32} />
+              <h3 className="font-black uppercase text-sm tracking-widest mb-2">Reopen Uniform Sizes?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                This will return <strong>{filterCompany || activeCompany} Company</strong> sizes to <strong>Draft</strong> status.
+              </p>
+              <p className="text-xs text-slate-400 mb-6">
+                The S4 assistant will be able to add, edit, and re-submit sizes. Previously submitted data is preserved.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setReopenConf(false)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 font-black text-xs uppercase text-slate-600 dark:text-slate-400">
+                  Cancel
+                </button>
+                <button onClick={handleReopen} disabled={reopening}
+                  className="flex-1 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 disabled:opacity-60 text-slate-950 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                  {reopening ? <Loader2 size={14} className="animate-spin" /> : <Unlock size={14} />}
+                  {reopening ? 'Reopening…' : 'Reopen'}
                 </button>
               </div>
             </motion.div>
@@ -1088,9 +1360,14 @@ const AdminUniformSizes = () => {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-const SizeCell = ({ value }) => (
-  <td className="p-3 font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-    {value || <span className="text-slate-300 dark:text-slate-700">—</span>}
+const SizeCell = ({ value, required, hasRecord }) => (
+  <td className="p-3 font-bold whitespace-nowrap">
+    {value
+      ? <span className="text-slate-700 dark:text-slate-300">{value}</span>
+      : (required && hasRecord)
+        ? <span className="text-red-400 dark:text-red-500 text-[10px] font-black uppercase tracking-widest">Missing</span>
+        : <span className="text-slate-300 dark:text-slate-700">—</span>
+    }
   </td>
 );
 
