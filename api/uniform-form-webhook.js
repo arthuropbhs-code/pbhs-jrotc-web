@@ -248,15 +248,57 @@ async function findRosterEntry(projectId, nameLastFirst, company, letLevel) {
   }
 }
 
+// ── Duplicate-submission check ─────────────────────────────────────────────────
+// Queries Firestore for a recent submission with the same cadet name.
+// Returns true if a duplicate is found within the cooldown window.
+async function isDuplicateSubmission(projectId, accessToken, cadetName, windowMinutes = 30) {
+  if (!cadetName) return false;
+  const since = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'uniformFormRequests' }],
+          where: {
+            compositeFilter: {
+              op: 'AND',
+              filters: [
+                { fieldFilter: { field: { fieldPath: 'rosterName' }, op: 'EQUAL', value: { stringValue: cadetName } } },
+                { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { stringValue: since } } },
+              ],
+            },
+          },
+          limit: 1,
+        },
+      }),
+    });
+    const rows = await res.json();
+    return rows.some(r => r.document?.fields);
+  } catch {
+    // Non-fatal — if the check fails, allow the submission through
+    return false;
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Rate-limit: max 60 submissions per minute (more than enough; protects
-  // against replay attacks).
-  try { await checkRateLimit(req, 'uniform-form-webhook', 60, 60); }
-  catch { return res.status(429).json({ error: 'Too many requests' }); }
+  // ── Global burst rate limit ─────────────────────────────────────────────────
+  // Max 50 submissions per 5 minutes. A company of ~30 cadets submitting all at
+  // once during class is fine; a spam attack (50+ in 5 min) is blocked.
+  // Note: we return 200 to Google Apps Script on rejection so it doesn't retry
+  // and fill the linked spreadsheet with error rows.
+  const rl = await checkRateLimit('uniform-form-webhook:global', 50, 300);
+  if (!rl.allowed) {
+    console.warn('[uniform-form-webhook] global rate limit hit, count:', rl.count);
+    // Return 200 to Google so Apps Script doesn't retry the failed submission
+    return res.status(200).json({ ok: false, skipped: true, reason: 'rate_limited' });
+  }
 
   // ── Verify shared secret ────────────────────────────────────────────────────
   const secret = process.env.FORM_WEBHOOK_SECRET;
@@ -298,6 +340,20 @@ export default async function handler(req, res) {
         letKey     ? normalised[letKey]     : null,
       )
     : null;
+
+  // ── Per-cadet duplicate check ───────────────────────────────────────────────
+  // If a submission with the same cadet name already exists in the last 30
+  // minutes, silently acknowledge without writing another document. This handles
+  // double-submits (form refresh, accidental resubmit) without creating duplicate
+  // records for S4 to review. We return 200 so Apps Script does not retry.
+  if (rosterEntry?.rosterName) {
+    const accessToken = await getAccessToken();
+    const isDupe = await isDuplicateSubmission(account.project_id, accessToken, rosterEntry.rosterName, 30);
+    if (isDupe) {
+      console.warn('[uniform-form-webhook] duplicate submission for', rosterEntry.rosterName, '— skipping write');
+      return res.status(200).json({ ok: false, skipped: true, reason: 'duplicate' });
+    }
+  }
 
   // ── Write to Firestore ──────────────────────────────────────────────────────
   try {

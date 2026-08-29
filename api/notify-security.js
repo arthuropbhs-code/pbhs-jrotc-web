@@ -191,8 +191,8 @@ export default async function handler(req, res) {
     const { uid, projectId } = await verifyIdToken(idToken);
 
     // Rate limit: max 10 security alerts per UID per hour
-    const limited = await checkRateLimit(`security:${uid}`, 10, 3600);
-    if (limited) return res.status(429).json({ error: 'Rate limited' });
+    const rl = await checkRateLimit(`security:${uid}`, 10, 3600);
+    if (!rl.allowed) return res.status(429).json({ error: 'Rate limited' });
 
     const accessToken = await getAccessToken();
     const recipients  = await getAlertRecipients(accessToken, projectId);
