@@ -266,6 +266,18 @@ const AdminUsers = () => {
       }
     }
 
+    // Force-refresh the Firebase ID token before writing — guards against a
+    // stale token that expired while the page was open. If the refresh itself
+    // fails (no network, Firebase Installations 400, etc.) we bail here with
+    // an explicit message instead of a confusing "permission-denied" toast.
+    try {
+      await user.getIdToken(true);
+    } catch (tokenErr) {
+      console.error('[AdminUsers] Token refresh failed:', tokenErr);
+      showStatus(`Session expired — please sign out and back in (${tokenErr?.code || tokenErr?.message || 'auth error'})`);
+      return;
+    }
+
     try {
       if (editingRecord) {
         await updateDoc(doc(db, "users", editingRecord.id), {
@@ -451,8 +463,14 @@ const AdminUsers = () => {
         });
       }
       setFormData(initialFormState);
-    } catch {
-      showStatus("Error Saving Record");
+    } catch (err) {
+      console.error('[AdminUsers] Save failed:', err?.code, err?.message, err);
+      const code = err?.code || '';
+      if (code === 'permission-denied') {
+        showStatus('Permission denied — your session may have expired. Sign out and back in.');
+      } else {
+        showStatus(`Error Saving Record (${code || err?.message || 'unknown'})`);
+      }
     }
   };
 

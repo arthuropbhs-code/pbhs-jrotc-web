@@ -667,7 +667,7 @@ const AdminChangelog = () => {
           <C type="feat">New user onboarding wizard gains step 3 (Terms) — acceptance recorded as part of finishOnboarding alongside existing email-verify and 2FA steps</C>
           <C type="law">TOS covers restricted access, credential security, cadet PII confidentiality, acceptable use, FERPA implications, and consequences of violation</C>
         </>} />
-        <Patch version="v1.6.41" date="Aug 28" title="Uniform Sizes v2 · Roster security hardening · Audit & alert infrastructure" isCurrent changes={<>
+        <Patch version="v1.6.41" date="Aug 28" title="Uniform Sizes v2 · Roster security hardening · Audit & alert infrastructure" changes={<>
           {/* ── Uniform Sizes v2 ── */}
           <C type="fix">S4 assistants (level 35) could create/update uniform size records but the read rule required level 45 — list subscription failed with permission-denied so saved records never appeared</C>
           <C type="fix">writeLog (adminLog create) required myLevel ≥ 70; lowered to ≥ 35 so company-level assistants can log their own actions</C>
@@ -703,6 +703,12 @@ const AdminChangelog = () => {
           <C type="feat">AdminRoster: S1 adjutant rank/position changes write flaggedForApproval to rosterChangelog and emit a security log entry for BC/CSM review, per chain-of-command policy</C>
           <C type="fix">AdminUniformSizes: finalize is hard-blocked when any cadet is missing a required column — prevents S4 assistants from submitting incomplete size data as if it were done</C>
           <C type="feat">Activity digest: S1 rank-change hazard detector added; burst detector flags any single user generating 30+ log entries in the digest period (potential log-flood attack)</C>
+        </>} />
+
+        <Patch version="v1.6.42" date="Aug 29" title="CSP fix · Auth token refresh diagnostic" isCurrent changes={<>
+          <C type="fix">Content Security Policy hash updated to match the current production build; <code className="font-mono text-[10px]">apis.google.com</code> added to <code className="font-mono text-[10px]">script-src</code> and <code className="font-mono text-[10px]">connect-src</code> — resolves blocked Google Identity/OAuth frames that were silently preventing Firebase Auth on some browsers</C>
+          <C type="fix">Manage Personnel: approval action now force-refreshes the Firebase ID token (<code className="font-mono text-[10px]">getIdToken(true)</code>) before writing to Firestore — prevents stale-token <code className="font-mono text-[10px]">permission-denied</code> failures when the page has been open without interaction for an extended period</C>
+          <C type="fix">Manage Personnel: catch block now surfaces the real Firestore error code and message in the toast instead of the generic "Error Saving Record" — makes root-cause diagnosis possible from the UI without opening DevTools</C>
         </>} />
       </Minor>
 
