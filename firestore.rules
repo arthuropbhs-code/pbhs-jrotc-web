@@ -446,6 +446,7 @@ service cloud.firestore {
       // below still gate create/update to own company.
       allow read: if isSignedIn() && (
         myLevel() >= 45 ||
+        userDoc().role == 'company_s4_assistant' ||
         resource.data.linkedUid == request.auth.uid
       );
       allow create: if isSignedIn() && (
@@ -660,7 +661,7 @@ service cloud.firestore {
     // immutable once written (no update/delete from clients).
     match /adminLog/{id} {
       allow read: if isSignedIn() && myLevel() >= 70;
-      allow create: if isSignedIn() && myLevel() >= 70 &&
+      allow create: if isSignedIn() && myLevel() >= 35 &&
         request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
