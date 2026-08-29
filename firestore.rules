@@ -735,12 +735,14 @@ service cloud.firestore {
     // immutable once written (no update/delete from clients).
     match /adminLog/{id} {
       allow read: if isSignedIn() && myLevel() >= 70;
-      // userId must be the authenticated user's UID (already prevents fake actor
-      // attribution). userFullName is now also locked to the user's stored fullName
-      // so nobody can write a log entry blaming a different person by name.
+      // userId is locked to request.auth.uid so actor attribution cannot be
+      // faked at the identity level. userFullName is freetext and could differ
+      // from the stored fullName in edge cases (name change race, context not yet
+      // refreshed) — enforcing it server-side here causes false permission-denied
+      // errors that silently kill log writes. The userId constraint is the
+      // authoritative protection; userFullName is display-only.
       allow create: if isSignedIn() && myLevel() >= 35 &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.userFullName == userDoc().fullName;
+        request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
 
