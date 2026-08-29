@@ -107,10 +107,18 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         // Admins and user managers (S1 adjutant, S6 technology) may update any
         // field, but cannot elevate a role to their own level or above —
-        // prevents privilege-cloning attacks.
+        // prevents privilege-cloning attacks. Also blocks self-approval: a user
+        // manager cannot approve an account whose linkedUid matches their own UID
+        // (prevents approving a second account they created for themselves).
         (isUserManager() && (
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
           roleLevel(request.resource.data.role) < myLevel()
+        ) &&
+        !(
+          request.resource.data.approved == true &&
+          resource.data.approved == false &&
+          resource.data.linkedUid != null &&
+          resource.data.linkedUid == request.auth.uid
         )) ||
         (request.auth.uid == userId &&
          !request.resource.data.diff(resource.data).affectedKeys().hasAny([
@@ -280,10 +288,12 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         // ── Access tier ────────────────────────────────────────────────────────
         myLevel() >= 70 ||
-        // Company command (45–69): own company, cannot change linkedUid.
+        // Company command (45–69): own company, cannot change linkedUid or
+        // secondaryCompany (prevents cross-company exposure via that field).
         (myLevel() >= 45 && myLevel() < 70 &&
           resource.data.company == userDoc().company &&
-          request.resource.data.linkedUid == resource.data.linkedUid) ||
+          request.resource.data.linkedUid == resource.data.linkedUid &&
+          request.resource.data.secondaryCompany == resource.data.secondaryCompany) ||
         // company_s1_assistant: may edit all fields except fullName, company,
         // position, and rank. LET level changes are permitted (academic tracking).
         (userDoc().role == 'company_s1_assistant' &&
@@ -309,7 +319,15 @@ service cloud.firestore {
       !(resource.data.linkedUid == request.auth.uid &&
         !isSelfEditExempt() &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['position', 'rank', 'letLevel', 'company', 'linkedUid']));
+          .hasAny(['position', 'rank', 'letLevel', 'company', 'linkedUid'])) &&
+      // ── Rank/position lock ─────────────────────────────────────────────────
+      // Only staff (70+) — S1 Adjutant and above — may change a cadet's rank or
+      // position. Company commanders (45–69) cannot promote or demote subordinates
+      // through the portal. S1 adjutant (70) changes are flagged in rosterChangelog
+      // for BC/CSM review (enforced client-side in AdminRoster.jsx handleSave).
+      !(myLevel() < 70 &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['rank', 'position']));
       // Delete: staff (70+) only. Below that, use rosterPendingActions.
       allow delete: if isSignedIn() && myLevel() >= 70;
     }
@@ -717,8 +735,12 @@ service cloud.firestore {
     // immutable once written (no update/delete from clients).
     match /adminLog/{id} {
       allow read: if isSignedIn() && myLevel() >= 70;
+      // userId must be the authenticated user's UID (already prevents fake actor
+      // attribution). userFullName is now also locked to the user's stored fullName
+      // so nobody can write a log entry blaming a different person by name.
       allow create: if isSignedIn() && myLevel() >= 35 &&
-        request.resource.data.userId == request.auth.uid;
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.userFullName == userDoc().fullName;
       allow update, delete: if false;
     }
 

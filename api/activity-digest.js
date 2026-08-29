@@ -160,6 +160,26 @@ function detectHazards(entries) {
     hazards.push({ level: 'warning', message: `${highRoleChanges.length} high-rank role change${highRoleChanges.length > 1 ? 's' : ''} — ${highRoleChanges.map(e => e.targetName).join(', ')}` });
   }
 
+  // S1 adjutant rank/position changes flagged for BC/CSM review
+  const s1RankChanges = entries.filter(e => e.action === 'rank_change_flagged');
+  if (s1RankChanges.length > 0) {
+    hazards.push({ level: 'warning', message: `${s1RankChanges.length} S1 adjutant rank/position change${s1RankChanges.length > 1 ? 's' : ''} pending BC/CSM review — ${s1RankChanges.map(e => e.targetName).join(', ')}` });
+  }
+
+  // Log noise / burst attack: any single user with 30+ total log entries in the
+  // period regardless of type. Normal S4 data-entry for a full company runs
+  // 20–25 entries; 30+ from one user in one day suggests either a loop/bot or
+  // an intentional flood to bury other activity.
+  const allEditors = {};
+  entries.forEach(e => {
+    if (e.userFullName) allEditors[e.userFullName] = (allEditors[e.userFullName] || 0) + 1;
+  });
+  Object.entries(allEditors).forEach(([name, count]) => {
+    if (count >= 30) {
+      hazards.push({ level: 'warning', message: `${name} generated ${count} log entries in this period — possible log flood or runaway process` });
+    }
+  });
+
   return hazards;
 }
 

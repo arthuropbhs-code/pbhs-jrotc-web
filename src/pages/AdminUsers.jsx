@@ -216,6 +216,15 @@ const AdminUsers = () => {
     const wasPendingApproval = !!editingRecord && editingRecord.approved === false;
     const roleChanged = !!editingRecord && editingRecord.role !== formData.role;
 
+    // ── Self-approval block ────────────────────────────────────────────────────
+    // Prevent a user manager from approving an account whose linkedUid points to
+    // their own roster entry — blocks the "create a second account and approve
+    // it yourself" exploit. Firestore rules enforce the same check server-side.
+    if (wasPendingApproval && editingRecord.linkedUid && editingRecord.linkedUid === user?.uid) {
+      showStatus('BLOCKED: You cannot approve an account linked to your own roster entry. Ask another staff member to review this account.');
+      return;
+    }
+
     // ── Role-limit enforcement for top-level roles ─────────────────────────────
     if (editingRecord && roleChanged) {
       const newRole = formData.role;

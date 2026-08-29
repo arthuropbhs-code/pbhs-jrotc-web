@@ -553,6 +553,20 @@ const AdminUniformSizes = () => {
 
   // ── Finalize (company S4 assistant) ──────────────────────────────────────────
   const handleFinalize = async () => {
+    // ── Pre-finalize validation ──────────────────────────────────────────────
+    // Block finalize if any cadet is still missing a required column. This
+    // prevents spoofing — submitting incomplete data as if it's done, which
+    // would trigger email notifications with misleading information.
+    if (requiredCols.length > 0) {
+      const missing = displaySizes.filter(s => isMissingRequired(s, requiredCols));
+      if (missing.length > 0) {
+        showToast(
+          `Cannot finalize: ${missing.length} cadet${missing.length === 1 ? '' : 's'} still missing required sizes. Fix them first.`
+        );
+        return;
+      }
+    }
+
     setFinalizing(true);
     try {
       await setDoc(doc(db, 'uniformSizeStatus', activeCompany), {

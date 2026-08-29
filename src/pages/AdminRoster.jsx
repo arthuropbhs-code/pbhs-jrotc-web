@@ -329,6 +329,12 @@ const AdminRoster = () => {
             if (String(oldVal) !== String(newVal)) changedFields[field] = { from: oldVal, to: newVal };
           }
           if (Object.keys(changedFields).length > 0) {
+            // Flag S1 adjutant rank/position changes for BC/CSM review —
+            // per policy, only BC/CSM can freely change rank/position; S1 adjutant
+            // is permitted but the change must be reviewed by BC if commissioned
+            // officer or BC/CSM if NCO.
+            const rankOrPositionChanged = 'rank' in changedFields || 'position' in changedFields;
+            const isS1Change = role === 's1_adjutant';
             addDoc(collection(db, 'rosterChangelog'), {
               rosterId: editingId,
               cadetName: existingEntry.fullName,
@@ -337,7 +343,22 @@ const AdminRoster = () => {
               changedByName: userData?.fullName || '',
               changedByRole: role || '',
               timestamp: serverTimestamp(),
+              ...(rankOrPositionChanged && isS1Change && {
+                flaggedForApproval: true,
+                flagReason: 'S1 adjutant changed rank/position — requires BC/CSM review per chain of command policy',
+              }),
             }).catch(err => console.warn('[rosterChangelog] write failed:', err));
+
+            // Write an immediate security alert log entry when S1 changes rank/position
+            if (rankOrPositionChanged && isS1Change) {
+              writeLog({
+                type: 'roster', action: 'rank_change_flagged',
+                description: `⚑ S1 adjutant changed rank/position for ${existingEntry.fullName} — pending BC/CSM review`,
+                userId: user?.uid || '', userFullName: userData?.fullName || '',
+                userRole: role || '', targetId: editingId, targetName: existingEntry.fullName,
+                category: 'security',
+              });
+            }
           }
         }
 
