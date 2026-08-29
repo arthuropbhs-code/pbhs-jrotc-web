@@ -103,7 +103,7 @@ const ic  = 'w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:bo
 const lc  = 'text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1 block mb-1 tracking-widest';
 
 const EMPTY_FORM = {
-  cadetId: '', cadetName: '', gender: '', linkedUid: '',
+  cadetId: '', cadetName: '', gender: '', linkedUid: '', cadetPosition: '',
   classBShirtSize: '',
   classBPantsSize: '',
   ptShirtSize: '',
@@ -111,6 +111,22 @@ const EMPTY_FORM = {
   companyShirtSize: '',
   hasClassA: false, classAJacketSize: '',
 };
+
+// Returns true when a roster position string indicates company-level leadership
+// (Commander, XO, 1SG) — used to auto-check Class A jacket. Platoon leaders,
+// squad leaders, and specialty-team commanders are intentionally excluded so
+// S4 can manually check those as needed.
+function isCompanyLeadershipPosition(position) {
+  const p = (position || '').toLowerCase();
+  return (
+    /\bcommander\b/.test(p) && !p.includes('platoon') && !p.includes('squad') ||
+    /\bxo\b/.test(p) ||
+    p.includes('executive officer') ||
+    p.includes('1sg') ||
+    p.includes('1st sergeant') ||
+    p.includes('first sergeant')
+  );
+}
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
@@ -319,10 +335,14 @@ const AdminUniformSizes = () => {
 
   const openEdit = (rec) => {
     const [shoeUS, shoeW] = splitShoeSize(rec.classBShoeSize || '');
+    // Position lives in the roster, not the size record — look it up live.
+    const rosterEntry = cadets.find(c => c.uid === rec.cadetId);
     setForm({
       cadetId:          rec.cadetId         || '',
       cadetName:        rec.cadetName        || '',
       gender:           rec.gender           || '',
+      cadetPosition:    rosterEntry?.position || '',
+      linkedUid:        rec.linkedUid        || '',
       classBShirtSize:  rec.classBShirtSize  || '',
       classBPantsSize:  rec.classBPantsSize  || '',
       ptShirtSize:      rec.ptShirtSize      || '',
@@ -346,22 +366,30 @@ const AdminUniformSizes = () => {
   const handleCadetSelect = async (uid) => {
     const cadet = cadets.find(c => c.uid === uid);
     if (!cadet) {
-      setForm(f => ({ ...f, cadetId: uid, cadetName: '', gender: '', hasClassA: false }));
+      setForm(f => ({ ...f, cadetId: uid, cadetName: '', gender: '', cadetPosition: '', hasClassA: false }));
       return;
     }
-    // Auto-fill gender from roster
-    const gender = cadet.gender || '';
+
+    // Seed form with roster data immediately (gender, position)
+    const gender   = cadet.gender   || '';
+    const position = cadet.position || '';
+
+    // Auto-check Class A from roster position (company CO/XO/1SG).
+    // Other cadets (platoon leaders, specialty teams, etc.) can be manually checked.
+    const leaderByPosition = isCompanyLeadershipPosition(position);
+
     setForm(f => ({
       ...f,
-      cadetId:    uid,
-      cadetName:  cadet.fullName || '',
+      cadetId:       uid,
+      cadetName:     cadet.fullName || '',
       gender,
-      linkedUid:  cadet.linkedUid || '',
-      hasClassA:  false,  // will be overridden below if leadership
-      // Reset size fields for new cadet (or keep existing if re-editing)
+      cadetPosition: position,
+      linkedUid:     cadet.linkedUid || '',
+      hasClassA:     leaderByPosition,
     }));
 
-    // Auto-detect company leadership via linked portal account
+    // Cross-check the cadet's linked portal role as a secondary signal
+    // (catches cases where position text doesn't match but the portal role does).
     if (cadet.linkedUid) {
       setDetectingLeader(true);
       try {
@@ -374,18 +402,6 @@ const AdminUniformSizes = () => {
         }
       } catch { /* non-blocking */ }
       setDetectingLeader(false);
-    }
-
-    // Also check position field for leadership keywords (fallback for unlinked accounts)
-    const position = (cadet.position || '').toLowerCase();
-    if (
-      position.includes('commander') ||
-      position.includes(' xo') ||
-      position.includes('1sg') ||
-      position.includes('1st sergeant') ||
-      position.includes('executive officer')
-    ) {
-      setForm(f => ({ ...f, hasClassA: true }));
     }
   };
 
@@ -842,10 +858,19 @@ const AdminUniformSizes = () => {
                       <Loader2 size={10} className="animate-spin" /> Checking leadership status…
                     </p>
                   )}
-                  {form.gender && (
-                    <p className="text-[10px] text-slate-400 ml-1 mt-1 font-bold uppercase">
-                      Gender: {form.gender === 'M' ? 'Male (M)' : form.gender === 'F' ? 'Female (F)' : form.gender}
-                    </p>
+                  {(form.gender || form.cadetPosition) && (
+                    <div className="ml-1 mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
+                      {form.gender && (
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">
+                          Gender: {form.gender === 'M' ? 'Male (M)' : form.gender === 'F' ? 'Female (F)' : form.gender}
+                        </p>
+                      )}
+                      {form.cadetPosition && (
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">
+                          Position: {form.cadetPosition}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
