@@ -191,21 +191,34 @@ const AdminUniformSizes = () => {
   }, [authLoading, filterCompany, activeCompany, canViewAll]);
 
   // ── Subscribe: roster cadets ──────────────────────────────────────────────────
+  // When a canViewAll user is in "All Companies" mode (no filterCompany), load
+  // the entire roster so the table rows and the cadet dropdown match the
+  // all-companies uniform sizes that are already loading. Without this, the
+  // cadets subscription would fall back to myCompany (often 'Battalion'),
+  // showing only HQ rows while sizes for every company are loaded.
   useEffect(() => {
-    if (!activeCompany) { setCadets([]); return; }
-    const companyFilter = BATTALION_COMPANIES.includes(activeCompany)
-      ? BATTALION_COMPANIES
-      : [activeCompany];
-    const q = query(
-      collection(db, 'roster'),
-      where('company', 'in', companyFilter),
-      orderBy('fullName', 'asc'),
-    );
+    let q;
+    if (canViewAll && !filterCompany) {
+      // All-companies overview — load full roster (no company filter)
+      q = query(collection(db, 'roster'), orderBy('fullName', 'asc'));
+    } else if (activeCompany) {
+      const companyFilter = BATTALION_COMPANIES.includes(activeCompany)
+        ? BATTALION_COMPANIES
+        : [activeCompany];
+      q = query(
+        collection(db, 'roster'),
+        where('company', 'in', companyFilter),
+        orderBy('fullName', 'asc'),
+      );
+    } else {
+      setCadets([]);
+      return;
+    }
     const unsub = onSnapshot(q, snap => {
       setCadets(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [activeCompany]);
+  }, [activeCompany, canViewAll, filterCompany]);
 
   // ── Subscribe: cycle/status doc ───────────────────────────────────────────────
   useEffect(() => {
@@ -268,7 +281,11 @@ const AdminUniformSizes = () => {
   const currentStatus  = statusDoc.status || 'draft';
   const isSubmitted    = currentStatus === 'submitted';
   const isPending      = currentStatus === 'pending';
-  const canEdit        = canInput && activeCompany;
+  // canViewAll users must have a specific company selected (filterCompany) before
+  // adding/editing — "All Companies" mode is a read-only overview. Without a
+  // selected company, activeCompany falls back to myCompany ('Battalion'), which
+  // would incorrectly save sizes under Battalion for cadets from other companies.
+  const canEdit        = canInput && (canViewAll ? !!filterCompany : !!activeCompany);
 
   // ── Toast ─────────────────────────────────────────────────────────────────────
   const showToast = useCallback(msg => {
@@ -682,7 +699,7 @@ const AdminUniformSizes = () => {
           <div className="space-y-2">
             {[1,2,3,4].map(n => <div key={n} className="h-12 bg-slate-100 dark:bg-slate-900/60 rounded-xl animate-pulse" />)}
           </div>
-        ) : !activeCompany ? (
+        ) : (!activeCompany && !(canViewAll && !filterCompany)) ? (
           <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-3xl">
             <Shirt className="mx-auto text-slate-300 dark:text-slate-700 mb-4" size={36} />
             {canInput && !canViewAll ? (

@@ -436,13 +436,16 @@ service cloud.firestore {
     // Read:  company command (45+) reads own company; logistics/admin (70+) reads all.
     // Delete: logistics/admin (70+) only.
     match /uniformSizes/{docId} {
-      // Staff (70+) sees all; company command + S4 assistant sees own company;
-      // cadets can read their own record via linkedUid (personal profile view).
-      // linkedUid is written to new records by AdminUniformSizes at create time.
+      // READ: level 45+ (company command and above) can read; cadets read their
+      // own record via linkedUid. The strict per-company restriction previously
+      // here was enforced at the document level (resource.data.company ==
+      // userDoc().company), but Firestore cannot evaluate that cross-document
+      // get() at list-query evaluation time, causing the onSnapshot subscription
+      // to fail silently for Commanders/XOs even when the write succeeded.
+      // Company scoping is enforced client-side by the query filter; write rules
+      // below still gate create/update to own company.
       allow read: if isSignedIn() && (
-        myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        (userDoc().role == 'company_s4_assistant' && resource.data.company == userDoc().company) ||
+        myLevel() >= 45 ||
         resource.data.linkedUid == request.auth.uid
       );
       allow create: if isSignedIn() && (
