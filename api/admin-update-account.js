@@ -814,6 +814,69 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, suspended: suspend });
     }
 
+    if (type === 'update-user-fields') {
+      // Staff-initiated account edit or approval, routed through the service
+      // account to bypass Firestore client-side security rules. The client
+      // rules require a cross-document get() of the actor's own role; that
+      // get() can fail when Firebase Installations is degraded, cascading into
+      // permission-denied even for legitimate admins.
+      // Authorization is already confirmed above (canManageAccount gate).
+      const { updateFields = {} } = req.body || {};
+
+      // Re-read the caller's role so we can enforce the role-ceiling:
+      // staff cannot assign a role at or above their own permission level.
+      const callerRole = await getUserField(accessToken, projectId, callerUid, 'role');
+      const callerLevel = ROLE_HIERARCHY[callerRole] || 0;
+      const newRoleSlug  = updateFields.role;
+      if (newRoleSlug && (ROLE_HIERARCHY[newRoleSlug] || 0) >= callerLevel) {
+        return res.status(403).json({ error: 'Cannot assign a role at or above your own permission level.' });
+      }
+
+      // Only these form fields may be written — everything else (uid, createdAt,
+      // isManual, etc.) is stripped so the client cannot overwrite system fields.
+      const SAFE_FIELDS = [
+        'fullName', 'email', 'company', 'platoon', 'squad', 'rank',
+        'position', 'letLevel', 'gender', 'secondaryCompany', 'status', 'role',
+      ];
+
+      const fields = {};
+      for (const key of SAFE_FIELDS) {
+        if (!(key in updateFields)) continue;
+        const val = updateFields[key];
+        // Null/undefined/empty → Firestore null (same semantics as the
+        // client-side updateDoc path, which also writes null for these).
+        if (val === null || val === undefined || val === '') {
+          fields[key] = { nullValue: null };
+        } else {
+          fields[key] = { stringValue: String(val) };
+        }
+      }
+      // Always stamp approval and updated-at regardless of what was passed in.
+      fields.approved  = { booleanValue: true };
+      fields.updatedAt = { timestampValue: new Date().toISOString() };
+
+      // Use updateMask so we only overwrite the form fields + approval stamp —
+      // system fields (uid, createdAt, createdBy, isManual, tos*, etc.) stay
+      // untouched. Without updateMask a PATCH replaces the whole document.
+      const fieldPaths = Object.keys(fields);
+      const mask = fieldPaths.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+
+      const patchRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${targetUid}?${mask}`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields }),
+        }
+      );
+      if (!patchRes.ok) {
+        const errData = await patchRes.json().catch(() => ({}));
+        throw new Error(errData.error?.message || 'Failed to update account');
+      }
+
+      return res.status(200).json({ success: true });
+    }
+
     if (type === 'delete-account') {
       // Auth user and Firestore record are independent deletes - run them
       // concurrently. Firestore's REST delete is idempotent-ish (404 on an

@@ -266,25 +266,26 @@ const AdminUsers = () => {
       }
     }
 
-    // Force-refresh the Firebase ID token before writing — guards against a
-    // stale token that expired while the page was open. If the refresh itself
-    // fails (no network, Firebase Installations 400, etc.) we bail here with
-    // an explicit message instead of a confusing "permission-denied" toast.
-    try {
-      await user.getIdToken(true);
-    } catch (tokenErr) {
-      console.error('[AdminUsers] Token refresh failed:', tokenErr);
-      showStatus(`Session expired — please sign out and back in (${tokenErr?.code || tokenErr?.message || 'auth error'})`);
-      return;
-    }
-
     try {
       if (editingRecord) {
-        await updateDoc(doc(db, "users", editingRecord.id), {
-          ...formData,
-          approved: true,
-          updatedAt: serverTimestamp()
+        // Route the users-doc write through the server-side Admin SDK so it
+        // bypasses the Firestore client security rules. The rules require a
+        // cross-document get() of the actor's role; that get() can fail when
+        // Firebase Installations is degraded, cascading into permission-denied
+        // for legitimate admins. The endpoint re-validates the role ceiling
+        // server-side, so we lose no security by moving the write there.
+        const saveToken = await user.getIdToken();
+        const saveRes = await fetch('/api/admin-update-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${saveToken}` },
+          body: JSON.stringify({
+            type: 'update-user-fields',
+            targetUid: editingRecord.id,
+            updateFields: formData,
+          }),
         });
+        const saveData = await saveRes.json();
+        if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save account');
         setEditingRecord(null);
         showStatus("Record Updated");
 

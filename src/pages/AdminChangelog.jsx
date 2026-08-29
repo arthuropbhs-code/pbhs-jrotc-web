@@ -705,10 +705,16 @@ const AdminChangelog = () => {
           <C type="feat">Activity digest: S1 rank-change hazard detector added; burst detector flags any single user generating 30+ log entries in the digest period (potential log-flood attack)</C>
         </>} />
 
-        <Patch version="v1.6.42" date="Aug 29" title="CSP fix · Auth token refresh diagnostic" isCurrent changes={<>
+        <Patch version="v1.6.42" date="Aug 29" title="CSP fix · Auth token refresh diagnostic" changes={<>
           <C type="fix">Content Security Policy hash updated to match the current production build; <code className="font-mono text-[10px]">apis.google.com</code> added to <code className="font-mono text-[10px]">script-src</code> and <code className="font-mono text-[10px]">connect-src</code> — resolves blocked Google Identity/OAuth frames that were silently preventing Firebase Auth on some browsers</C>
           <C type="fix">Manage Personnel: approval action now force-refreshes the Firebase ID token (<code className="font-mono text-[10px]">getIdToken(true)</code>) before writing to Firestore — prevents stale-token <code className="font-mono text-[10px]">permission-denied</code> failures when the page has been open without interaction for an extended period</C>
           <C type="fix">Manage Personnel: catch block now surfaces the real Firestore error code and message in the toast instead of the generic "Error Saving Record" — makes root-cause diagnosis possible from the UI without opening DevTools</C>
+        </>} />
+
+        <Patch version="v1.6.43" date="Aug 29" title="Manage Personnel — server-side account saves" isCurrent changes={<>
+          <C type="fix">Account saves (approval, role change, profile edit) now route through the Admin SDK server endpoint instead of direct Firestore client writes — eliminates the <code className="font-mono text-[10px]">permission-denied</code> failure that occurred when Firebase Installations was degraded and the Firestore security rules' cross-document <code className="font-mono text-[10px]">get()</code> calls failed</C>
+          <C type="sec">Server enforces the same role-ceiling restriction (cannot assign a role ≥ your own level), now independently of Firestore rules — verified via the service account rather than client-side rules evaluation</C>
+          <C type="fix">Only the 12 safe form fields are written to Firestore on each save; system fields (<code className="font-mono text-[10px]">uid</code>, <code className="font-mono text-[10px]">createdAt</code>, <code className="font-mono text-[10px]">isManual</code>, TOS timestamps, etc.) are stripped server-side and never overwritten</C>
         </>} />
       </Minor>
 
