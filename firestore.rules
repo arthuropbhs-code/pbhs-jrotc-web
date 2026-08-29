@@ -26,6 +26,15 @@ service cloud.firestore {
         userDoc().role in ['s1_adjutant', 's6_technology'];
     }
 
+    // Roles that are exempt from the roster self-edit restriction.
+    // These accounts may edit their own roster entry freely.
+    function isSelfEditExempt() {
+      return userDoc().role in [
+        'battalion_commander', 'battalion_xo', 'battalion_csm',
+        'senior_army_instructor', 'army_instructor', 's1_adjutant'
+      ];
+    }
+
     // Mirrors src/constants.js ROLE_HIERARCHY — keep in sync when the role
     // table changes.
     function roleLevel(roleName) {
@@ -247,9 +256,14 @@ service cloud.firestore {
     //          roster and assistants can view the roster page.
     // create — company command (45+) or staff (70+), plus S1/S3 assistants
     //          for their own company.
-    // update — same as create; S1/S3 assistants may not change fullName or company.
-    // delete — company command (45+) or staff (70+), plus S1/S3 assistants
-    //          for their own company.
+    // update — same as create with additional field-level restrictions:
+    //          • Self-edit block: non-exempt accounts cannot change authority fields
+    //            (position, rank, letLevel, company, linkedUid) on their own entry.
+    //          • S1 assistants may not change position or rank (LET level is OK).
+    //          • S3 assistants may not change position, rank, or letLevel.
+    //          • company command (45–69) and assistants may not change linkedUid.
+    // delete — staff (70+) only. Commanders submit rosterPendingActions instead;
+    //          Battalion S1 reviews and performs the actual delete.
     match /roster/{id} {
       allow read: if isSignedIn() && (
         myLevel() >= 70 ||
@@ -264,20 +278,62 @@ service cloud.firestore {
           request.resource.data.company == userDoc().company)
       );
       allow update: if isSignedIn() && (
+        // ── Access tier ────────────────────────────────────────────────────────
         myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        // S1/S3 assistants may edit any field except fullName and company.
-        (userDoc().role in ['company_s1_assistant', 'company_s3_assistant'] &&
+        // Company command (45–69): own company, cannot change linkedUid.
+        (myLevel() >= 45 && myLevel() < 70 &&
           resource.data.company == userDoc().company &&
-          request.resource.data.company  == resource.data.company &&
-          request.resource.data.fullName == resource.data.fullName)
+          request.resource.data.linkedUid == resource.data.linkedUid) ||
+        // company_s1_assistant: may edit all fields except fullName, company,
+        // position, and rank. LET level changes are permitted (academic tracking).
+        (userDoc().role == 'company_s1_assistant' &&
+          resource.data.company == userDoc().company &&
+          request.resource.data.company   == resource.data.company &&
+          request.resource.data.fullName  == resource.data.fullName &&
+          request.resource.data.position  == resource.data.position &&
+          request.resource.data.rank      == resource.data.rank &&
+          request.resource.data.linkedUid == resource.data.linkedUid) ||
+        // company_s3_assistant: same as S1 but also cannot change letLevel.
+        (userDoc().role == 'company_s3_assistant' &&
+          resource.data.company == userDoc().company &&
+          request.resource.data.company   == resource.data.company &&
+          request.resource.data.fullName  == resource.data.fullName &&
+          request.resource.data.position  == resource.data.position &&
+          request.resource.data.rank      == resource.data.rank &&
+          request.resource.data.letLevel  == resource.data.letLevel &&
+          request.resource.data.linkedUid == resource.data.linkedUid)
+      ) &&
+      // ── Self-edit gate (applied AFTER access tier) ─────────────────────────
+      // Non-exempt accounts cannot modify authority fields on their own roster
+      // entry regardless of their command level.
+      !(resource.data.linkedUid == request.auth.uid &&
+        !isSelfEditExempt() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['position', 'rank', 'letLevel', 'company', 'linkedUid']));
+      // Delete: staff (70+) only. Below that, use rosterPendingActions.
+      allow delete: if isSignedIn() && myLevel() >= 70;
+    }
+
+    // ── Roster Changelog ──────────────────────────────────────────────────────
+    // Append-only before/after snapshots written on every roster edit.
+    // Any account that can write to the roster may create a changelog entry.
+    // Immutable once written; only staff (70+) can read.
+    match /rosterChangelog/{id} {
+      allow create: if isSignedIn() && myLevel() >= 35;
+      allow read: if isSignedIn() && myLevel() >= 70;
+      allow update, delete: if false;
+    }
+
+    // ── Roster Pending Actions ────────────────────────────────────────────────
+    // Deletion requests submitted by commanders (45+) or assistants (35).
+    // Battalion S1 (70+) reviews, approves (performs actual delete), or rejects.
+    match /rosterPendingActions/{id} {
+      allow create: if isSignedIn() && (
+        myLevel() >= 35 || isCommandTier()
       );
-      allow delete: if isSignedIn() && (
-        myLevel() >= 70 ||
-        (myLevel() >= 45 && resource.data.company == userDoc().company) ||
-        (userDoc().role in ['company_s1_assistant', 'company_s3_assistant'] &&
-          resource.data.company == userDoc().company)
-      );
+      allow read: if isSignedIn() && myLevel() >= 70;
+      allow update: if isSignedIn() && myLevel() >= 70;
+      allow delete: if isSignedIn() && myLevel() >= 70;
     }
 
     // ── Cadet Challenge Cycles ────────────────────────────────────────────────

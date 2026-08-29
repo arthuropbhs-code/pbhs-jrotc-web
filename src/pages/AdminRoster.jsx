@@ -28,6 +28,7 @@ import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
   Loader2, CheckCircle2, Search, ChevronDown, Eye, RefreshCw,
   History, GraduationCap, Trophy, Tent, BookOpen, ChevronRight, Filter,
+  ShieldAlert, Clock, CheckCheck, XCircle, AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScrambleText from '../components/ScrambleText';
@@ -39,6 +40,21 @@ const PLATOONS = ['1st Platoon', '2nd Platoon', '3rd Platoon', 'Company HQ'];
 const SQUADS   = ['1st Squad', '2nd Squad', '3rd Squad', '4th Squad'];
 const LET_LEVELS = ['LET 1', 'LET 2', 'LET 3', 'LET 4'];
 const GENDERS  = ['Male', 'Female', 'Other'];
+
+// Roles exempt from the roster self-edit restriction — keep in sync with firestore.rules isSelfEditExempt()
+const SELF_EDIT_EXEMPT_ROLES = [
+  'battalion_commander', 'battalion_xo', 'battalion_csm',
+  'senior_army_instructor', 'army_instructor', 's1_adjutant',
+];
+
+// Authority fields that non-exempt accounts cannot change on their own entry.
+const AUTHORITY_FIELDS = ['position', 'rank', 'letLevel', 'company', 'linkedUid'];
+
+// Fields captured in the rosterChangelog snapshot (excludes timestamps).
+const CHANGELOG_FIELDS = [
+  'fullName', 'rank', 'position', 'company', 'platoon', 'squad',
+  'gender', 'letLevel', 'linkedUid', 'secondaryCompany', 'notes',
+];
 
 // 'Zulu' kept for backward compat — old Firestore records still carry it.
 // All new records use 'Battalion'. Both are treated as HQ throughout.
@@ -97,6 +113,12 @@ const AdminRoster = () => {
     && (canManageAll || canManageOwn || canS1Edit);
   const myCompany     = userData?.company || '';
 
+  // Self-edit security: this account is exempt if they hold a top-level role.
+  // All other accounts are blocked from editing authority fields on their own entry.
+  const isSelfEditExempt = SELF_EDIT_EXEMPT_ROLES.includes(role);
+  // Battalion S1 (70+) can review and approve pending deletion requests.
+  const canApproveDeletion = userLevel >= STAFF_LEVEL;
+
   // Staff default to the Battalion tab; company command default to their own company.
   const [activeCompany, setActiveCompany] = useState('');
 
@@ -119,6 +141,13 @@ const AdminRoster = () => {
   const [saving,      setSaving]      = useState(false);
   const [deleteConf,  setDeleteConf]  = useState(null);
   const [toast,       setToast]       = useState(null);
+
+  // ── Pending deletion requests (Battalion S1 approval queue) ────────────────
+  const [pendingActions,    setPendingActions]    = useState([]);
+  const [pendingLoading,    setPendingLoading]    = useState(false);
+  const [approvingAction,   setApprovingAction]   = useState(null);
+  const [rejectingAction,   setRejectingAction]   = useState(null);
+  const [deleteRequestConf, setDeleteRequestConf] = useState(null); // entry asking for deletion
 
   // ── Cadet History (view archived years) ────────────────────────────────────
   const [historyEntry,   setHistoryEntry]   = useState(null); // entry being viewed
@@ -173,6 +202,23 @@ const AdminRoster = () => {
     );
     return () => unsub();
   }, [authLoading]);
+
+  // Pending deletion requests (visible to Battalion S1 / staff 70+)
+  useEffect(() => {
+    if (authLoading || !canApproveDeletion) return;
+    setPendingLoading(true);
+    const unsub = onSnapshot(
+      query(collection(db, 'rosterPendingActions'),
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'asc')),
+      (snap) => {
+        setPendingActions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setPendingLoading(false);
+      },
+      () => setPendingLoading(false),
+    );
+    return () => unsub();
+  }, [authLoading, canApproveDeletion]);
 
   // ── derived data ──────────────────────────────────────────────────────────
 
@@ -273,6 +319,28 @@ const AdminRoster = () => {
         syncMaster:       form.linkedUid ? (form.syncMaster || 'roster') : null,
       };
       if (editingId) {
+        // ── Roster changelog: capture before/after diff ────────────────────
+        const existingEntry = rosterEntries.find(e => e.id === editingId);
+        if (existingEntry) {
+          const changedFields = {};
+          for (const field of CHANGELOG_FIELDS) {
+            const oldVal = existingEntry[field] ?? null;
+            const newVal = payload[field] ?? null;
+            if (String(oldVal) !== String(newVal)) changedFields[field] = { from: oldVal, to: newVal };
+          }
+          if (Object.keys(changedFields).length > 0) {
+            addDoc(collection(db, 'rosterChangelog'), {
+              rosterId: editingId,
+              cadetName: existingEntry.fullName,
+              changes: changedFields,
+              changedBy: user?.uid || '',
+              changedByName: userData?.fullName || '',
+              changedByRole: role || '',
+              timestamp: serverTimestamp(),
+            }).catch(err => console.warn('[rosterChangelog] write failed:', err));
+          }
+        }
+
         await updateDoc(doc(db, 'roster', editingId), { ...payload, updatedAt: serverTimestamp() });
         showToast('Entry updated');
         writeLog({
@@ -336,21 +404,101 @@ const AdminRoster = () => {
     }
   };
 
+  // handleDelete: staff (70+) can delete immediately; everyone else submits a
+  // pending action for Battalion S1 to approve. The actual Firestore delete is
+  // gated by rules to level 70+ only.
   const handleDelete = async () => {
     if (!deleteConf) return;
-    const deletedName = deleteConf.fullName || '';
+    const entry = deleteConf;
     try {
-      await deleteDoc(doc(db, 'roster', deleteConf.id));
+      if (canApproveDeletion) {
+        // Staff (70+): immediate delete
+        await deleteDoc(doc(db, 'roster', entry.id));
+        writeLog({
+          type: 'roster', action: 'delete',
+          description: `Removed ${entry.fullName} from the roster`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId: entry.id, targetName: entry.fullName,
+        });
+        showToast('Entry removed');
+      } else {
+        // Commander / assistant: submit for S1 approval
+        await addDoc(collection(db, 'rosterPendingActions'), {
+          type: 'delete',
+          rosterId:          entry.id,
+          cadetName:         entry.fullName,
+          cadetCompany:      entry.company,
+          cadetRank:         entry.rank    || null,
+          cadetPosition:     entry.position || null,
+          requestedBy:       user?.uid || '',
+          requestedByName:   userData?.fullName || '',
+          requestedByRole:   role || '',
+          status:            'pending',
+          createdAt:         serverTimestamp(),
+        });
+        writeLog({
+          type: 'roster', action: 'delete_requested',
+          description: `${userData?.fullName} requested deletion of ${entry.fullName} — pending Battalion S1 approval`,
+          userId: user?.uid || '', userFullName: userData?.fullName || '',
+          userRole: role || '', targetId: entry.id, targetName: entry.fullName,
+          category: 'security',
+        });
+        showToast('Deletion request submitted — Battalion S1 will review');
+      }
+      setDeleteConf(null);
+    } catch {
+      showToast('Failed — try again');
+    }
+  };
+
+  // S1 approves a pending deletion: perform the actual delete and mark resolved.
+  const handleApproveDelete = async (action) => {
+    if (approvingAction) return;
+    setApprovingAction(action.id);
+    try {
+      await deleteDoc(doc(db, 'roster', action.rosterId));
+      await updateDoc(doc(db, 'rosterPendingActions', action.id), {
+        status:          'approved',
+        reviewedBy:      user?.uid || '',
+        reviewedByName:  userData?.fullName || '',
+        reviewedAt:      serverTimestamp(),
+      });
       writeLog({
         type: 'roster', action: 'delete',
-        description: `Removed ${deletedName} from the roster`,
+        description: `Approved deletion of ${action.cadetName} (requested by ${action.requestedByName})`,
         userId: user?.uid || '', userFullName: userData?.fullName || '',
-        userRole: role || '', targetId: deleteConf.id, targetName: deletedName,
+        userRole: role || '', targetId: action.rosterId, targetName: action.cadetName,
       });
-      setDeleteConf(null);
-      showToast('Entry removed');
+      showToast(`${action.cadetName} removed`);
     } catch {
-      showToast('Delete failed');
+      showToast('Approval failed — try again');
+    } finally {
+      setApprovingAction(null);
+    }
+  };
+
+  // S1 rejects a pending deletion: mark resolved with status 'rejected'.
+  const handleRejectDelete = async (action) => {
+    if (rejectingAction) return;
+    setRejectingAction(action.id);
+    try {
+      await updateDoc(doc(db, 'rosterPendingActions', action.id), {
+        status:          'rejected',
+        reviewedBy:      user?.uid || '',
+        reviewedByName:  userData?.fullName || '',
+        reviewedAt:      serverTimestamp(),
+      });
+      writeLog({
+        type: 'roster', action: 'delete_rejected',
+        description: `Rejected deletion request for ${action.cadetName} (requested by ${action.requestedByName})`,
+        userId: user?.uid || '', userFullName: userData?.fullName || '',
+        userRole: role || '', targetId: action.rosterId, targetName: action.cadetName,
+      });
+      showToast('Request rejected');
+    } catch {
+      showToast('Failed — try again');
+    } finally {
+      setRejectingAction(null);
     }
   };
 
@@ -436,6 +584,64 @@ const AdminRoster = () => {
           )}
         </div>
 
+        {/* ── Pending Deletion Approvals (Battalion S1 only) ── */}
+        {canApproveDeletion && (pendingLoading || pendingActions.length > 0) && (
+          <div className="mb-8 rounded-2xl border border-amber-300/60 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/10 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-amber-200 dark:border-amber-500/20 bg-amber-100/60 dark:bg-amber-900/20">
+              <Clock size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                Pending Roster Deletions — {pendingActions.length} request{pendingActions.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            {pendingLoading ? (
+              <div className="flex items-center gap-2 px-5 py-4 text-amber-600 dark:text-amber-400">
+                <Loader2 size={14} className="animate-spin" />
+                <span className="text-xs font-bold">Loading requests…</span>
+              </div>
+            ) : (
+              <div className="divide-y divide-amber-200/60 dark:divide-amber-500/10">
+                {pendingActions.map(action => (
+                  <div key={action.id} className="flex items-center gap-4 px-5 py-3 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-slate-900 dark:text-white">
+                        {action.cadetName}
+                        {action.cadetRank && (
+                          <span className="ml-2 text-[9px] font-bold text-slate-400">({action.cadetRank})</span>
+                        )}
+                        <span className="ml-2 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                          {action.cadetCompany} Co.
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Requested by <strong className="text-slate-700 dark:text-slate-300">{action.requestedByName}</strong>
+                        {' '}({action.requestedByRole?.replace(/_/g, ' ')})
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleRejectDelete(action)}
+                        disabled={rejectingAction === action.id || approvingAction === action.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/10 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-50 transition-all"
+                      >
+                        {rejectingAction === action.id ? <Loader2 size={10} className="animate-spin" /> : <XCircle size={10} />}
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleApproveDelete(action)}
+                        disabled={approvingAction === action.id || rejectingAction === action.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-wider disabled:opacity-50 transition-all"
+                      >
+                        {approvingAction === action.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
+                        Approve &amp; Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Company filter ── */}
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           {canManageAll ? (
@@ -511,6 +717,9 @@ const AdminRoster = () => {
                   const ch  = latestChallenge(entry.fullName, challengeMap);
                   const acc = entry.linkedUid ? userMap[entry.linkedUid] : null;
                   const hasAccount = Boolean(entry.linkedUid);
+                  // Self-edit check: is this the current user's own roster entry?
+                  const isSelfEntry    = Boolean(user?.uid && entry.linkedUid === user.uid);
+                  const selfEditBlocked = isSelfEntry && !isSelfEditExempt;
 
                   return (
                     <tr
@@ -615,13 +824,53 @@ const AdminRoster = () => {
                           {canEdit && (
                             <>
                               <button
-                                onClick={() => openEdit(entry)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition-all"
+                                onClick={() => {
+                                  if (selfEditBlocked) {
+                                    // Log and block the attempt
+                                    writeLog({
+                                      type: 'roster', action: 'self_edit_blocked',
+                                      description: `${userData?.fullName || 'Unknown'} attempted to edit their own roster entry`,
+                                      userId: user?.uid || '', userFullName: userData?.fullName || '',
+                                      userRole: role || '', targetId: entry.id, targetName: entry.fullName,
+                                      category: 'security',
+                                    });
+                                    // Immediate security alert for commander+ accounts
+                                    if (userLevel >= COMMAND_LEVEL) {
+                                      user?.getIdToken?.().then(idToken => {
+                                        fetch('/api/notify-security', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            idToken,
+                                            event: 'self_edit_attempt',
+                                            actorName: userData?.fullName || '',
+                                            actorRole: role || '',
+                                            targetName: entry.fullName,
+                                            targetId: entry.id,
+                                          }),
+                                        }).catch(() => {});
+                                      }).catch(() => {});
+                                    }
+                                    showToast('You cannot edit your own roster entry — contact a staff member');
+                                    return;
+                                  }
+                                  openEdit(entry);
+                                }}
+                                title={selfEditBlocked ? 'Self-editing blocked — contact staff' : 'Edit entry'}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                  selfEditBlocked
+                                    ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                    : 'text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10'
+                                }`}
                               >
-                                <Edit3 size={14} />
+                                {selfEditBlocked
+                                  ? <ShieldAlert size={14} />
+                                  : <Edit3 size={14} />
+                                }
                               </button>
                               <button
-                                onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName })}
+                                onClick={() => setDeleteConf({ id: entry.id, fullName: entry.fullName, company: entry.company, rank: entry.rank, position: entry.position })}
+                                title={canApproveDeletion ? 'Remove from roster' : 'Request removal (requires S1 approval)'}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                               >
                                 <Trash2 size={14} />
@@ -937,17 +1186,37 @@ const AdminRoster = () => {
         {deleteConf && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <div className="modal-enter bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 max-w-sm w-full text-center">
-              <Trash2 className="mx-auto text-red-500 mb-4" size={32} />
-              <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">Remove from Roster?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                This removes <strong>{deleteConf.fullName}</strong> from the battalion roster. Their portal account (if any) is not affected.
+              {canApproveDeletion
+                ? <Trash2 className="mx-auto text-red-500 mb-4" size={32} />
+                : <AlertTriangle className="mx-auto text-amber-500 mb-4" size={32} />
+              }
+              <h3 className="font-black uppercase text-sm tracking-widest text-slate-900 dark:text-white mb-2">
+                {canApproveDeletion ? 'Remove from Roster?' : 'Request Removal?'}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                {canApproveDeletion
+                  ? <>This removes <strong>{deleteConf.fullName}</strong> from the battalion roster. Their portal account (if any) is not affected.</>
+                  : <>A removal request will be sent to the <strong>Battalion S1</strong> for approval. <strong>{deleteConf.fullName}</strong> will remain on the roster until approved.</>
+                }
               </p>
-              <div className="flex gap-3">
+              {!canApproveDeletion && (
+                <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 tracking-widest mb-4">
+                  Requires Battalion S1 sign-off
+                </p>
+              )}
+              <div className="flex gap-3 mt-4">
                 <button onClick={() => setDeleteConf(null)} className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 font-black text-xs uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
                   Cancel
                 </button>
-                <button onClick={handleDelete} className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase transition-all">
-                  Remove
+                <button
+                  onClick={handleDelete}
+                  className={`flex-1 py-3 rounded-xl text-white font-black text-xs uppercase transition-all ${
+                    canApproveDeletion
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-amber-500 hover:bg-amber-600'
+                  }`}
+                >
+                  {canApproveDeletion ? 'Remove' : 'Submit Request'}
                 </button>
               </div>
             </div>

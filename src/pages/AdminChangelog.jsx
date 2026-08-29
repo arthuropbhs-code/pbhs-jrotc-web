@@ -117,11 +117,11 @@ const AdminChangelog = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap mb-6 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 overflow-hidden">
-        <Stat value="45"      label="Releases"    />
-        <Stat value="350"     label="Commits"     />
+        <Stat value="46"      label="Releases"    />
+        <Stat value="358"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.40" label="Current"     />
+        <Stat value="v1.6.41" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -667,11 +667,26 @@ const AdminChangelog = () => {
           <C type="feat">New user onboarding wizard gains step 3 (Terms) — acceptance recorded as part of finishOnboarding alongside existing email-verify and 2FA steps</C>
           <C type="law">TOS covers restricted access, credential security, cadet PII confidentiality, acceptable use, FERPA implications, and consequences of violation</C>
         </>} />
-        <Patch version="v1.6.40" date="Aug 28" title="Uniform Sizes: S4 assistant access, writeLog, subscription recovery" isCurrent changes={<>
+        <Patch version="v1.6.40" date="Aug 28" title="Uniform Sizes: S4 assistant access, writeLog, subscription recovery" changes={<>
           <C type="fix">S4 assistants (level 35) could create/update uniform size records but the read rule required level 45 — list subscription failed with permission-denied so saved records never appeared</C>
           <C type="fix">Added explicit company_s4_assistant role check to uniformSizes read rule; same pattern already used for create/update</C>
           <C type="fix">writeLog (adminLog create) required myLevel ≥ 70; lowered to ≥ 35 so company-level assistants can log their own actions</C>
           <C type="fix">Firestore onSnapshot dies permanently on permission-denied and does not auto-restart — added auto-retry (3 s backoff) and force-restart after every save/delete so records appear immediately</C>
+        </>} />
+        <Patch version="v1.6.41" date="Aug 28" title="Roster security hardening: self-edit block, deletion approval, role limits, audit digest" isCurrent changes={<>
+          <C type="sec">Firestore rule: non-exempt accounts cannot edit authority fields (position, rank, LET level, company, linkedUid) on their own roster entry; exempt roles: BC, XO, CSM, Instructors, S1 Adjutant</C>
+          <C type="sec">Firestore rule: S1/S3 assistants cannot change position or rank; S1 assistants may still change LET level; S3 assistants cannot change LET level</C>
+          <C type="sec">Firestore rule: company command (45–69) and assistants cannot change linkedUid — requires staff (70+)</C>
+          <C type="sec">Firestore rule: roster delete restricted to staff (70+) only — commanders submit rosterPendingActions instead</C>
+          <C type="feat">Self-edit detection in AdminRoster: edit button replaced with ShieldAlert icon and blocked toast for own entry (non-exempt); logs attempt and sends immediate security email for commander+ accounts</C>
+          <C type="feat">Deletion approval workflow: commanders submit requests to rosterPendingActions; Battalion S1 sees a pending panel with Approve / Reject buttons; actual deleteDoc only on approval</C>
+          <C type="feat">rosterChangelog collection: before/after field diff written on every roster update (tracks fullName, rank, position, company, platoon, squad, gender, letLevel, linkedUid, secondaryCompany, notes)</C>
+          <C type="feat">Battalion Commander hard block: assigning battalion_commander when one exists shows an error and aborts — the current BC must be revoked first</C>
+          <C type="feat">Battalion XO / CSM single-holder limit: blocked unless BC enables dual-role override via the new BcRoleOverridePanel toggle (stored in settings/roleOverrides)</C>
+          <C type="feat">Duplicate high-rank role assignment logged as security event with ⚠️ prefix in activity log</C>
+          <C type="feat">New /api/notify-security.js: sends immediate HTML email to SAI + BC + arthuro.pbhs@gmail.com on critical security events (self_edit_attempt, duplicate_role)</C>
+          <C type="feat">New /api/activity-digest.js: reads adminLog, detects hazards, and sends a formatted daily/weekly digest with grouped events and flagged items</C>
+          <C type="feat">Vercel cron: /api/activity-digest runs daily at 06:00 ET (10:00 UTC); weekly digest auto-triggers on Mondays; manual POST trigger available with CRON_SECRET</C>
         </>} />
       </Minor>
 

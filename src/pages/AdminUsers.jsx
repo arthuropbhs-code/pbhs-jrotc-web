@@ -2,20 +2,92 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
   collection, doc, updateDoc, onSnapshot, query, where,
-  addDoc, serverTimestamp, deleteDoc, getDocs
+  addDoc, serverTimestamp, deleteDoc, getDocs, getDoc, setDoc,
 } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { writeLog } from '../lib/writeLog';
 import { Navigate } from 'react-router-dom';
 import {
   UserCog, Search, CheckCircle2,
-  Loader2, UserPlus, User, X, Edit3, KeyRound, Ban, Trash2
+  Loader2, UserPlus, User, X, Edit3, KeyRound, Ban, Trash2,
+  ShieldCheck, ShieldOff, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, JROTC_POSITIONS } from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { RosterRowSkeleton } from '../components/Skeleton';
+
+// ── BC Role Override Panel ─────────────────────────────────────────────────────
+// Shown to the Battalion Commander only. Allows temporary dual-role permission
+// for XO and/or CSM (e.g. during a transition year with 2 XOs).
+// The override is stored in settings/roleOverrides and read by handleAction.
+function BcRoleOverridePanel() {
+  const [overrides, setOverrides]   = useState({ allowDualXO: false, allowDualCSM: false });
+  const [saving,    setSaving]      = useState(null); // 'allowDualXO' | 'allowDualCSM' | null
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'roleOverrides'), (snap) => {
+      if (snap.exists()) setOverrides(snap.data());
+    });
+    return () => unsub();
+  }, []);
+
+  const toggle = async (key) => {
+    setSaving(key);
+    try {
+      const next = !overrides[key];
+      await setDoc(doc(db, 'settings', 'roleOverrides'), { ...overrides, [key]: next }, { merge: true });
+    } catch (err) {
+      console.error('Override toggle failed:', err);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const OverrideRow = ({ roleKey, label, settingKey }) => {
+    const active  = overrides[settingKey];
+    const loading = saving === settingKey;
+    return (
+      <div className="flex items-center justify-between gap-4 py-2.5">
+        <div>
+          <p className="text-xs font-black text-slate-800 dark:text-slate-200">{label}</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
+            {active ? 'Dual assignment permitted this cycle' : 'Single-holder limit enforced'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => toggle(settingKey)}
+          disabled={loading}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+            active
+              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
+              : 'bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
+          }`}
+        >
+          {loading ? <Loader2 size={10} className="animate-spin" /> : active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+          {active ? 'ON' : 'OFF'}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4 mt-1">
+      <p className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 flex items-center gap-1.5 mb-3">
+        <ShieldCheck size={10} /> BC Override — Dual Role Permissions
+      </p>
+      <p className="text-[10px] text-amber-600 dark:text-amber-400 mb-3 leading-relaxed">
+        Enabling an override allows a second account to hold that role temporarily (e.g. during a leadership transition). The override is global and affects all assignments until you turn it off.
+      </p>
+      <div className="divide-y divide-amber-200 dark:divide-amber-500/20">
+        <OverrideRow label="Allow 2nd Battalion XO" settingKey="allowDualXO" />
+        <OverrideRow label="Allow 2nd Battalion CSM" settingKey="allowDualCSM" />
+      </div>
+    </div>
+  );
+}
 
 // Requires the military roster convention: "LASTNAME, FIRSTNAME" (each side
 // may be multiple words, e.g. "DE ALMEIDA, ARTHURO").
@@ -143,6 +215,47 @@ const AdminUsers = () => {
     // record here, which is also when the welcome email goes out.
     const wasPendingApproval = !!editingRecord && editingRecord.approved === false;
     const roleChanged = !!editingRecord && editingRecord.role !== formData.role;
+
+    // ── Role-limit enforcement for top-level roles ─────────────────────────────
+    if (editingRecord && roleChanged) {
+      const newRole = formData.role;
+      const LIMITED_ROLES = ['battalion_commander', 'battalion_xo', 'battalion_csm'];
+      if (LIMITED_ROLES.includes(newRole)) {
+        // Count existing accounts already holding this role (excluding the record being edited)
+        const snap = await getDocs(
+          query(collection(db, 'users'), where('role', '==', newRole))
+        );
+        const existingHolders = snap.docs.filter(d => d.id !== editingRecord.id);
+
+        if (existingHolders.length >= 1) {
+          const holderName = existingHolders[0]?.data()?.fullName || 'another account';
+          if (newRole === 'battalion_commander') {
+            // Hard block — no override
+            showStatus(`BLOCKED: Battalion Commander is already assigned to ${holderName}. That role must be revoked before it can be reassigned.`);
+            return;
+          } else {
+            // XO/CSM — check for BC override setting
+            const overrideSnap = await getDocs(
+              query(collection(db, 'settings'), where('__name__', '==', 'roleOverrides'))
+            );
+            const overrides = overrideSnap.docs[0]?.data() || {};
+            const overrideKey = newRole === 'battalion_xo' ? 'allowDualXO' : 'allowDualCSM';
+            if (!overrides[overrideKey]) {
+              showStatus(`BLOCKED: ${newRole === 'battalion_xo' ? 'Battalion XO' : 'Battalion CSM'} is already assigned to ${holderName}. The Battalion Commander must enable a role override first.`);
+              return;
+            }
+            // Override is active — allow but flag in activity log
+            writeLog({
+              type: 'account', action: 'duplicate-role-warning',
+              description: `⚠️ DUAL ROLE: ${formData.fullName} assigned ${newRole} — ${holderName} already holds this role. BC override is active.`,
+              userId: user?.uid || '', userFullName: userData?.fullName || '',
+              userRole: role || '', targetId: editingRecord.id, targetName: formData.fullName,
+              category: 'security',
+            });
+          }
+        }
+      }
+    }
 
     try {
       if (editingRecord) {
@@ -734,7 +847,20 @@ const AdminUsers = () => {
                       </option>
                     ))}
                   </select>
+                  {/* Role limit notice for high-level roles */}
+                  {['battalion_commander', 'battalion_xo', 'battalion_csm'].includes(formData.role) && (
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 ml-1 mt-1">
+                      ⚠ {formData.role === 'battalion_commander' ? 'Hard limit: 1 BC only. Current BC must be revoked first.' : 'Limit: 1 per role. BC can enable a temporary dual-role override in settings.'}
+                    </p>
+                  )}
                 </div>
+
+                {/* ── BC Override Toggle (Battalion Commander only) ── */}
+                {role === 'battalion_commander' && (
+                  <div className="md:col-span-2">
+                    <BcRoleOverridePanel />
+                  </div>
+                )}
 
                 {editingRecord?.approved === false ? (
                   /* ── Pending-approval flow: green Approve + red Deny ── */
