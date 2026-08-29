@@ -667,10 +667,11 @@ const AdminChangelog = () => {
           <C type="feat">New user onboarding wizard gains step 3 (Terms) — acceptance recorded as part of finishOnboarding alongside existing email-verify and 2FA steps</C>
           <C type="law">TOS covers restricted access, credential security, cadet PII confidentiality, acceptable use, FERPA implications, and consequences of violation</C>
         </>} />
-        <Patch version="v1.6.40" date="Aug 28" title="Uniform Sizes: S4 assistant access & writeLog permissions" isCurrent changes={<>
+        <Patch version="v1.6.40" date="Aug 28" title="Uniform Sizes: S4 assistant access, writeLog, subscription recovery" isCurrent changes={<>
           <C type="fix">S4 assistants (level 35) could create/update uniform size records but the read rule required level 45 — list subscription failed with permission-denied so saved records never appeared</C>
           <C type="fix">Added explicit company_s4_assistant role check to uniformSizes read rule; same pattern already used for create/update</C>
           <C type="fix">writeLog (adminLog create) required myLevel ≥ 70; lowered to ≥ 35 so company-level assistants can log their own actions</C>
+          <C type="fix">Firestore onSnapshot dies permanently on permission-denied and does not auto-restart — added auto-retry (3 s backoff) and force-restart after every save/delete so records appear immediately</C>
         </>} />
       </Minor>
 

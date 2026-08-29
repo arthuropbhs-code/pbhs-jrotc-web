@@ -140,6 +140,9 @@ const AdminUniformSizes = () => {
   const [toast,          setToast]          = useState(null);
   const [dataLoading,    setDataLoading]    = useState(true);
   const [detectingLeader,setDetectingLeader]= useState(false);
+  // Bump to force the uniformSizes subscription to restart (used after
+  // a successful save and as an auto-retry after a permission error).
+  const [sizesFetchKey,  setSizesFetchKey]  = useState(0);
 
   // ── Personal-view state ───────────────────────────────────────────────────────
   const [myRosterDocId,     setMyRosterDocId]     = useState(null);
@@ -164,6 +167,10 @@ const AdminUniformSizes = () => {
   }, [canViewAll, myCompany]);
 
   // ── Subscribe: uniformSizes ───────────────────────────────────────────────────
+  // sizesFetchKey is incremented after each successful save (so the table
+  // updates immediately) and on a permission-error retry (so that a rules
+  // change propagates without a page reload — the subscription restarts and
+  // the new listener is evaluated under the updated rules).
   useEffect(() => {
     if (authLoading) return;
     setDataLoading(true);
@@ -182,13 +189,23 @@ const AdminUniformSizes = () => {
     } else {
       setSizes([]); setDataLoading(false); return;
     }
-    const unsub = onSnapshot(q, snap => {
-      setSizes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setDataLoading(false);
-    }, () => setDataLoading(false));
-    return () => unsub();
+    let retryTimer = null;
+    const unsub = onSnapshot(q,
+      snap => {
+        setSizes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setDataLoading(false);
+      },
+      err => {
+        console.warn('[uniformSizes] snapshot error:', err.code, '— retrying in 3 s');
+        setDataLoading(false);
+        // Restart the subscription after 3 s. After a Firestore rules deploy
+        // the new listener will be evaluated under the updated rules.
+        retryTimer = setTimeout(() => setSizesFetchKey(k => k + 1), 3000);
+      },
+    );
+    return () => { unsub(); if (retryTimer) clearTimeout(retryTimer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, filterCompany, activeCompany, canViewAll]);
+  }, [authLoading, filterCompany, activeCompany, canViewAll, sizesFetchKey]);
 
   // ── Subscribe: roster cadets ──────────────────────────────────────────────────
   // When a canViewAll user is in "All Companies" mode (no filterCompany), load
@@ -438,6 +455,9 @@ const AdminUniformSizes = () => {
         showToast('Sizes saved');
       }
       closeModal();
+      // Force the subscription to restart so the saved record appears
+      // immediately rather than waiting for the next listener event.
+      setSizesFetchKey(k => k + 1);
       writeLog({
         type: 'uniform_sizes', action: editingRecord ? 'update' : 'create',
         description: `${editingRecord ? 'Updated' : 'Saved'} uniform sizes for ${form.cadetName}`,
@@ -460,6 +480,7 @@ const AdminUniformSizes = () => {
       await deleteDoc(doc(db, 'uniformSizes', deleteConf.id));
       setDeleteConf(null);
       showToast('Record deleted');
+      setSizesFetchKey(k => k + 1);
       writeLog({
         type: 'uniform_sizes', action: 'delete',
         description: `Deleted uniform sizes for ${deleteConf.cadetName || deleteConf.id}`,
