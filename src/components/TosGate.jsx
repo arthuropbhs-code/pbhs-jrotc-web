@@ -16,12 +16,23 @@ import { Shield, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
 // Increment this string whenever the TOS materially changes to force re-acceptance.
 export const CURRENT_TOS_VERSION = '1.0';
 
+// Minimum seconds the user must spend on the TOS before they can agree.
+const WAIT_SECONDS = 30;
+
 const TosGate = ({ userData }) => {
   const [checkedTos,     setCheckedTos]     = useState(false);
   const [checkedPrivacy, setCheckedPrivacy] = useState(false);
   const [saving,         setSaving]         = useState(false);
   const [scrolledFar,    setScrolledFar]    = useState(false);
+  const [countdown,      setCountdown]      = useState(WAIT_SECONDS);
   const scrollRef = useRef(null);
+
+  // Countdown timer — starts immediately, fires once per second until zero.
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [countdown]);
 
   // Detect when the user has scrolled far enough into the TOS body
   const handleScroll = () => {
@@ -38,7 +49,9 @@ const TosGate = ({ userData }) => {
     return () => window.removeEventListener('keydown', block, true);
   }, []);
 
-  const canAgree = checkedTos && checkedPrivacy && scrolledFar;
+  // Both the countdown AND the scroll must complete before checkboxes unlock.
+  const bothReady = scrolledFar && countdown === 0;
+  const canAgree  = checkedTos && checkedPrivacy && bothReady;
 
   const handleAgree = async () => {
     if (!canAgree) return;
@@ -277,14 +290,24 @@ const TosGate = ({ userData }) => {
           </section>
         </div>
 
-        {/* ── Footer: checkboxes + button ── */}
+        {/* ── Footer: countdown + checkboxes + button ── */}
         <div className="px-8 py-6 border-t border-white/5 shrink-0 space-y-4">
 
-          {!scrolledFar && (
+          {/* Status row — countdown or scroll prompt */}
+          {countdown > 0 ? (
+            <div className="flex items-center justify-between bg-white/3 border border-white/8 rounded-xl px-4 py-2.5">
+              <span className="text-[11px] font-bold text-slate-400">
+                Please read the full terms before agreeing
+              </span>
+              <span className="text-sm font-black text-yellow-500 tabular-nums shrink-0 ml-3">
+                {String(Math.floor(countdown / 60)).padStart(2, '0')}:{String(countdown % 60).padStart(2, '0')}
+              </span>
+            </div>
+          ) : !scrolledFar ? (
             <p className="text-[11px] text-slate-500 font-bold text-center">
               ↓ Scroll to the bottom to enable agreement
             </p>
-          )}
+          ) : null}
 
           <label className="flex items-start gap-3 cursor-pointer group">
             <div className="mt-0.5 shrink-0">
@@ -292,20 +315,20 @@ const TosGate = ({ userData }) => {
                 type="checkbox"
                 checked={checkedTos}
                 onChange={e => setCheckedTos(e.target.checked)}
-                disabled={!scrolledFar}
+                disabled={!bothReady}
                 className="sr-only"
               />
               <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                 checkedTos
                   ? 'bg-yellow-500 border-yellow-500'
-                  : scrolledFar
+                  : bothReady
                     ? 'border-slate-500 group-hover:border-yellow-500/60'
                     : 'border-slate-700 opacity-40 cursor-not-allowed'
               }`}>
                 {checkedTos && <CheckCircle2 size={10} className="text-slate-950" />}
               </div>
             </div>
-            <span className={`text-xs leading-relaxed ${scrolledFar ? 'text-slate-300' : 'text-slate-600'}`}>
+            <span className={`text-xs leading-relaxed ${bothReady ? 'text-slate-300' : 'text-slate-600'}`}>
               I have read and agree to the <strong className="text-white">Terms of Use</strong> — I understand
               this is a restricted system, I will not share cadet information or screenshots, and I will not
               share my login credentials with anyone.
@@ -318,20 +341,20 @@ const TosGate = ({ userData }) => {
                 type="checkbox"
                 checked={checkedPrivacy}
                 onChange={e => setCheckedPrivacy(e.target.checked)}
-                disabled={!scrolledFar}
+                disabled={!bothReady}
                 className="sr-only"
               />
               <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                 checkedPrivacy
                   ? 'bg-yellow-500 border-yellow-500'
-                  : scrolledFar
+                  : bothReady
                     ? 'border-slate-500 group-hover:border-yellow-500/60'
                     : 'border-slate-700 opacity-40 cursor-not-allowed'
               }`}>
                 {checkedPrivacy && <CheckCircle2 size={10} className="text-slate-950" />}
               </div>
             </div>
-            <span className={`text-xs leading-relaxed ${scrolledFar ? 'text-slate-300' : 'text-slate-600'}`}>
+            <span className={`text-xs leading-relaxed ${bothReady ? 'text-slate-300' : 'text-slate-600'}`}>
               I acknowledge the <strong className="text-white">Privacy Policy</strong> — I understand
               how my data is stored, that my actions are logged, and that I am responsible for data
               I enter into this system.

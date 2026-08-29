@@ -77,7 +77,16 @@ const AdminWelcome = () => {
   const [tosChecked,     setTosChecked]     = useState(false);
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const [tosScrolled,    setTosScrolled]    = useState(false);
+  const [tosCountdown,   setTosCountdown]   = useState(30);
   const tosScrollRef = useRef(null);
+
+  // Countdown starts when TOS step becomes active
+  useEffect(() => {
+    if (step !== 'tos') return;
+    if (tosCountdown <= 0) return;
+    const id = setTimeout(() => setTosCountdown(c => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [step, tosCountdown]);
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const mfaMandatory = userLevel >= STAFF_LEVEL;
@@ -591,21 +600,27 @@ const AdminWelcome = () => {
               <p className="text-slate-600 text-[10px] pt-1">Version {CURRENT_TOS_VERSION} · August 2026</p>
             </div>
 
-            {!tosScrolled && (
+            {/* Countdown / scroll status */}
+            {tosCountdown > 0 ? (
+              <div className="flex items-center justify-between bg-white/3 border border-white/8 rounded-xl px-3 py-2">
+                <span className="text-[10px] font-bold text-slate-500">Please read before agreeing</span>
+                <span className="text-sm font-black text-yellow-500 tabular-nums">{tosCountdown}s</span>
+              </div>
+            ) : !tosScrolled ? (
               <p className="text-[10px] text-slate-600 font-bold text-center">↓ Scroll to the bottom to enable</p>
-            )}
+            ) : null}
 
             {/* TOS checkbox */}
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="mt-0.5 shrink-0">
-                <input type="checkbox" checked={tosChecked} onChange={e => setTosChecked(e.target.checked)} disabled={!tosScrolled} className="sr-only" />
+                <input type="checkbox" checked={tosChecked} onChange={e => setTosChecked(e.target.checked)} disabled={!(tosScrolled && tosCountdown === 0)} className="sr-only" />
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                  tosChecked ? 'bg-yellow-500 border-yellow-500' : tosScrolled ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
+                  tosChecked ? 'bg-yellow-500 border-yellow-500' : (tosScrolled && tosCountdown === 0) ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
                 }`}>
                   {tosChecked && <CheckCircle2 size={10} className="text-slate-950" />}
                 </div>
               </div>
-              <span className={`text-xs leading-relaxed ${tosScrolled ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span className={`text-xs leading-relaxed ${(tosScrolled && tosCountdown === 0) ? 'text-slate-300' : 'text-slate-600'}`}>
                 I agree to the <strong className="text-white">Terms of Use</strong> — no sharing cadet data, screenshots, or credentials.
               </span>
             </label>
@@ -613,21 +628,21 @@ const AdminWelcome = () => {
             {/* Privacy checkbox */}
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="mt-0.5 shrink-0">
-                <input type="checkbox" checked={privacyChecked} onChange={e => setPrivacyChecked(e.target.checked)} disabled={!tosScrolled} className="sr-only" />
+                <input type="checkbox" checked={privacyChecked} onChange={e => setPrivacyChecked(e.target.checked)} disabled={!(tosScrolled && tosCountdown === 0)} className="sr-only" />
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                  privacyChecked ? 'bg-yellow-500 border-yellow-500' : tosScrolled ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
+                  privacyChecked ? 'bg-yellow-500 border-yellow-500' : (tosScrolled && tosCountdown === 0) ? 'border-slate-500 group-hover:border-yellow-500/60' : 'border-slate-700 opacity-40 cursor-not-allowed'
                 }`}>
                   {privacyChecked && <CheckCircle2 size={10} className="text-slate-950" />}
                 </div>
               </div>
-              <span className={`text-xs leading-relaxed ${tosScrolled ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span className={`text-xs leading-relaxed ${(tosScrolled && tosCountdown === 0) ? 'text-slate-300' : 'text-slate-600'}`}>
                 I acknowledge the <strong className="text-white">Privacy Policy</strong> — I understand my actions are logged.
               </span>
             </label>
 
             <button
               onClick={finishOnboarding}
-              disabled={!tosChecked || !privacyChecked || !tosScrolled}
+              disabled={!tosChecked || !privacyChecked || !tosScrolled || tosCountdown > 0}
               className="w-full py-3.5 rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 bg-yellow-500 text-slate-950 hover:bg-yellow-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <Shield size={14} /> Agree &amp; Enter Portal
