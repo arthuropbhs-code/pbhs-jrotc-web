@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.44" label="Current"     />
+        <Stat value="v1.6.45" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -717,8 +717,13 @@ const AdminChangelog = () => {
           <C type="fix">Only the 12 safe form fields are written to Firestore on each save; system fields (<code className="font-mono text-[10px]">uid</code>, <code className="font-mono text-[10px]">createdAt</code>, <code className="font-mono text-[10px]">isManual</code>, TOS timestamps, etc.) are stripped server-side and never overwritten</C>
         </>} />
 
-        <Patch version="v1.6.44" date="Aug 29" title="Auth resilience — preserve role on transient Firestore errors" isCurrent changes={<>
+        <Patch version="v1.6.44" date="Aug 29" title="Auth resilience — preserve role on transient Firestore errors" changes={<>
           <C type="fix">Firestore snapshot error handler in <code className="font-mono text-[10px]">useAuth.js</code> no longer resets a logged-in admin's role to 'guest' on transient WebChannel failures (token refresh race, brief connectivity blip) — role is only set to 'guest' if no role has been established yet in this session, preventing spurious mid-session logouts</C>
+        </>} />
+
+        <Patch version="v1.6.45" date="Aug 29" title="Roster — block company officers from assigning battalion positions" isCurrent changes={<>
+          <C type="sec">Company command (1SG, level 45–69) and S1/S3 assistants can no longer create roster entries with battalion-level positions (Battalion Staff S-1 through S-7, Sergeant Major, Battalion XO, CSM, or BC) — blocked both at the Firestore rules layer (<code className="font-mono text-[10px]">allow create</code> now rejects battalion positions for sub-staff accounts) and in the UI (position dropdown filtered to company-level positions only for those tiers)</C>
+          <C type="feat">New <code className="font-mono text-[10px]">BATTALION_POSITIONS</code> export in <code className="font-mono text-[10px]">constants.js</code> is the single source of truth for the restricted position list; <code className="font-mono text-[10px]">isBattalionPosition()</code> helper added to <code className="font-mono text-[10px]">firestore.rules</code> with a keep-in-sync comment</C>
         </>} />
       </Minor>
 

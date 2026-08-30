@@ -22,7 +22,7 @@ import { writeLog } from '../lib/writeLog';
 import { useCompanies } from '../hooks/useCompanies';
 import {
   ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL,
-  JROTC_RANKS, JROTC_POSITIONS,
+  JROTC_RANKS, JROTC_POSITIONS, BATTALION_POSITIONS,
 } from '../constants';
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
@@ -989,7 +989,9 @@ const AdminRoster = () => {
                   </div>
                 </div>
 
-                {/* Position */}
+                {/* Position — battalion-level positions are restricted to staff (70+).
+                    Company command and assistants only see company-level positions.
+                    Firestore rules enforce the same gate on create. */}
                 <div>
                   <label className={lCls}>Position</label>
                   <select
@@ -998,7 +1000,9 @@ const AdminRoster = () => {
                     className={iCls}
                   >
                     <option value="">— Select —</option>
-                    {JROTC_POSITIONS.map(p => <option key={p}>{p}</option>)}
+                    {JROTC_POSITIONS
+                      .filter(p => canManageAll || !BATTALION_POSITIONS.includes(p))
+                      .map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
 

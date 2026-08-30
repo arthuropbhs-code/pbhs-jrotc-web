@@ -101,6 +101,24 @@ export const JROTC_RANKS = [
   'C/2LT', 'C/1LT', 'C/CPT', 'C/MAJ', 'C/LTC', 'C/COL',
 ];
 
+// Battalion-level positions — only staff (70+) and above may assign these on
+// roster entries. Company command (45–69) and assistants (35) are blocked both
+// client-side (filtered dropdown) and server-side (Firestore rules).
+// Keep in sync with the isBattalionPosition() helper in firestore.rules.
+export const BATTALION_POSITIONS = [
+  'Battalion Staff (S-1)',
+  'Battalion Staff (S-2)',
+  'Battalion Staff (S-3)',
+  'Battalion Staff (S-4)',
+  'Battalion Staff (S-5)',
+  'Battalion Staff (S-6)',
+  'Battalion Staff (S-7)',
+  'Sergeant Major',
+  'Battalion XO',
+  'Battalion CSM',
+  'Battalion Commander',
+];
+
 // Human-readable position labels for the signup and admin-personnel forms.
 // Listed low → high so the dropdown reads naturally. Import this in both
 // SignUp.jsx and AdminUsers.jsx — do NOT maintain a separate copy in each file.

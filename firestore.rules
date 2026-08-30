@@ -35,6 +35,18 @@ service cloud.firestore {
       ];
     }
 
+    // Returns true when a roster position string is a battalion-level slot
+    // (S-1 through S-7 staff, Sergeant Major, XO, CSM, or BC).
+    // Keep in sync with BATTALION_POSITIONS in src/constants.js.
+    function isBattalionPosition(pos) {
+      return pos in [
+        'Battalion Staff (S-1)', 'Battalion Staff (S-2)', 'Battalion Staff (S-3)',
+        'Battalion Staff (S-4)', 'Battalion Staff (S-5)', 'Battalion Staff (S-6)',
+        'Battalion Staff (S-7)', 'Sergeant Major',
+        'Battalion XO', 'Battalion CSM', 'Battalion Commander'
+      ];
+    }
+
     // Mirrors src/constants.js ROLE_HIERARCHY — keep in sync when the role
     // table changes.
     function roleLevel(roleName) {
@@ -281,9 +293,14 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() && (
         myLevel() >= 70 ||
-        (myLevel() >= 45 && request.resource.data.company == userDoc().company) ||
+        // Company command (45–69): own company only, cannot assign battalion positions.
+        (myLevel() >= 45 && myLevel() < 70 &&
+          request.resource.data.company == userDoc().company &&
+          !isBattalionPosition(request.resource.data.position)) ||
+        // S1/S3 assistants (35): own company only, also blocked from battalion positions.
         (userDoc().role in ['company_s1_assistant', 'company_s3_assistant'] &&
-          request.resource.data.company == userDoc().company)
+          request.resource.data.company == userDoc().company &&
+          !isBattalionPosition(request.resource.data.position))
       );
       allow update: if isSignedIn() && (
         // ── Access tier ────────────────────────────────────────────────────────
