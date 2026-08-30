@@ -284,7 +284,7 @@ const AdminRoster = () => {
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const showToast = (msg, isError = false) => { setToast({ msg, isError }); setTimeout(() => setToast(null), 3000); };
 
   const openCreate = () => {
     setForm({ ...EMPTY_FORM, company: activeCompany });
@@ -395,6 +395,16 @@ const AdminRoster = () => {
           userRole: role || '', targetId: editingId, targetName: payload.fullName,
         });
       } else {
+        // Duplicate guard — block if another entry already has this exact name.
+        const normalizedNew = payload.fullName.trim().toUpperCase();
+        const duplicate = rosterEntries.find(
+          e => (e.fullName || '').trim().toUpperCase() === normalizedNew
+        );
+        if (duplicate) {
+          showToast(`A cadet named "${payload.fullName}" is already on the roster`, true);
+          setSaving(false);
+          return;
+        }
         const newDoc = await addDoc(collection(db, 'roster'), {
           ...payload,
           createdAt:  serverTimestamp(),
@@ -1102,15 +1112,15 @@ const AdminRoster = () => {
 
                 {/* Company row + conditional platoon/squad or secondary company */}
                 <div className="grid grid-cols-3 gap-4">
-                  {/* Company */}
+                  {/* Company — locked for portal-linked entries (account is master) */}
                   <div>
                     <label className={lCls}>Company</label>
                     <input
                       type="text"
                       value={form.company}
-                      readOnly={!canManageAll}
-                      onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
-                      className={`${iCls} ${!canManageAll ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      readOnly={!canManageAll || accountLocked}
+                      onChange={(!canManageAll || accountLocked) ? undefined : e => setForm(f => ({ ...f, company: e.target.value }))}
+                      className={`${iCls} ${(!canManageAll || accountLocked) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -1439,9 +1449,13 @@ const AdminRoster = () => {
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl shadow-xl z-50"
+            className={`fixed bottom-6 right-6 text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl shadow-xl z-50 ${
+              toast.isError
+                ? 'bg-rose-600 text-white'
+                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+            }`}
           >
-            {toast}
+            {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>

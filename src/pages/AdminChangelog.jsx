@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.49" label="Current"     />
+        <Stat value="v1.6.50" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -731,7 +731,13 @@ const AdminChangelog = () => {
           <C type="fix">Rank field now shows "Must reflect the cadet's current issued uniform rank — not a desired or future rank" as helper text whenever the field is editable, preventing deliberate or accidental entry of aspirational ranks</C>
         </>} />
 
-        <Patch version="v1.6.49" date="Aug 30" title="Roster — battalion-in-period headcount" isCurrent changes={<>
+        <Patch version="v1.6.50" date="Aug 30" title="Roster — company lock + duplicate guard" isCurrent changes={<>
+          <C type="fix">Company field is now locked (read-only) when editing a roster entry that is linked to a portal account — company must be changed via the Accounts page, consistent with name, rank, position, and platoon</C>
+          <C type="fix">Creating a new roster entry is blocked if another cadet with the exact same name already exists — a red error toast names the duplicate so staff can verify the existing record instead of filing it twice</C>
+          <C type="fix">Error toasts (duplicate, permission denied, save failed) now appear in red to visually distinguish failures from neutral confirmations</C>
+        </>} />
+
+        <Patch version="v1.6.49" date="Aug 30" title="Roster — battalion-in-period headcount" changes={<>
           <C type="new">Company tabs on the Battalion Roster now show three stacked counts in the header: <strong>cadets</strong> (company members), <strong>battalion in period</strong> (HQ staff whose secondary company attaches them to this class period), and a <strong>total</strong> of both — gives instructors a full room headcount at a glance</C>
           <C type="fix">Accounts page: moved <code className="font-mono text-[10px]">platoonAutoLocked</code> to after the <code className="font-mono text-[10px]">formData</code> useState declaration, preventing the same TDZ crash that took down the Roster page (esbuild preserves const order in production bundles)</C>
         </>} />
