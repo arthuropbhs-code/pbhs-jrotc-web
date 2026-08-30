@@ -326,22 +326,23 @@ const AdminUsers = () => {
             query(collection(db, 'roster'), where('linkedUid', '==', editingRecord.id))
           );
           for (const rosterDoc of rosterSnap.docs) {
-            if (rosterDoc.data().syncMaster === 'portal') {
-              const existingCompany = rosterDoc.data().company;
-              const isBn = BATTALION_COMPANIES.includes(existingCompany);
-              await updateDoc(rosterDoc.ref, {
-                // Personal info — always safe to sync
-                fullName: (formData.fullName || '').trim().toUpperCase() || rosterDoc.data().fullName,
-                rank:     formData.rank     || null,
-                position: formData.position || null,
-                gender:   formData.gender   || null,
-                letLevel: formData.letLevel || null,
-                // Org structure — keep the roster's values; null out platoon/squad
-                // for battalion entries so they don't inherit portal's old values
-                ...(isBn ? { platoon: null, squad: null } : {}),
-                updatedAt: serverTimestamp(),
-              });
-            }
+            // Account page is always the source of truth for linked roster entries —
+            // push all shared fields regardless of syncMaster setting.
+            const existingCompany = rosterDoc.data().company;
+            const isBn = BATTALION_COMPANIES.includes(existingCompany);
+            await updateDoc(rosterDoc.ref, {
+              fullName: (formData.fullName || '').trim().toUpperCase() || rosterDoc.data().fullName,
+              rank:     formData.rank     || null,
+              position: formData.position || null,
+              gender:   formData.gender   || null,
+              letLevel: formData.letLevel || null,
+              // Platoon and squad: pull from account for company entries;
+              // battalion entries always have null platoon/squad.
+              ...(isBn
+                ? { platoon: null, squad: null }
+                : { platoon: formData.platoon || null, squad: formData.squad || null }),
+              updatedAt: serverTimestamp(),
+            });
           }
         } catch (syncErr) {
           // Non-fatal — portal save succeeded; just log the sync miss

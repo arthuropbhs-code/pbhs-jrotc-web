@@ -101,6 +101,10 @@ const AdminRoster = () => {
   const userLevel     = !authLoading ? (ROLE_HIERARCHY[role] || 0) : 0;
   const canManageAll  = userLevel >= STAFF_LEVEL;
   const canManageOwn  = userLevel >= COMMAND_LEVEL;
+  // True when editing an existing entry that has a linked portal account.
+  // All personal/org fields come from the portal and are locked here —
+  // changes must go through the Accounts page (managed by S1).
+  const accountLocked = !!editingId && !!form.linkedUid;
   // S1 and S3 assistants can create, edit, and delete cadets in their own
   // company — but they cannot change a cadet's name or company assignment.
   const canS1Edit     = role === 'company_s1_assistant' || role === 'company_s3_assistant';
@@ -937,9 +941,24 @@ const AdminRoster = () => {
 
               <form onSubmit={handleSave} className="p-6 space-y-4">
 
-                {/* Full Name — locked for S1 assistants when editing (can't rename a cadet) */}
+                {/* Portal-managed banner — shown when editing a linked account entry */}
+                {accountLocked && (
+                  <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-4 flex items-start gap-3">
+                    <Link2 size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-1">
+                        Managed by Portal Account
+                      </p>
+                      <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-relaxed">
+                        This cadet's name, rank, position, company, and platoon are pulled directly from their portal account — managed by the <strong>Battalion S1</strong>. To change any of these fields, contact S1 who will update it in the Accounts page. Only <strong>notes</strong> can be edited here.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Name — locked for S1 assistants and for linked account entries */}
                 {(() => {
-                  const nameLocked = canS1Edit && !!editingId;
+                  const nameLocked = (canS1Edit && !!editingId) || accountLocked;
                   return (
                     <div>
                       <label className={lCls}>
@@ -962,11 +981,10 @@ const AdminRoster = () => {
                 })()}
 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Rank — locked for company-level officers on existing entries.
-                      Firestore's rank/position lock enforces the same rule server-side;
-                      only staff (S-1 adjutant / level 70+) can change an existing rank. */}
+                  {/* Rank — locked for linked-account entries (account is master) and for
+                      company-level officers on existing entries (Firestore rank/position lock). */}
                   {(() => {
-                    const rankLocked = !canManageAll && !!editingId;
+                    const rankLocked = accountLocked || (!canManageAll && !!editingId);
                     return (
                       <div>
                         <label className={lCls}>
@@ -998,8 +1016,9 @@ const AdminRoster = () => {
                     <label className={lCls}>Gender</label>
                     <select
                       value={form.gender}
-                      onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
-                      className={iCls}
+                      disabled={accountLocked}
+                      onChange={accountLocked ? undefined : e => setForm(f => ({ ...f, gender: e.target.value }))}
+                      className={`${iCls} ${accountLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <option value="">— Select —</option>
                       {GENDERS.map(g => <option key={g}>{g}</option>)}
@@ -1007,13 +1026,14 @@ const AdminRoster = () => {
                   </div>
                 </div>
 
-                {/* Position — two-layer gate:
-                    1. When editing an existing entry, only staff (70+) can change position
+                {/* Position — three-layer gate:
+                    1. Locked entirely when a portal account is linked (account is master).
+                    2. When editing an existing entry, only staff (70+) can change position
                        (Firestore's rank/position lock enforces this server-side too).
-                    2. Battalion-level positions are hidden from sub-staff even on creates
+                    3. Battalion-level positions are hidden from sub-staff even on creates
                        (Firestore create rule enforces the same). */}
                 {(() => {
-                  const posLocked = !canManageAll && !!editingId;
+                  const posLocked = accountLocked || (!canManageAll && !!editingId);
                   return (
                     <div>
                       <label className={lCls}>
@@ -1051,22 +1071,22 @@ const AdminRoster = () => {
                     />
                   </div>
 
-                  {/* Platoon / Squad — hidden for Battalion */}
+                  {/* Platoon / Squad — hidden for Battalion; locked for portal-linked entries */}
                   {!BATTALION_COMPANIES.includes(form.company) && (
                     <div>
                       <label className={lCls}>Platoon</label>
                       <select
                         value={form.platoon}
-                        onChange={e => {
+                        disabled={accountLocked}
+                        onChange={accountLocked ? undefined : e => {
                           const next = e.target.value;
                           setForm(f => ({
                             ...f,
                             platoon: next,
-                            // Company HQ has no squad — clear it when switching to HQ
                             ...(next === 'Company HQ' ? { squad: '' } : {}),
                           }));
                         }}
-                        className={iCls}
+                        className={`${iCls} ${accountLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         <option value="">— —</option>
                         {PLATOONS.map(p => <option key={p}>{p}</option>)}
@@ -1079,8 +1099,9 @@ const AdminRoster = () => {
                       <label className={lCls}>Squad</label>
                       <select
                         value={form.squad}
-                        onChange={e => setForm(f => ({ ...f, squad: e.target.value }))}
-                        className={iCls}
+                        disabled={accountLocked}
+                        onChange={accountLocked ? undefined : e => setForm(f => ({ ...f, squad: e.target.value }))}
+                        className={`${iCls} ${accountLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         <option value="">— —</option>
                         {SQUADS.map(s => <option key={s}>{s}</option>)}
@@ -1111,8 +1132,9 @@ const AdminRoster = () => {
                   <label className={lCls}>LET Level</label>
                   <select
                     value={form.letLevel}
-                    onChange={e => setForm(f => ({ ...f, letLevel: e.target.value }))}
-                    className={iCls}
+                    disabled={accountLocked}
+                    onChange={accountLocked ? undefined : e => setForm(f => ({ ...f, letLevel: e.target.value }))}
+                    className={`${iCls} ${accountLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     <option value="">— Select —</option>
                     {LET_LEVELS.map(l => <option key={l}>{l}</option>)}
@@ -1144,70 +1166,14 @@ const AdminRoster = () => {
                   </p>
                 </div>
 
-                {/* Sync Settings — only visible when an account is linked */}
+                {/* Sync info — shown when an account is linked.
+                    Account page is always the authority; no toggle needed. */}
                 {form.linkedUid && (
-                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <RefreshCw size={10} />
-                      Sync Settings
-                    </p>
+                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-3 flex items-center gap-2">
+                    <RefreshCw size={10} className="text-slate-400 shrink-0" />
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                      Roster saves <strong className="text-slate-600 dark:text-slate-300">always</strong> push updates to the linked account. This setting controls the reverse: whether saving from the account page also updates this roster entry.
+                      Saving from the <strong className="text-slate-600 dark:text-slate-300">Accounts page</strong> always updates this entry — the portal account is the source of truth.
                     </p>
-
-                    {/* Master toggle */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { value: 'roster',  label: 'One-way sync',      desc: 'Roster → Portal only' },
-                        { value: 'portal',  label: 'Two-way sync',      desc: 'Roster ↔ Portal' },
-                      ].map(opt => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setForm(f => ({ ...f, syncMaster: opt.value }))}
-                          className={`text-left px-3 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all ${
-                            form.syncMaster === opt.value
-                              ? 'bg-yellow-500 border-yellow-500 text-slate-950'
-                              : 'border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-yellow-400'
-                          }`}
-                        >
-                          <span className="block">{opt.label}</span>
-                          <span className={`block font-normal normal-case tracking-normal mt-0.5 text-[9px] ${
-                            form.syncMaster === opt.value ? 'text-slate-800' : 'text-slate-400 dark:text-slate-600'
-                          }`}>{opt.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Pull from Portal button */}
-                    {form.syncMaster === 'portal' && userMap[form.linkedUid] && (() => {
-                      const pu = userMap[form.linkedUid];
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Only pull personal-info fields from the portal.
-                            // Company, platoon, squad, and secondaryCompany are
-                            // organisational assignments managed by the roster —
-                            // pulling them would move the entry to the wrong
-                            // company tab or overwrite battalion-null values.
-                            setForm(f => ({
-                              ...f,
-                              fullName: pu.fullName || f.fullName,
-                              rank:     pu.rank     || f.rank,
-                              position: pu.position || f.position,
-                              gender:   pu.gender   || f.gender,
-                              letLevel: pu.letLevel || f.letLevel,
-                            }));
-                            showToast('Personal info pulled from portal account');
-                          }}
-                          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:border-yellow-400 hover:text-yellow-500 transition-all"
-                        >
-                          <RefreshCw size={10} />
-                          Pull from Portal Account
-                        </button>
-                      );
-                    })()}
                   </div>
                 )}
 
