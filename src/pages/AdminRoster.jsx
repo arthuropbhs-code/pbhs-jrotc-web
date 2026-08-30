@@ -962,18 +962,36 @@ const AdminRoster = () => {
                 })()}
 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Rank */}
-                  <div>
-                    <label className={lCls}>Rank</label>
-                    <select
-                      value={form.rank}
-                      onChange={e => setForm(f => ({ ...f, rank: e.target.value }))}
-                      className={iCls}
-                    >
-                      <option value="">— Select —</option>
-                      {JROTC_RANKS.map(r => <option key={r}>{r}</option>)}
-                    </select>
-                  </div>
+                  {/* Rank — locked for company-level officers on existing entries.
+                      Firestore's rank/position lock enforces the same rule server-side;
+                      only staff (S-1 adjutant / level 70+) can change an existing rank. */}
+                  {(() => {
+                    const rankLocked = !canManageAll && !!editingId;
+                    return (
+                      <div>
+                        <label className={lCls}>
+                          Rank
+                          {rankLocked && (
+                            <span className="ml-2 text-slate-400 normal-case tracking-normal font-bold">— contact staff to change</span>
+                          )}
+                        </label>
+                        <select
+                          value={form.rank}
+                          disabled={rankLocked}
+                          onChange={rankLocked ? undefined : e => setForm(f => ({ ...f, rank: e.target.value }))}
+                          className={`${iCls} ${rankLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        >
+                          <option value="">— Select —</option>
+                          {JROTC_RANKS.map(r => <option key={r}>{r}</option>)}
+                        </select>
+                        {!rankLocked && (
+                          <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                            Must reflect the cadet's current issued uniform rank — not a desired or future rank.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Gender */}
                   <div>
@@ -989,22 +1007,35 @@ const AdminRoster = () => {
                   </div>
                 </div>
 
-                {/* Position — battalion-level positions are restricted to staff (70+).
-                    Company command and assistants only see company-level positions.
-                    Firestore rules enforce the same gate on create. */}
-                <div>
-                  <label className={lCls}>Position</label>
-                  <select
-                    value={form.position}
-                    onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-                    className={iCls}
-                  >
-                    <option value="">— Select —</option>
-                    {JROTC_POSITIONS
-                      .filter(p => canManageAll || !BATTALION_POSITIONS.includes(p))
-                      .map(p => <option key={p}>{p}</option>)}
-                  </select>
-                </div>
+                {/* Position — two-layer gate:
+                    1. When editing an existing entry, only staff (70+) can change position
+                       (Firestore's rank/position lock enforces this server-side too).
+                    2. Battalion-level positions are hidden from sub-staff even on creates
+                       (Firestore create rule enforces the same). */}
+                {(() => {
+                  const posLocked = !canManageAll && !!editingId;
+                  return (
+                    <div>
+                      <label className={lCls}>
+                        Position
+                        {posLocked && (
+                          <span className="ml-2 text-slate-400 normal-case tracking-normal font-bold">— contact staff to change</span>
+                        )}
+                      </label>
+                      <select
+                        value={form.position}
+                        disabled={posLocked}
+                        onChange={posLocked ? undefined : e => setForm(f => ({ ...f, position: e.target.value }))}
+                        className={`${iCls} ${posLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="">— Select —</option>
+                        {JROTC_POSITIONS
+                          .filter(p => canManageAll || !BATTALION_POSITIONS.includes(p))
+                          .map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  );
+                })()}
 
                 {/* Company row + conditional platoon/squad or secondary company */}
                 <div className="grid grid-cols-3 gap-4">

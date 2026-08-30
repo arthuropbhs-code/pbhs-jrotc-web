@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.45" label="Current"     />
+        <Stat value="v1.6.46" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -721,9 +721,14 @@ const AdminChangelog = () => {
           <C type="fix">Firestore snapshot error handler in <code className="font-mono text-[10px]">useAuth.js</code> no longer resets a logged-in admin's role to 'guest' on transient WebChannel failures (token refresh race, brief connectivity blip) — role is only set to 'guest' if no role has been established yet in this session, preventing spurious mid-session logouts</C>
         </>} />
 
-        <Patch version="v1.6.45" date="Aug 29" title="Roster — block company officers from assigning battalion positions" isCurrent changes={<>
+        <Patch version="v1.6.45" date="Aug 29" title="Roster — block company officers from assigning battalion positions" changes={<>
           <C type="sec">Company command (1SG, level 45–69) and S1/S3 assistants can no longer create roster entries with battalion-level positions (Battalion Staff S-1 through S-7, Sergeant Major, Battalion XO, CSM, or BC) — blocked both at the Firestore rules layer (<code className="font-mono text-[10px]">allow create</code> now rejects battalion positions for sub-staff accounts) and in the UI (position dropdown filtered to company-level positions only for those tiers)</C>
           <C type="feat">New <code className="font-mono text-[10px]">BATTALION_POSITIONS</code> export in <code className="font-mono text-[10px]">constants.js</code> is the single source of truth for the restricted position list; <code className="font-mono text-[10px]">isBattalionPosition()</code> helper added to <code className="font-mono text-[10px]">firestore.rules</code> with a keep-in-sync comment</C>
+        </>} />
+
+        <Patch version="v1.6.46" date="Aug 29" title="Roster — lock rank and position fields for sub-staff on edits" isCurrent changes={<>
+          <C type="sec">Rank and position fields in the roster edit modal are now read-only for company command (level 45–69) and assistants when editing an existing entry — matching the Firestore rank/position lock that already blocked the server-side write; sub-staff see a "contact staff to change" label and grayed-out selects</C>
+          <C type="fix">Rank field now shows "Must reflect the cadet's current issued uniform rank — not a desired or future rank" as helper text whenever the field is editable, preventing deliberate or accidental entry of aspirational ranks</C>
         </>} />
       </Minor>
 
