@@ -105,7 +105,11 @@ const AdminRoster = () => {
   // True when editing an existing entry that has a linked portal account.
   // All personal/org fields come from the portal and are locked here —
   // changes must go through the Accounts page (managed by S1).
-  const accountLocked = !!editingId && !!form.linkedUid;
+  const accountLocked     = !!editingId && !!form.linkedUid;
+  // Platoon is forced to "Company HQ" (and the select locked) when the
+  // selected position is a command-tier role. Computed here (not inside JSX)
+  // to avoid a Rollup TDZ issue with the imported constant in the render path.
+  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(form.position);
   // S1 and S3 assistants can create, edit, and delete cadets in their own
   // company — but they cannot change a cadet's name or company assignment.
   const canS1Edit     = role === 'company_s1_assistant' || role === 'company_s3_assistant';
@@ -1088,32 +1092,27 @@ const AdminRoster = () => {
                     <div>
                       <label className={lCls}>
                         Platoon
-                        {COMPANY_HQ_LOCKED_POSITIONS.includes(form.position) && !accountLocked && (
+                        {platoonAutoLocked && !accountLocked && (
                           <span className="ml-2 text-slate-400 normal-case tracking-normal font-bold">— fixed for this position</span>
                         )}
                       </label>
-                      {/* Locked if: (a) portal account is master, or (b) position forces Company HQ. */}
-                      {(() => {
-                        const platoonLocked = accountLocked || COMPANY_HQ_LOCKED_POSITIONS.includes(form.position);
-                        return (
-                          <select
-                            value={form.platoon}
-                            disabled={platoonLocked}
-                            onChange={platoonLocked ? undefined : e => {
-                              const next = e.target.value;
-                              setForm(f => ({
-                                ...f,
-                                platoon: next,
-                                ...(next === 'Company HQ' ? { squad: '' } : {}),
-                              }));
-                            }}
-                            className={`${iCls} ${platoonLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            <option value="">— —</option>
-                            {PLATOONS.map(p => <option key={p}>{p}</option>)}
-                          </select>
-                        );
-                      })()}
+                      {/* Locked when portal account is master OR position forces Company HQ. */}
+                      <select
+                        value={form.platoon}
+                        disabled={accountLocked || platoonAutoLocked}
+                        onChange={accountLocked || platoonAutoLocked ? undefined : e => {
+                          const next = e.target.value;
+                          setForm(f => ({
+                            ...f,
+                            platoon: next,
+                            ...(next === 'Company HQ' ? { squad: '' } : {}),
+                          }));
+                        }}
+                        className={`${iCls} ${accountLocked || platoonAutoLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="">— —</option>
+                        {PLATOONS.map(p => <option key={p}>{p}</option>)}
+                      </select>
                     </div>
                   )}
 

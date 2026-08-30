@@ -135,6 +135,10 @@ const AdminUsers = () => {
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isAuthorized = userLevel >= STAFF_LEVEL;
+  // Platoon is forced to "Company HQ" (and locked) for command-tier positions.
+  // Computed here (not inside JSX IIFE) to avoid a Rollup TDZ issue with the
+  // imported constant being accessed before initialization in the render path.
+  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position);
   const isBattalionStaff = userLevel >= ADMIN_LEVEL || role === 's6_technology' || role === 's1_adjutant';
 
   // Mirrors api/admin-update-account.js's EMAIL_MANAGER_ROLES - this is just
@@ -805,31 +809,26 @@ const AdminUsers = () => {
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">
                       Platoon
-                      {COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position) && (
+                      {platoonAutoLocked && (
                         <span className="ml-2 text-slate-400 normal-case font-bold tracking-normal">— fixed for this position</span>
                       )}
                     </label>
                     {/* Auto-locked when position forces Company HQ (Commander, XO, 1SG, MSG). */}
-                    {(() => {
-                      const platoonLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position);
-                      return (
-                        <select
-                          className={`w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none ${platoonLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          value={formData.platoon}
-                          disabled={platoonLocked}
-                          onChange={platoonLocked ? undefined : e => {
-                            const next = e.target.value;
-                            setFormData({
-                              ...formData,
-                              platoon: next,
-                              ...(next === 'Company HQ' ? { squad: '' } : {}),
-                            });
-                          }}
-                        >
-                          {PLATOONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
-                        </select>
-                      );
-                    })()}
+                    <select
+                      className={`w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none ${platoonAutoLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      value={formData.platoon}
+                      disabled={platoonAutoLocked}
+                      onChange={platoonAutoLocked ? undefined : e => {
+                        const next = e.target.value;
+                        setFormData({
+                          ...formData,
+                          platoon: next,
+                          ...(next === 'Company HQ' ? { squad: '' } : {}),
+                        });
+                      }}
+                    >
+                      {PLATOONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
+                    </select>
                   </div>
                 )}
 
