@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.41" label="Current"     />
+        <Stat value="v1.6.44" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -711,10 +711,14 @@ const AdminChangelog = () => {
           <C type="fix">Manage Personnel: catch block now surfaces the real Firestore error code and message in the toast instead of the generic "Error Saving Record" — makes root-cause diagnosis possible from the UI without opening DevTools</C>
         </>} />
 
-        <Patch version="v1.6.43" date="Aug 29" title="Manage Personnel — server-side account saves" isCurrent changes={<>
+        <Patch version="v1.6.43" date="Aug 29" title="Manage Personnel — server-side account saves" changes={<>
           <C type="fix">Account saves (approval, role change, profile edit) now route through the Admin SDK server endpoint instead of direct Firestore client writes — eliminates the <code className="font-mono text-[10px]">permission-denied</code> failure that occurred when Firebase Installations was degraded and the Firestore security rules' cross-document <code className="font-mono text-[10px]">get()</code> calls failed</C>
           <C type="sec">Server enforces the same role-ceiling restriction (cannot assign a role ≥ your own level), now independently of Firestore rules — verified via the service account rather than client-side rules evaluation</C>
           <C type="fix">Only the 12 safe form fields are written to Firestore on each save; system fields (<code className="font-mono text-[10px]">uid</code>, <code className="font-mono text-[10px]">createdAt</code>, <code className="font-mono text-[10px]">isManual</code>, TOS timestamps, etc.) are stripped server-side and never overwritten</C>
+        </>} />
+
+        <Patch version="v1.6.44" date="Aug 29" title="Auth resilience — preserve role on transient Firestore errors" isCurrent changes={<>
+          <C type="fix">Firestore snapshot error handler in <code className="font-mono text-[10px]">useAuth.js</code> no longer resets a logged-in admin's role to 'guest' on transient WebChannel failures (token refresh race, brief connectivity blip) — role is only set to 'guest' if no role has been established yet in this session, preventing spurious mid-session logouts</C>
         </>} />
       </Minor>
 

@@ -52,7 +52,11 @@ export const useAuth = () => {
           },
           (error) => {
             console.warn("Firestore: Access pending or denied.", error);
-            setRole('guest');
+            // Only fall back to 'guest' if no role has been established yet
+            // for this session. A transient WebChannel failure (token refresh,
+            // brief connectivity blip) should never kick a logged-in admin by
+            // resetting their role — keep whatever role we already confirmed.
+            setRole(prev => prev ?? 'guest');
             setLoading(false);
           }
         );
