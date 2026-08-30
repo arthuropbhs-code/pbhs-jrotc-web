@@ -135,10 +135,6 @@ const AdminUsers = () => {
 
   const userLevel = ROLE_HIERARCHY[role] || 0;
   const isAuthorized = userLevel >= STAFF_LEVEL;
-  // Platoon is forced to "Company HQ" (and locked) for command-tier positions.
-  // Computed here (not inside JSX IIFE) to avoid a Rollup TDZ issue with the
-  // imported constant being accessed before initialization in the render path.
-  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position);
   const isBattalionStaff = userLevel >= ADMIN_LEVEL || role === 's6_technology' || role === 's1_adjutant';
 
   // Mirrors api/admin-update-account.js's EMAIL_MANAGER_ROLES - this is just
@@ -178,6 +174,11 @@ const AdminUsers = () => {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+
+  // Must come AFTER formData useState — const is not hoisted, so placing this
+  // before its dependency causes a TDZ crash in the production bundle where
+  // esbuild preserves declaration order (same fix applied to AdminRoster).
+  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position);
 
   useEffect(() => {
     if (!authLoading && isAuthorized) {
