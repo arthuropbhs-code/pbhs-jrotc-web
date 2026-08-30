@@ -105,11 +105,6 @@ const AdminRoster = () => {
   // True when editing an existing entry that has a linked portal account.
   // All personal/org fields come from the portal and are locked here —
   // changes must go through the Accounts page (managed by S1).
-  const accountLocked     = !!editingId && !!form.linkedUid;
-  // Platoon is forced to "Company HQ" (and the select locked) when the
-  // selected position is a command-tier role. Computed here (not inside JSX)
-  // to avoid a Rollup TDZ issue with the imported constant in the render path.
-  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(form.position);
   // S1 and S3 assistants can create, edit, and delete cadets in their own
   // company — but they cannot change a cadet's name or company assignment.
   const canS1Edit     = role === 'company_s1_assistant' || role === 'company_s3_assistant';
@@ -147,6 +142,11 @@ const AdminRoster = () => {
   const [showModal,   setShowModal]   = useState(false);
   const [editingId,   setEditingId]   = useState(null);
   const [form,        setForm]        = useState(EMPTY_FORM);
+  // Must come AFTER editingId and form useState declarations — const is not
+  // hoisted, so placing these before their dependencies causes a TDZ crash
+  // in the production bundle where esbuild preserves the declaration order.
+  const accountLocked     = !!editingId && !!form.linkedUid;
+  const platoonAutoLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(form.position);
   const [saving,      setSaving]      = useState(false);
   const [deleteConf,  setDeleteConf]  = useState(null);
   const [toast,       setToast]       = useState(null);
