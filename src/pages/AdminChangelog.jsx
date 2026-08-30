@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.50" label="Current"     />
+        <Stat value="v1.6.51" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -731,7 +731,14 @@ const AdminChangelog = () => {
           <C type="fix">Rank field now shows "Must reflect the cadet's current issued uniform rank — not a desired or future rank" as helper text whenever the field is editable, preventing deliberate or accidental entry of aspirational ranks</C>
         </>} />
 
-        <Patch version="v1.6.50" date="Aug 30" title="Roster — company lock + duplicate guard" isCurrent changes={<>
+        <Patch version="v1.6.51" date="Aug 30" title="FCM push notifications" isCurrent changes={<>
+          <C type="new">Cadets and staff can now opt in to push notifications on their device — go to <strong>My Profile → Push Notifications</strong> and tap Enable; the browser asks for permission once, after which announcements arrive on the phone lock screen even when the portal isn't open</C>
+          <C type="new">Sending a Global Broadcast automatically fires a push notification to every subscribed device — no extra steps required for command staff</C>
+          <C type="new">Foreground notifications (tab is open) are delivered in-app; background notifications (tab closed or minimised) are delivered by the browser as a native OS alert</C>
+          <C type="new">Stale tokens (devices that unsubscribed or cleared site data) are automatically removed from Firestore after a failed send, keeping the subscriber list clean</C>
+        </>} />
+
+        <Patch version="v1.6.50" date="Aug 30" title="Roster — company lock + duplicate guard" changes={<>
           <C type="fix">Company field is now locked (read-only) when editing a roster entry that is linked to a portal account — company must be changed via the Accounts page, consistent with name, rank, position, and platoon</C>
           <C type="fix">Creating a new roster entry is blocked if another cadet with the exact same name already exists — a red error toast names the duplicate so staff can verify the existing record instead of filing it twice</C>
           <C type="fix">Error toasts (duplicate, permission denied, save failed) now appear in red to visually distinguish failures from neutral confirmations</C>

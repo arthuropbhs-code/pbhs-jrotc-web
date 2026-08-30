@@ -34,10 +34,11 @@ const AdminAnnouncements = () => {
   const handleBroadcast = async (e) => {
     e.preventDefault();
     try {
+      const issuer = `${userData?.rank || ''} ${userData?.fullName || userData?.name || 'Staff'}`.trim();
       await addDoc(collection(db, "announcements"), {
         content: text,
         timestamp: serverTimestamp(),
-        issuer: `${userData?.rank || ''} ${userData?.fullName || userData?.name || 'Staff'}`.trim(),
+        issuer,
         issuerLevel: userPower,
         target: 'All',
         active: true,
@@ -51,6 +52,20 @@ const AdminAnnouncements = () => {
         userId: user?.uid || '', userFullName: userData?.fullName || '',
         userRole: role || '',
       });
+
+      // Push notification — fire-and-forget: a push failure should never
+      // block or surface an error for what is a secondary delivery channel.
+      user?.getIdToken().then(idToken =>
+        fetch('/api/send-push', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            idToken,
+            title: 'Broadcast — PBHS JROTC',
+            body:  `${issuer}: ${text.substring(0, 160)}`,
+          }),
+        }).catch(err => console.warn('send-push failed (non-critical):', err))
+      ).catch(() => {});
     } catch (err) {
       console.error("Broadcast Error:", err);
       showToast('error', 'Broadcast failed. Try again.');

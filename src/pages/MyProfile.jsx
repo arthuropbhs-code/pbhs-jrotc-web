@@ -13,7 +13,8 @@ import {
 } from 'firebase/auth';
 import { ROLE_LABELS, ROLE_HIERARCHY, STAFF_LEVEL } from '../constants';
 import Footer from '../components/Footer';
-import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff, BookOpen, Calendar, FileText, Activity, DollarSign, Shirt } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Save, KeyRound, CheckCircle, Trash2, Camera, Loader2, Sun, Moon, Monitor, Smartphone, ShieldCheck, ShieldOff, BookOpen, Calendar, FileText, Activity, DollarSign, Shirt, Bell, BellOff } from 'lucide-react';
+import { requestAndStoreToken, removeAndClearToken, getCurrentToken } from '../lib/fcm';
 import { uploadToCloudinary } from '../utils/cloudinaryUpload';
 import { useThemeContext } from '../contexts/ThemeContext';
 import ScrambleText from '../components/ScrambleText';
@@ -125,6 +126,12 @@ const MyProfile = () => {
   const [mfaVerificationId, setMfaVerificationId] = useState('');
   const [mfaStatus, setMfaStatus] = useState(null); // null | 'sending' | 'verifying' | 'success' | error string
 
+  // Push notifications
+  // 'checking' | 'unsupported' | 'blocked' | 'enabled' | 'disabled'
+  const [notifStatus,  setNotifStatus]  = useState('checking');
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [activeToken,  setActiveToken]  = useState(null); // current FCM token for this device
+
   const resetCooldownSeconds = Math.max(0, Math.ceil((resetCooldownUntil - now) / 1000));
 
   // Only ticks while an actual cooldown is running - not on every render.
@@ -147,6 +154,35 @@ const MyProfile = () => {
   useEffect(() => {
     setLoginEmail(user?.email || '');
   }, [user?.email]);
+
+  // Detect push notification support and current opt-in state on mount.
+  useEffect(() => {
+    if (!user) return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      setNotifStatus('unsupported');
+      return;
+    }
+    const perm = Notification.permission;
+    if (perm === 'denied') { setNotifStatus('blocked'); return; }
+    if (perm === 'granted') {
+      // Silently refresh the stored token so stale tokens don't linger.
+      getCurrentToken().then(tok => {
+        if (tok) {
+          setActiveToken(tok);
+          setNotifStatus('enabled');
+          // Ensure the token is stored (handles the case where storage was
+          // cleared but the browser still has the same granted permission).
+          import('../lib/fcm').then(({ requestAndStoreToken: store }) =>
+            store(user.uid).catch(() => {})
+          );
+        } else {
+          setNotifStatus('disabled');
+        }
+      }).catch(() => setNotifStatus('disabled'));
+    } else {
+      setNotifStatus('disabled');
+    }
+  }, [user?.uid]);
 
   // Reflect current MFA enrollment whenever the auth user object updates.
   useEffect(() => {
@@ -416,6 +452,40 @@ const MyProfile = () => {
       setMfaStatus(null);
     } catch (err) {
       setMfaStatus(err.message || 'Failed to remove 2FA. Try again.');
+    }
+  };
+
+  // ── Push notification handlers ──────────────────────────────────────────────
+
+  const handleEnableNotifications = async () => {
+    if (!user) return;
+    setNotifLoading(true);
+    try {
+      const token = await requestAndStoreToken(user.uid);
+      if (token) {
+        setActiveToken(token);
+        setNotifStatus('enabled');
+      } else if (Notification.permission === 'denied') {
+        setNotifStatus('blocked');
+      }
+    } catch (err) {
+      console.error('FCM enable failed:', err);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const handleDisableNotifications = async () => {
+    if (!user) return;
+    setNotifLoading(true);
+    try {
+      await removeAndClearToken(user.uid, activeToken);
+      setActiveToken(null);
+      setNotifStatus('disabled');
+    } catch (err) {
+      console.error('FCM disable failed:', err);
+    } finally {
+      setNotifLoading(false);
     }
   };
 
@@ -932,6 +1002,72 @@ const MyProfile = () => {
             ))}
           </div>
         </div>
+
+        {/* PUSH NOTIFICATIONS */}
+        {notifStatus !== 'unsupported' && (
+          <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-3xl p-8 shadow-sm dark:shadow-none mt-6">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Push Notifications</h2>
+            <div className="flex items-start justify-between gap-6 flex-wrap">
+              <div className="flex-1 min-w-0">
+                {notifStatus === 'enabled' && (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Bell size={15} className="text-yellow-500 shrink-0" /> Notifications enabled
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      This device will receive announcements and alerts from command staff.
+                    </p>
+                  </>
+                )}
+                {notifStatus === 'disabled' && (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <BellOff size={15} className="text-slate-400 shrink-0" /> Notifications off
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      Enable to receive announcements directly on this device.
+                    </p>
+                  </>
+                )}
+                {notifStatus === 'blocked' && (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <BellOff size={15} className="text-red-500 shrink-0" /> Notifications blocked
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      Your browser is blocking notifications. Go to your browser settings → Site permissions → Notifications → allow pbhsjrotc.com.
+                    </p>
+                  </>
+                )}
+                {notifStatus === 'checking' && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                    <Loader2 size={12} className="animate-spin" /> Checking…
+                  </p>
+                )}
+              </div>
+              {notifStatus === 'enabled' && (
+                <button
+                  onClick={handleDisableNotifications}
+                  disabled={notifLoading}
+                  className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-50"
+                >
+                  {notifLoading ? <Loader2 size={12} className="animate-spin" /> : <BellOff size={13} />}
+                  Disable
+                </button>
+              )}
+              {notifStatus === 'disabled' && (
+                <button
+                  onClick={handleEnableNotifications}
+                  disabled={notifLoading}
+                  className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 disabled:opacity-50"
+                >
+                  {notifLoading ? <Loader2 size={12} className="animate-spin" /> : <Bell size={13} />}
+                  Enable
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* DANGER ZONE */}
         <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 rounded-3xl p-8 shadow-sm dark:shadow-none mt-6">
