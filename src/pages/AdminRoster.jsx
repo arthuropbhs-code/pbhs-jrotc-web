@@ -267,6 +267,21 @@ const AdminRoster = () => {
     );
   }, [rosterEntries, activeCompany, search]);
 
+  // ── Period counts ─────────────────────────────────────────────────────────
+  // isOnBattalionTab: viewing the HQ tab — battalion-in-period concept N/A.
+  // companyTotal: unfiltered headcount for the active company/tab.
+  // battalionInPeriod: battalion HQ members whose secondaryCompany attaches
+  //   them to this company's class period — adds to the room's headcount.
+  const isOnBattalionTab = BATTALION_COMPANIES.includes(activeCompany);
+  const companyTotal = isOnBattalionTab
+    ? rosterEntries.filter(e => BATTALION_COMPANIES.includes(e.company)).length
+    : rosterEntries.filter(e => e.company === activeCompany).length;
+  const battalionInPeriod = isOnBattalionTab
+    ? 0
+    : rosterEntries.filter(e =>
+        BATTALION_COMPANIES.includes(e.company) && e.secondaryCompany === activeCompany
+      ).length;
+
   // ── helpers ───────────────────────────────────────────────────────────────
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
@@ -694,9 +709,21 @@ const AdminRoster = () => {
               {BATTALION_COMPANIES.includes(myCompany) ? `${myCompany} · HQ` : `${myCompany} Company`}
             </span>
           )}
-          <span className="ml-auto self-center text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
-            {visibleEntries.length} cadet{visibleEntries.length !== 1 ? 's' : ''}
-          </span>
+          <div className="ml-auto self-center text-right space-y-0.5">
+            <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
+              {visibleEntries.length} cadet{visibleEntries.length !== 1 ? 's' : ''}
+            </p>
+            {!isOnBattalionTab && (
+              <>
+                <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
+                  {battalionInPeriod} battalion in period
+                </p>
+                <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-t border-slate-200 dark:border-white/10 pt-0.5">
+                  {companyTotal + battalionInPeriod} total
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Search ── */}

@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.48" label="Current"     />
+        <Stat value="v1.6.49" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -731,7 +731,12 @@ const AdminChangelog = () => {
           <C type="fix">Rank field now shows "Must reflect the cadet's current issued uniform rank — not a desired or future rank" as helper text whenever the field is editable, preventing deliberate or accidental entry of aspirational ranks</C>
         </>} />
 
-        <Patch version="v1.6.48" date="Aug 29" title="Auto Company HQ platoon + gender field parity" isCurrent changes={<>
+        <Patch version="v1.6.49" date="Aug 30" title="Roster — battalion-in-period headcount" isCurrent changes={<>
+          <C type="new">Company tabs on the Battalion Roster now show three stacked counts in the header: <strong>cadets</strong> (company members), <strong>battalion in period</strong> (HQ staff whose secondary company attaches them to this class period), and a <strong>total</strong> of both — gives instructors a full room headcount at a glance</C>
+          <C type="fix">Accounts page: moved <code className="font-mono text-[10px]">platoonAutoLocked</code> to after the <code className="font-mono text-[10px]">formData</code> useState declaration, preventing the same TDZ crash that took down the Roster page (esbuild preserves const order in production bundles)</C>
+        </>} />
+
+        <Patch version="v1.6.48" date="Aug 29" title="Auto Company HQ platoon + gender field parity" changes={<>
           <C type="new">Setting a position to Company Commander, Company XO, First Sergeant, or Master Sergeant now automatically assigns <strong>Company HQ</strong> as the platoon and locks the platoon select — applies on both the Roster and Accounts pages, no button press required</C>
           <C type="new">Setting a Company S1–S7 Assistant position automatically defaults platoon to <strong>Company HQ</strong> (overridable — staff assistants may hold a double slot in a platoon)</C>
           <C type="fix">Gender field added to the Accounts (AdminUsers) form so all personal fields are editable there — previously gender was synced to the roster but could not be set from the Accounts page</C>
