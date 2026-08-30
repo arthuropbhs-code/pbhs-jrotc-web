@@ -1,0 +1,4 @@
+# Exclude test files from the api/ directory — Vercel deploys every .js file
+# in api/ as a serverless function, and the Hobby plan caps at 12. Test files
+# don't need to be deployed as endpoints.
+api/**/*.test.js
