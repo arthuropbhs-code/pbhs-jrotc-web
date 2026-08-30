@@ -23,6 +23,7 @@ import { useCompanies } from '../hooks/useCompanies';
 import {
   ROLE_HIERARCHY, STAFF_LEVEL, COMMAND_LEVEL, ADMIN_LEVEL,
   JROTC_RANKS, JROTC_POSITIONS, BATTALION_POSITIONS,
+  COMPANY_HQ_LOCKED_POSITIONS, COMPANY_HQ_DEFAULT_POSITIONS,
 } from '../constants';
 import {
   Link2, UserCircle, Plus, Edit3, Trash2, X,
@@ -1045,7 +1046,18 @@ const AdminRoster = () => {
                       <select
                         value={form.position}
                         disabled={posLocked}
-                        onChange={posLocked ? undefined : e => setForm(f => ({ ...f, position: e.target.value }))}
+                        onChange={posLocked ? undefined : e => {
+                          const newPos = e.target.value;
+                          const isHqLocked   = COMPANY_HQ_LOCKED_POSITIONS.includes(newPos);
+                          const isHqDefault  = COMPANY_HQ_DEFAULT_POSITIONS.includes(newPos);
+                          setForm(f => ({
+                            ...f,
+                            position: newPos,
+                            // Auto-assign Company HQ platoon for command/staff positions.
+                            // Locked positions cannot override it; default positions can.
+                            ...(isHqLocked || isHqDefault ? { platoon: 'Company HQ', squad: '' } : {}),
+                          }));
+                        }}
                         className={`${iCls} ${posLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         <option value="">— Select —</option>
@@ -1074,23 +1086,34 @@ const AdminRoster = () => {
                   {/* Platoon / Squad — hidden for Battalion; locked for portal-linked entries */}
                   {!BATTALION_COMPANIES.includes(form.company) && (
                     <div>
-                      <label className={lCls}>Platoon</label>
-                      <select
-                        value={form.platoon}
-                        disabled={accountLocked}
-                        onChange={accountLocked ? undefined : e => {
-                          const next = e.target.value;
-                          setForm(f => ({
-                            ...f,
-                            platoon: next,
-                            ...(next === 'Company HQ' ? { squad: '' } : {}),
-                          }));
-                        }}
-                        className={`${iCls} ${accountLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      >
-                        <option value="">— —</option>
-                        {PLATOONS.map(p => <option key={p}>{p}</option>)}
-                      </select>
+                      <label className={lCls}>
+                        Platoon
+                        {COMPANY_HQ_LOCKED_POSITIONS.includes(form.position) && !accountLocked && (
+                          <span className="ml-2 text-slate-400 normal-case tracking-normal font-bold">— fixed for this position</span>
+                        )}
+                      </label>
+                      {/* Locked if: (a) portal account is master, or (b) position forces Company HQ. */}
+                      {(() => {
+                        const platoonLocked = accountLocked || COMPANY_HQ_LOCKED_POSITIONS.includes(form.position);
+                        return (
+                          <select
+                            value={form.platoon}
+                            disabled={platoonLocked}
+                            onChange={platoonLocked ? undefined : e => {
+                              const next = e.target.value;
+                              setForm(f => ({
+                                ...f,
+                                platoon: next,
+                                ...(next === 'Company HQ' ? { squad: '' } : {}),
+                              }));
+                            }}
+                            className={`${iCls} ${platoonLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          >
+                            <option value="">— —</option>
+                            {PLATOONS.map(p => <option key={p}>{p}</option>)}
+                          </select>
+                        );
+                      })()}
                     </div>
                   )}
 

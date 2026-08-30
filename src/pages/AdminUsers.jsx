@@ -13,7 +13,10 @@ import {
   ShieldCheck, ShieldOff, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, JROTC_POSITIONS } from '../constants';
+import {
+  ROLE_HIERARCHY, ROLE_LABELS, ADMIN_LEVEL, STAFF_LEVEL, JROTC_POSITIONS,
+  COMPANY_HQ_LOCKED_POSITIONS, COMPANY_HQ_DEFAULT_POSITIONS,
+} from '../constants';
 import { useCompanies } from '../hooks/useCompanies';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { RosterRowSkeleton } from '../components/Skeleton';
@@ -800,17 +803,33 @@ const AdminUsers = () => {
                 {/* Platoon / Squad — hidden for Battalion members */}
                 {!BATTALION_COMPANIES.includes(formData.company) && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Platoon</label>
-                    <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.platoon} onChange={e => {
-                      const next = e.target.value;
-                      setFormData({
-                        ...formData,
-                        platoon: next,
-                        ...(next === 'Company HQ' ? { squad: '' } : {}),
-                      });
-                    }}>
-                      {PLATOONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
-                    </select>
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">
+                      Platoon
+                      {COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position) && (
+                        <span className="ml-2 text-slate-400 normal-case font-bold tracking-normal">— fixed for this position</span>
+                      )}
+                    </label>
+                    {/* Auto-locked when position forces Company HQ (Commander, XO, 1SG, MSG). */}
+                    {(() => {
+                      const platoonLocked = COMPANY_HQ_LOCKED_POSITIONS.includes(formData.position);
+                      return (
+                        <select
+                          className={`w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none ${platoonLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          value={formData.platoon}
+                          disabled={platoonLocked}
+                          onChange={platoonLocked ? undefined : e => {
+                            const next = e.target.value;
+                            setFormData({
+                              ...formData,
+                              platoon: next,
+                              ...(next === 'Company HQ' ? { squad: '' } : {}),
+                            });
+                          }}
+                        >
+                          {PLATOONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
+                        </select>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -861,8 +880,30 @@ const AdminUsers = () => {
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Gender</label>
+                  <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}>
+                    <option value="">— Select —</option>
+                    {['Male', 'Female', 'Other'].map(g => <option key={g} value={g} className="bg-white dark:bg-slate-900">{g}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-1">Position</label>
-                  <select className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})}>
+                  <select
+                    className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 p-4 rounded-2xl outline-none text-sm font-bold text-slate-900 dark:text-white appearance-none"
+                    value={formData.position}
+                    onChange={e => {
+                      const newPos = e.target.value;
+                      const isHqLocked  = COMPANY_HQ_LOCKED_POSITIONS.includes(newPos);
+                      const isHqDefault = COMPANY_HQ_DEFAULT_POSITIONS.includes(newPos);
+                      setFormData({
+                        ...formData,
+                        position: newPos,
+                        // Auto-assign Company HQ for command/staff roles; lock for forced positions.
+                        ...(isHqLocked || isHqDefault ? { platoon: 'Company HQ', squad: '' } : {}),
+                      });
+                    }}
+                  >
                     {JROTC_POSITIONS.map(p => <option key={p} value={p} className="bg-white dark:bg-slate-900">{p}</option>)}
                   </select>
                 </div>

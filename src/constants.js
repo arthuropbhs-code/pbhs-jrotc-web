@@ -101,6 +101,27 @@ export const JROTC_RANKS = [
   'C/2LT', 'C/1LT', 'C/CPT', 'C/MAJ', 'C/LTC', 'C/COL',
 ];
 
+// Positions that ALWAYS get "Company HQ" as their platoon — non-negotiable.
+// Changing position to one of these auto-locks the platoon select to "Company HQ".
+export const COMPANY_HQ_LOCKED_POSITIONS = [
+  'Company Commander',
+  'Company XO',
+  'First Sergeant',
+  'Master Sergeant',
+];
+
+// Positions that DEFAULT to "Company HQ" but can still be overridden
+// (e.g. a staff assistant who also holds a platoon-level slot).
+export const COMPANY_HQ_DEFAULT_POSITIONS = [
+  'Company S1 Assistant',
+  'Company S2 Assistant',
+  'Company S3 Assistant',
+  'Company S4 Assistant',
+  'Company S5 Assistant',
+  'Company S6 Assistant',
+  'Company S7 Assistant',
+];
+
 // Battalion-level positions — only staff (70+) and above may assign these on
 // roster entries. Company command (45–69) and assistants (35) are blocked both
 // client-side (filtered dropdown) and server-side (Firestore rules).

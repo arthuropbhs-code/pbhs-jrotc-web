@@ -121,7 +121,7 @@ const AdminChangelog = () => {
         <Stat value="359"     label="Commits"     />
         <Stat value="22"      label="Role Levels" />
         <Stat value="213d"    label="In Dev"      />
-        <Stat value="v1.6.47" label="Current"     />
+        <Stat value="v1.6.48" label="Current"     />
       </div>
 
       {/* Legend */}
@@ -731,7 +731,14 @@ const AdminChangelog = () => {
           <C type="fix">Rank field now shows "Must reflect the cadet's current issued uniform rank — not a desired or future rank" as helper text whenever the field is editable, preventing deliberate or accidental entry of aspirational ranks</C>
         </>} />
 
-        <Patch version="v1.6.47" date="Aug 29" title="Roster — portal account is source of truth for linked entries" isCurrent changes={<>
+        <Patch version="v1.6.48" date="Aug 29" title="Auto Company HQ platoon + gender field parity" isCurrent changes={<>
+          <C type="new">Setting a position to Company Commander, Company XO, First Sergeant, or Master Sergeant now automatically assigns <strong>Company HQ</strong> as the platoon and locks the platoon select — applies on both the Roster and Accounts pages, no button press required</C>
+          <C type="new">Setting a Company S1–S7 Assistant position automatically defaults platoon to <strong>Company HQ</strong> (overridable — staff assistants may hold a double slot in a platoon)</C>
+          <C type="fix">Gender field added to the Accounts (AdminUsers) form so all personal fields are editable there — previously gender was synced to the roster but could not be set from the Accounts page</C>
+          <C type="fix">Platoon select label shows "— fixed for this position" hint when the position forces Company HQ, making the lock self-explanatory to staff</C>
+        </>} />
+
+        <Patch version="v1.6.47" date="Aug 29" title="Roster — portal account is source of truth for linked entries" changes={<>
           <C type="sec">Roster edit modal is fully locked (all personal and org fields read-only) when the entry has a linked portal account — a blue "Managed by Portal Account" banner explains that changes must go through the Accounts page via S1; only <strong>Notes</strong> remains editable</C>
           <C type="fix">Portal→roster sync now fires for every account save regardless of the previous "One-way / Two-way" setting — the Accounts page is always the authority for linked entries; the sync-direction toggle has been removed in favour of a single note</C>
           <C type="fix">Platoon and squad are now included in the portal→roster sync so updating them in the Accounts page propagates to the roster automatically; battalion entries continue to receive <code className="font-mono text-[10px]">null</code> for platoon and squad</C>
